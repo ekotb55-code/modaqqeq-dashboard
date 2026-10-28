@@ -584,7 +584,10 @@ async function buildMerged() {
     }
     box.innerHTML = '<h3>📤 للمشاركة مع الفرع</h3><div class="caption" id="cap">' + esc(captionText(v)) + '</div>' +
       '<div class="actions">' +
-      (v.groupUrl ? '<button class="btn green" onclick="sendGroup()">📤 ابعت لجروب ' + esc(v.store) + '</button>' : '<button class="btn green" onclick="share()">📲 مشاركة (واتساب)</button>') +
+      (v.groupUrl
+        ? '<button class="btn" onclick="copyImg()">1️⃣ انسخ الصورة</button>' +
+          '<a class="wabtn" href="' + esc(v.groupUrl) + '" target="_blank" rel="noopener" onclick="toast(\'في الجروب دوس Ctrl+V وابعت\')">2️⃣ افتح جروب ' + esc(v.store) + ' والصق</a>'
+        : '<button class="btn green" onclick="share()">📲 مشاركة (واتساب)</button>') +
       '<button class="btn ghost" onclick="download()">⬇️ تنزيل الصورة</button>' +
       '<button class="btn ghost" onclick="copyCap()">📋 نسخ الجملة</button></div><img id="mergedImg" src="' + url + '">';
   } catch (e) { box.innerHTML = '<div class="err">ما قدرناش نعمل الصورة المدمجة: ' + esc(msg(e)) + '</div>'; }
@@ -652,21 +655,19 @@ async function share() {
   download(); await copyCap();
   toast('نزّلت الصورة ونسخت الجملة - افتح واتساب وابعتهم للفرع');
 }
-// ينسخ الصورة المدمجة ويفتح جروب الفرع، والدعم يلصق (Ctrl+V) ويبعت
-async function sendGroup() {
-  const v = cur.invoice;
-  let copied = false;
+// ينسخ الصورة المدمجة (بعدها الدعم يفتح الجروب ويلصق Ctrl+V)
+async function copyImg() {
   try {
     const im = await loadImage($('mergedImg').src);
     const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
     c.getContext('2d').drawImage(im, 0, 0);
     const png = await new Promise(r => c.toBlob(r, 'image/png'));
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
-    copied = true;
-  } catch (e) {}
-  window.open(v.groupUrl, '_blank', 'noopener');
-  if (copied) toast('✅ الصورة اتنسخت - في الجروب دوس Ctrl+V وابعت');
-  else { download(); toast('نزّلت الصورة - ابعتها في الجروب اللي اتفتح'); }
+    toast('✅ الصورة اتنسخت - دوس "افتح الجروب" والصق Ctrl+V');
+  } catch (e) {
+    download();
+    toast('ما قدرتش أنسخ الصورة، فنزّلتها - ابعتها في الجروب');
+  }
 }
 function download() { const a = document.createElement('a'); a.href = $('mergedImg').src; a.download = mergedName(); a.click(); }
 async function copyCap() {
