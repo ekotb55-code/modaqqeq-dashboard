@@ -27,6 +27,7 @@
   .btn.green { background: linear-gradient(135deg, #2BB45A, #1A8A3E); box-shadow: 0 4px 12px rgba(34,160,75,.25); }
   .btn.ghost { background: #fff; color: var(--blue); border: 1.5px solid var(--blue); box-shadow: none; }
   .btn.soft { background: var(--sky); color: var(--blue-2); box-shadow: none; }
+  .btn.red { background: linear-gradient(135deg, #F0504F, #C62828); box-shadow: 0 4px 12px rgba(224,57,62,.25); }
   .hidden { display: none !important; }
 
   /* ---------- الدخول ---------- */
@@ -56,7 +57,7 @@
 
   /* ---------- الإحصائيات ---------- */
   .main { max-width: 1500px; margin: 0 auto; padding: 16px; }
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
   .stat { border-radius: 18px; padding: 14px 16px; color: #fff; box-shadow: var(--shadow); position: relative; overflow: hidden; }
   .stat::after { content: ''; position: absolute; width: 110px; height: 110px; border-radius: 50%; background: rgba(255,255,255,.12); left: -30px; top: -40px; }
   .stat small { opacity: .9; font-weight: 600; }
@@ -65,6 +66,10 @@
   .s2 { background: linear-gradient(135deg, #1E90FF, #0F5FA8); }
   .s3 { background: linear-gradient(135deg, #2BB45A, #1A8A3E); }
   .s4 { background: linear-gradient(135deg, #F0504F, #C62828); }
+  .s5 { background: linear-gradient(135deg, #8B6CF0, #5B3CC4); }
+  .s6 { background: linear-gradient(135deg, #5B6B7E, #36414F); }
+  .hours { grid-column: 1 / -1; border-radius: 12px; padding: 8px 14px; font-weight: 700; background: #E2F5E6; color: #15803D; }
+  .hours.off { background: #EEF1F5; color: #4A5868; }
   @media (max-width: 800px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 
   /* ---------- القايمة والتفاصيل ---------- */
@@ -89,6 +94,11 @@
   .b-new { background: #FFF1DC; color: var(--orange); }
   .b-work { background: #E3F0FD; color: var(--blue); }
   .b-done { background: #E2F5E6; color: var(--green); }
+  .b-rej { background: #FDE2E2; color: #C62828; }
+  .card.st-rej { border-inline-start-color: var(--red); opacity: .85; }
+  .rv { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 20px; }
+  .rv-ok { background: #E2F5E6; color: #15803D; } .rv-wait { background: #FFF5D6; color: #A16207; } .rv-note { background: #F4EEFF; color: #4B2FB5; }
+  .t-off { background: #EEF1F5; color: #4A5868; }
   .money { font-weight: 800; color: var(--navy); }
   .timer { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; font-size: 13px; padding: 2px 10px; border-radius: 20px; direction: ltr; font-variant-numeric: tabular-nums; }
   .t-green { background: #E2F5E6; color: #15803D; }
@@ -138,6 +148,17 @@
   .pricebox { background: #F4EEFF; border: 1.5px solid #D4C6FA; border-radius: 12px; padding: 10px 12px; margin: 10px 0; }
   .pricebox label { display: flex; gap: 8px; align-items: center; font-weight: 800; color: #4B2FB5; cursor: pointer; }
   .pricebox input { width: 22px; height: 22px; }
+  .rejbox { background: #FDECEC; border: 2px solid #F5B5B7; color: #8E1519; border-radius: 14px; padding: 12px 14px; margin: 10px 0; line-height: 1.8; }
+  .rejbox b { color: #C62828; }
+  .revbox { border-radius: 14px; padding: 12px 14px; margin: 10px 0; line-height: 1.8; font-weight: 600; }
+  .revbox.ok { background: #E2F5E6; border: 2px solid #A7DDB4; color: #14532D; }
+  .revbox.wait { background: #FFF8E1; border: 2px solid #F5D98B; color: #7A4D00; }
+  .revbox .note { display: block; background: #fff; border-radius: 10px; padding: 8px 10px; margin-top: 6px; color: #4B2FB5; font-weight: 800; }
+  details.rejdet { margin-top: 12px; border: 2px solid #F5B5B7; border-radius: 16px; padding: 10px 14px; background: #FFF8F8; }
+  details.rejdet summary { cursor: pointer; font-weight: 800; color: #C62828; }
+  details.rejdet textarea { width: 100%; min-height: 70px; margin: 10px 0 6px; font-family: inherit; font-size: 15px; border: 1.5px solid #F5B5B7; border-radius: 10px; padding: 8px; box-sizing: border-box; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chips button { background: #fff; border: 1.5px solid #F5B5B7; color: #8E1519; padding: 4px 10px; border-radius: 20px; font-size: 13px; box-shadow: none; }
   .report-form { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; align-items: end; }
   @media (max-width: 800px) { .report-form { grid-template-columns: 1fr; } }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
@@ -238,9 +259,12 @@
 // رابط سكريبت "دليل الموظفين" (نفس اللي في التطبيق)
 const API = 'https://script.google.com/macros/s/AKfycbxUjxuVtROKO7MrxHtmBfzOxsjgwgfvWMVodCHxUdxuFszmgTyWMQFavjt82iJ8U0s/exec';
 const SLA_MIN = 30, WARN_MIN = 20;          // الفاتورة لازم تدخل خلال 30 دقيقة (أصفر من 20)
-const ST_NEW = 'جديدة', ST_WORK = 'بيتدخل', ST_DONE = 'تم الإدخال';
+const ST_NEW = 'جديدة', ST_WORK = 'بيتدخل', ST_DONE = 'تم الإدخال', ST_REJ = 'مرفوضة', TAB_NOTES = '📝 ملاحظات الفروع';
+// مواعيد العمل: من 9 الصبح لحد 1 بالليل - برة المواعيد العداد بيقف
+const OFF_FROM = 1, OFF_TO = 9;
+const PENDING_ALERT_MIN = 5; // تنبيه كل 5 دقايق طول ما فيه فواتير مستنية
 let token = '', me = '', all = [], stores = [], tab = ST_NEW, cur = null, shots = [], skew = 0;
-let known = null, pIdx = 0, perfRange = 'today';
+let known = null, pIdx = 0, perfRange = 'today', prevStatus = {}, revKnown = null, pendAt = 0;
 const imgCache = {};
 
 // ---------- أدوات ----------
@@ -262,10 +286,26 @@ function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 function money(v) { return Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function num(v) { return Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 3 }); }
 function dt(s) { if (!s) return ''; const d = new Date(s); return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric' }) + ' ' + d.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' }); }
-function badge(s) { return '<span class="badge ' + (s === ST_DONE ? 'b-done' : s === ST_WORK ? 'b-work' : 'b-new') + '">' + esc(s || ST_NEW) + '</span>'; }
+function badge(s) { return '<span class="badge ' + (s === ST_DONE ? 'b-done' : s === ST_WORK ? 'b-work' : s === ST_REJ ? 'b-rej' : 'b-new') + '">' + esc(s || ST_NEW) + '</span>'; }
 function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
 function now() { return Date.now() + skew; }
-function mins(a, b) { return (new Date(b) - new Date(a)) / 60000; }
+// وقت الشغل بس بين وقتين (من غير الفترة من 1 بالليل لـ 9 الصبح)
+function workMs(a, b) {
+  a = new Date(a).getTime(); b = new Date(b).getTime();
+  if (!(b > a)) return 0;
+  let off = 0;
+  const d = new Date(a); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - 1);
+  while (d.getTime() < b) {
+    const s = new Date(d); s.setHours(OFF_FROM, 0, 0, 0);
+    const e = new Date(d); e.setHours(OFF_TO, 0, 0, 0);
+    off += Math.max(0, Math.min(b, e.getTime()) - Math.max(a, s.getTime()));
+    d.setDate(d.getDate() + 1);
+  }
+  return b - a - off;
+}
+function inWork(t) { const h = new Date(t).getHours(); return h >= OFF_TO || h < OFF_FROM; }
+function mins(a, b) { return workMs(a, b) / 60000; }
+function pending(v) { return v.status === ST_NEW || v.status === ST_WORK || !v.status; }
 function clock(ms) { const s = Math.max(0, Math.floor(ms / 1000)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); }
 function durTxt(m) { m = Math.round(m); return m < 60 ? m + ' د' : Math.floor(m / 60) + ' س ' + (m % 60) + ' د'; }
 
@@ -277,16 +317,22 @@ function timerHtml(v) {
     const c = m <= WARN_MIN ? 'green' : m <= SLA_MIN ? 'yellow' : 'red';
     return '<span class="timer t-done-' + c + '">✓ ' + durTxt(m) + '</span>';
   }
-  const el = now() - new Date(v.createdAt).getTime();
-  const left = SLA_MIN * 60000 - el;
+  if (!pending(v)) return '';
+  const t = timerState(v.createdAt);
+  return '<span class="timer ' + t.cls + '" data-t="' + esc(v.createdAt) + '">' + t.txt + '</span>';
+}
+// العداد بيحسب وقت الشغل بس، وبرة المواعيد بيقف
+function timerState(created) {
+  const el = workMs(created, now()), left = SLA_MIN * 60000 - el;
+  if (!inWork(now())) return { cls: 't-off', txt: '⏸ ' + (el === 0 ? 'هتبدأ 9 الصبح' : (left > 0 ? clock(left) : 'متأخرة ' + clock(-left))) };
   const c = el < WARN_MIN * 60000 ? 'green' : left > 0 ? 'yellow' : 'red';
-  return '<span class="timer t-' + c + '" data-t="' + esc(v.createdAt) + '">' + (left > 0 ? '⏱ ' + clock(left) : '⚠ متأخرة ' + clock(-left)) + '</span>';
+  return { cls: 't-' + c, txt: left > 0 ? '⏱ ' + clock(left) : '⚠ متأخرة ' + clock(-left) };
 }
 setInterval(() => {
   document.querySelectorAll('.timer[data-t]').forEach(el => {
-    const el2 = now() - new Date(el.dataset.t).getTime(), left = SLA_MIN * 60000 - el2;
-    el.className = 'timer t-' + (el2 < WARN_MIN * 60000 ? 'green' : left > 0 ? 'yellow' : 'red');
-    el.textContent = left > 0 ? '⏱ ' + clock(left) : '⚠ متأخرة ' + clock(-left);
+    const t = timerState(el.dataset.t);
+    el.className = 'timer ' + t.cls;
+    el.textContent = t.txt;
   });
 }, 1000);
 
@@ -353,7 +399,7 @@ function ding() {
 }
 function alertNew(list) {
   ding();
-  const t = list.length === 1 ? 'فاتورة جديدة من ' + list[0].store : list.length + ' فواتير جديدة';
+  const t = list.length === 1 ? (list[0].rejectCount ? 'الفرع عدّل وبعت تاني: ' : 'فاتورة جديدة من ') + list[0].store : list.length + ' فواتير جديدة';
   const b = list.map(v => v.supplier + ' - ' + money(v.total) + ' ج.م').join('\n');
   if ('Notification' in window && Notification.permission === 'granted') {
     try {
@@ -363,6 +409,30 @@ function alertNew(list) {
   }
   toast('🔔 ' + t);
 }
+// تنبيه متكرر طول ما فيه فواتير مستنية الإدخال (في مواعيد العمل بس)
+function notify(title, body, id, tag) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      const n = new Notification(title, { body, icon: 'icon.png', tag: tag || ('inv-' + id), renotify: true, requireInteraction: true });
+      n.onclick = () => { window.focus(); page('inv'); if (id) openInv(id); n.close(); };
+    } catch (e) {}
+  }
+}
+function pendingAlert() {
+  if (!token || !all.length || !inWork(now())) return;
+  const list = all.filter(pending).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  if (!list.length) { pendAt = 0; return; }
+  if (pendAt && now() - pendAt < PENDING_ALERT_MIN * 60000) return;
+  if (!pendAt) { pendAt = now(); return; } // أول مرة: نستنى الدورة الجاية
+  pendAt = now();
+  const nNew = list.filter(v => v.status !== ST_WORK).length, nWork = list.length - nNew;
+  const t = '⏳ ' + list.length + (list.length === 1 ? ' فاتورة مستنية' : ' فواتير مستنية') + ' الإدخال';
+  const b = (nNew ? nNew + ' لسه محدش استلمها' : '') + (nNew && nWork ? ' • ' : '') + (nWork ? nWork + ' بيتدخلوا' : '') + '\n' +
+    list.slice(0, 4).map(v => v.store + ' - ' + v.supplier + ' (' + durTxt(mins(v.createdAt, now())) + ')').join('\n');
+  ding(); notify(t, b, list[0].id, 'pending');
+  toast(t);
+}
+setInterval(pendingAlert, 60000);
 function updateTitle() {
   const n = all.filter(v => v.status === ST_NEW).length;
   document.title = (n ? '(' + n + ') ' : '') + 'فواتير المشتريات - مدقق';
@@ -373,15 +443,25 @@ async function loadList(quiet) {
   try {
     const r = await api('dList', { token });
     if (r.now) skew = new Date(r.now).getTime() - Date.now();
-    const fresh = known ? r.invoices.filter(v => !known.has(v.id) && v.status === ST_NEW) : [];
+    const fresh = known ? r.invoices.filter(v => (!known.has(v.id) && v.status === ST_NEW) || (prevStatus[v.id] === ST_REJ && v.status === ST_NEW)) : [];
+    const reviews = revKnown ? r.invoices.filter(v => v.reviewedBy && !revKnown.has(v.id)) : [];
     known = new Set(r.invoices.map(v => v.id));
+    revKnown = new Set(r.invoices.filter(v => v.reviewedBy).map(v => v.id));
+    prevStatus = {}; r.invoices.forEach(v => { prevStatus[v.id] = v.status; });
     all = r.invoices; stores = r.stores;
     const sel = $('fStore'), val = sel.value;
     sel.innerHTML = '<option value="">كل المحلات</option>' + stores.map(s => '<option>' + esc(s) + '</option>').join('');
     sel.value = val;
     renderStats(); renderList(); updateTitle();
     if (!$('pagePerf').classList.contains('hidden')) renderPerf();
-    if (fresh.length) alertNew(fresh);
+    if (fresh.length) { alertNew(fresh); pendAt = now(); }
+    reviews.forEach(v => {
+      if (v.reviewNotes) {
+        ding();
+        notify('📝 ملاحظة من ' + v.store + ' على فاتورة ' + v.supplier, v.reviewNotes + '\n— ' + v.reviewedBy, v.id, 'rev-' + v.id);
+        toast('📝 ملاحظة من ' + v.store + ': ' + v.reviewNotes);
+      } else toast('✅ ' + v.store + ' راجع فاتورة ' + v.supplier);
+    });
     if (cur && !quiet) openInv(cur.invoice.id, true);
   } catch (e) { if (!quiet) toast(msg(e)); }
 }
@@ -389,28 +469,44 @@ function renderStats() {
   const today = new Date(now()); today.setHours(0, 0, 0, 0);
   const nNew = all.filter(v => v.status === ST_NEW).length, nWork = all.filter(v => v.status === ST_WORK).length;
   const doneToday = all.filter(v => v.status === ST_DONE && new Date(v.doneAt) >= today).length;
-  const late = all.filter(v => v.status !== ST_DONE && mins(v.createdAt, now()) > SLA_MIN).length;
+  const late = all.filter(v => pending(v) && mins(v.createdAt, now()) > SLA_MIN).length;
+  const nRej = all.filter(v => v.status === ST_REJ).length;
+  const nRev = all.filter(v => v.status === ST_DONE && !v.reviewedBy && new Date(v.doneAt) >= new Date(now() - 3 * 86400000)).length;
+  const work = inWork(now());
   $('stats').innerHTML =
+    '<div class="hours' + (work ? '' : ' off') + '">' + (work ? '🕘 مواعيد العمل من 9 الصبح لحد 1 بالليل - العداد شغال' : '⏸ برة مواعيد العمل (من 1 بالليل لـ 9 الصبح) - العداد واقف') + '</div>' +
     '<div class="stat s1"><small>🆕 جديدة</small><b>' + nNew + '</b></div>' +
     '<div class="stat s2"><small>⚙️ بيتدخل</small><b>' + nWork + '</b></div>' +
     '<div class="stat s3"><small>✅ اتدخلت النهارده</small><b>' + doneToday + '</b></div>' +
-    '<div class="stat s4"><small>⚠️ متأخرة (أكتر من ' + SLA_MIN + ' د)</small><b>' + late + '</b></div>';
+    '<div class="stat s4"><small>⚠️ متأخرة (أكتر من ' + SLA_MIN + ' د)</small><b>' + late + '</b></div>' +
+    '<div class="stat s6"><small>↩️ مرفوضة عند الفرع</small><b>' + nRej + '</b></div>' +
+    '<div class="stat s5"><small>👀 مستنية مراجعة الفرع</small><b>' + nRev + '</b></div>';
 }
 function renderList() {
   const st = $('fStore').value, q = $('fText').value.trim();
   const base = all.filter(v => (!st || v.store === st) && (!q || (v.supplier + ' ' + v.number + ' ' + v.systemNo + ' ' + v.user + ' ' + v.store).indexOf(q) !== -1));
   const cnt = s => base.filter(v => v.status === s).length;
-  $('tabs').innerHTML = [[ST_NEW, cnt(ST_NEW)], [ST_WORK, cnt(ST_WORK)], [ST_DONE, cnt(ST_DONE)], ['الكل', base.length]]
+  const notes = base.filter(v => v.reviewNotes).length;
+  $('tabs').innerHTML = [[ST_NEW, cnt(ST_NEW)], [ST_WORK, cnt(ST_WORK)], [ST_DONE, cnt(ST_DONE)], [ST_REJ, cnt(ST_REJ)], [TAB_NOTES, notes], ['الكل', base.length]]
     .map(([t, n]) => '<button class="tab' + (tab === t ? ' on' : '') + '" onclick="tab=\'' + t + '\';renderList()">' + t + '<span class="n">' + n + '</span></button>').join('');
-  let list = base.filter(v => tab === 'الكل' || v.status === tab);
-  if (tab !== ST_DONE && tab !== 'الكل') list = list.slice().sort((a, b) => a.createdAt.localeCompare(b.createdAt)); // الأقدم الأول
+  let list = base.filter(v => tab === 'الكل' || (tab === TAB_NOTES ? !!v.reviewNotes : v.status === tab));
+  if (tab === ST_NEW || tab === ST_WORK) list = list.slice().sort((a, b) => a.createdAt.localeCompare(b.createdAt)); // الأقدم الأول
   $('list').innerHTML = list.length ? list.map(v =>
-    '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
+    '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
     '<div class="top"><span class="sup">' + esc(v.supplier) + '</span>' + timerHtml(v) + '</div>' +
     '<div class="meta">🏪 ' + esc(v.store) + ' • ' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
     '<div class="meta">' + badge(v.status) + ' ' + v.count + ' صنف • <span class="money">' + money(v.total) + ' ج.م</span>' +
-    (v.receivedBy ? ' • 👤 ' + esc(v.receivedBy) : '') + (v.systemNo ? ' • #' + esc(v.systemNo) : '') + '</div></div>'
+    (v.receivedBy ? ' • 👤 ' + esc(v.receivedBy) : '') + (v.systemNo ? ' • #' + esc(v.systemNo) : '') +
+    (v.rejectCount && v.status !== ST_REJ ? ' • ↩️ اتبعتت تاني' : '') + '</div>' +
+    (v.status === ST_REJ ? '<div class="meta" style="color:#C62828">❌ ' + esc(v.rejectReason) + '</div>' : '') +
+    (v.status === ST_DONE ? '<div class="meta">' + revTag(v) + '</div>' : '') + '</div>'
   ).join('') : '<div class="empty">مفيش فواتير هنا 🎉</div>';
+}
+
+function revTag(v) {
+  if (v.reviewNotes) return '<span class="rv rv-note">📝 ' + esc(v.reviewNotes) + '</span>';
+  if (v.reviewedBy) return '<span class="rv rv-ok">✅ راجعها ' + esc(v.reviewedBy) + '</span>';
+  return '<span class="rv rv-wait">👀 الفرع لسه ما راجعهاش</span>';
 }
 
 // ---------- الفاتورة ----------
@@ -429,7 +525,7 @@ function pics() { const v = cur.invoice; return v.photos.map(id => ({ id, label:
 
 function renderDetail() {
   const v = cur.invoice, L = cur.lines;
-  const canWork = v.status !== ST_DONE;
+  const canWork = v.status !== ST_DONE && v.status !== ST_REJ;
   let h = '<button class="btn ghost back" onclick="closeInv()">→ رجوع للقايمة</button>';
   h += '<div class="dhead"><h2>' + esc(v.supplier) + '</h2>' + badge(v.status) + timerHtml(v) + '<span class="sp"></span>' +
     (v.groupUrl ? '<a class="wabtn" href="' + esc(v.groupUrl) + '" target="_blank" rel="noopener">💬 جروب الفرع</a>' : '') +
@@ -444,6 +540,19 @@ function renderDetail() {
     (v.status === ST_DONE ? i('رقم الفاتورة في السيستم', v.systemNo) + i('رصيد المورد', v.balance) + i('أدخلها', v.doneBy + ' - ' + dt(v.doneAt)) : '') +
     '</div>';
   if (v.totalNote) h += '<div class="warnbox">⚠️ ' + esc(v.totalNote) + '</div>';
+  if (v.status === ST_REJ) {
+    h += '<div class="rejbox"><b>❌ الفاتورة مرفوضة ورجعت للفرع</b><br>السبب: <b>' + esc(v.rejectReason) + '</b><br>' +
+      'رجّعها ' + esc(v.rejectedBy) + ' - ' + dt(v.rejectedAt) + '<br>مستنية الفرع يعدّلها ويبعتها تاني</div>';
+  } else if (v.rejectCount) {
+    h += '<div class="warnbox">↩️ الفاتورة دي اترفضت قبل كده' + (v.rejectCount > 1 ? ' (' + v.rejectCount + ' مرات)' : '') +
+      ' والفرع عدّلها وبعتها تاني - آخر سبب: ' + esc(v.rejectReason) + ' (' + esc(v.rejectedBy) + ')</div>';
+  }
+  if (v.status === ST_DONE) {
+    h += v.reviewedBy
+      ? '<div class="revbox ok">✅ الفرع راجع صورة الإثبات: ' + esc(v.reviewedBy) + ' - ' + dt(v.reviewedAt) +
+        (v.reviewNotes ? '<span class="note">📝 ملاحظة الفرع: ' + esc(v.reviewNotes) + '</span>' : '') + '</div>'
+      : '<div class="revbox wait">👀 الفرع لسه ما راجعش صورة الإثبات - بيوصله تذكير كل 10 دقايق لحد ما يراجع</div>';
+  }
   h += '<div class="compare"><div class="viewer"><div class="vstage" id="vstage"><img id="vimg" alt=""></div>' +
     '<div class="vtools"><button onclick="zoom(1.25)">＋</button><button onclick="zoom(.8)">－</button><button onclick="rot()">⟳</button><button onclick="fit()">ملء</button><button onclick="full()">⛶</button><span class="pg" id="pg"></span></div>' +
     '<div class="thumbs" id="thumbs"></div></div><div>';
@@ -471,13 +580,21 @@ function renderDetail() {
         '<small style="color:var(--muted)">لازم تعدّل أسعار البيع المعلّمة بالبنفسجي قبل ما تقفل الفاتورة - الإكسل بتاعها في الزرار البنفسجي فوق</small></div>' : '') +
       '<div class="err" id="doneErr"></div>' +
       '<button class="btn green" id="doneBtn" style="width:100%;padding:13px;font-size:17px" onclick="done()">تم الإدخال ✓</button></div>';
+    h += '<details class="rejdet"><summary>❌ رفض الفاتورة ورجّعها للفرع</summary>' +
+      '<div class="chips">' + ['الصورة مش واضحة', 'ناقص صفحة من الفاتورة', 'الأصناف مش مطابقة للورقة', 'الإجمالي مش مظبوط', 'المورد غلط', 'الفاتورة متكررة']
+        .map(x => '<button onclick="$(\'rejReason\').value=\'' + x + '\'">' + x + '</button>').join('') + '</div>' +
+      '<textarea id="rejReason" placeholder="سبب الرفض (هيوصل للفرع في إشعار)"></textarea>' +
+      '<div class="err" id="rejErr"></div>' +
+      '<button class="btn red" id="rejBtn" style="width:100%;padding:12px;font-size:16px" onclick="reject()">↩️ رجّع الفاتورة للفرع</button></details>';
+  } else if (v.status === ST_REJ) {
+    // مرفوضة: مفيش حاجة تتعمل لحد ما الفرع يبعتها تاني
   } else {
     h += '<div class="box" id="merged"><h3>📤 للمشاركة مع الفرع</h3><div class="empty"><span class="spin"></span> بيجهز الصورة المدمجة...</div></div>';
   }
   h += '</div></div>';
   $('detailPane').innerHTML = h;
   initViewer();
-  if (canWork) { renderShots(); bindDrop(); } else buildMerged();
+  if (canWork) { renderShots(); bindDrop(); } else if (v.status === ST_DONE) buildMerged();
 }
 function i(k, v) { return '<div><small>' + esc(k) + '</small><b>' + esc(v) + '</b></div>'; }
 
@@ -527,6 +644,18 @@ async function receive() {
   catch (e) { toast(msg(e)); b.disabled = false; }
 }
 
+async function reject() {
+  const reason = $('rejReason').value.trim(), err = $('rejErr'), b = $('rejBtn');
+  err.textContent = '';
+  if (!reason) return err.textContent = 'اكتب سبب الرفض - هيوصل للفرع';
+  if (!confirm('ترجّع فاتورة ' + cur.invoice.supplier + ' لفرع ' + cur.invoice.store + '؟\nالسبب: ' + reason)) return;
+  b.disabled = true; b.innerHTML = '<span class="spin"></span>';
+  try {
+    cur = await api('dReject', { token, id: cur.invoice.id, reason }, true);
+    toast('الفاتورة رجعت للفرع ↩️'); renderDetail(); loadList(true);
+  } catch (e) { err.textContent = msg(e); b.disabled = false; b.textContent = '↩️ رجّع الفاتورة للفرع'; }
+}
+
 // ---------- الإكسل: 4 أعمدة (xlsx أو xls 2003) ----------
 function saveSheet(rows, cols, sheet, name, type) {
   const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -535,7 +664,27 @@ function saveSheet(rows, cols, sheet, name, type) {
   wb.Workbook = { Views: [{ RTL: true }] };
   XLSX.utils.book_append_sheet(wb, ws, sheet);
   const file = name.replace(/[\\/:*?"<>|]/g, '-') + '.' + type;
-  XLSX.writeFile(wb, file, { bookType: type === 'xls' ? 'biff8' : 'xlsx' });
+  try {
+    const data = XLSX.write(wb, { bookType: type === 'xls' ? 'biff8' : 'xlsx', type: 'array' });
+    const mime = type === 'xls' ? 'application/vnd.ms-excel' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    saveBlob(new Blob([data], { type: mime }), file);
+  } catch (e) { toast('ما قدرناش نعمل الإكسل: ' + msg(e)); }
+}
+// تنزيل ملف: على الموبايل بيفتح المشاركة، وعلى الكمبيوتر بينزل في التنزيلات
+async function saveBlob(blob, file) {
+  const mobile = matchMedia('(pointer:coarse)').matches;
+  if (mobile && navigator.canShare) {
+    try {
+      const f = new File([blob], file, { type: blob.type });
+      if (navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: file }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = file; a.rel = 'noopener'; a.style.display = 'none';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 60000);
+  toast('⬇️ اتنزل: ' + file + ' - هتلاقيه في التنزيلات (Downloads)');
 }
 function excel(type) {
   const v = cur.invoice;
@@ -728,7 +877,7 @@ function makeReport() {
   const st = $('repStore').value, from = new Date($('repFrom').value + 'T00:00:00'), to = new Date($('repTo').value + 'T23:59:59');
   const done = all.filter(v => v.store === st && v.status === ST_DONE && v.doneAt && new Date(v.doneAt) >= from && new Date(v.doneAt) <= to)
     .sort((a, b) => a.doneAt.localeCompare(b.doneAt));
-  const pending = all.filter(v => v.store === st && v.status !== ST_DONE).length;
+  const waiting = all.filter(v => v.store === st && v.status !== ST_DONE).length;
   const total = done.reduce((s, v) => s + v.total, 0);
   const avg = done.length ? done.reduce((s, v) => s + mins(v.createdAt, v.doneAt), 0) / done.length : 0;
   const ontime = done.length ? done.filter(v => mins(v.createdAt, v.doneAt) <= SLA_MIN).length / done.length : 0;
@@ -753,7 +902,7 @@ function makeReport() {
     '<div class="grid"><div class="k k1"><small>فواتير اتدخلت</small><b>' + done.length + '</b></div><div class="k k2"><small>إجمالي المشتريات</small><b>' + money(total) + '</b></div>' +
     '<div class="k k3"><small>متوسط وقت الإدخال</small><b>' + durTxt(avg) + '</b></div><div class="k k4"><small>في الميعاد (≤ ' + SLA_MIN + ' د)</small><b>' + Math.round(ontime * 100) + '%</b></div>' +
     '<div class="k k5"><small>تعديلات أسعار البيع</small><b>' + pch + '</b></div></div>' +
-    (pending ? '<p style="color:#E67E00;font-weight:700">⏳ فيه ' + pending + ' فاتورة للفرع لسه ما دخلتش السيستم</p>' : '') +
+    (waiting ? '<p style="color:#E67E00;font-weight:700">⏳ فيه ' + waiting + ' فاتورة للفرع لسه ما دخلتش السيستم</p>' : '') +
     '<h2>الفواتير</h2><table><thead><tr><th>#</th><th>تاريخ الإدخال</th><th>المورد</th><th>رقم فاتورة المورد</th><th>رقم السيستم</th><th>أصناف</th><th>الإجمالي</th><th>رصيد المورد</th><th>أدخلها</th><th>المدة</th></tr></thead><tbody>' +
     (done.length ? done.map((v, k) => '<tr><td>' + (k + 1) + '</td><td>' + dt(v.doneAt) + '</td><td>' + esc(v.supplier) + '</td><td>' + esc(v.number || '-') + '</td><td>' + esc(v.systemNo) +
       '</td><td class="num">' + v.count + '</td><td class="num">' + money(v.total) + '</td><td class="num">' + esc(v.balance) + '</td><td>' + esc(v.doneBy) + '</td><td>' + durTxt(mins(v.createdAt, v.doneAt)) + '</td></tr>').join('')
@@ -802,7 +951,7 @@ function renderPerf() {
   h += '<div class="stats"><div class="stat s3"><small>فواتير اتدخلت</small><b>' + tot + '</b></div>' +
     '<div class="stat s2"><small>متوسط الوقت</small><b>' + durTxt(avgAll) + '</b></div>' +
     '<div class="stat s1"><small>في الميعاد (≤ ' + SLA_MIN + ' د)</small><b>' + Math.round(onAll * 100) + '%</b></div>' +
-    '<div class="stat s4"><small>متأخرة دلوقتي</small><b>' + all.filter(v => v.status !== ST_DONE && mins(v.createdAt, now()) > SLA_MIN).length + '</b></div></div>';
+    '<div class="stat s4"><small>متأخرة دلوقتي</small><b>' + all.filter(v => pending(v) && mins(v.createdAt, now()) > SLA_MIN).length + '</b></div></div>';
   h += list.length ? '<div class="people">' + list.map((p, k) =>
     '<div class="person"><div class="ph"><div class="av">' + esc((p.name || '?').trim().charAt(0)) + '</div><div class="nm">' + esc(p.name) + '</div><div class="medal">' + (p.n ? (medals[k] || '') : '') + '</div></div>' +
     '<div class="kpis">' +
