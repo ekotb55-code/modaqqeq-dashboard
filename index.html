@@ -131,6 +131,15 @@
   .new-item { color: var(--orange); font-weight: 700; font-size: 12px; }
   .tablebox { max-height: calc(100vh - 430px); min-height: 200px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
   .total-row td { background: var(--sky); font-weight: 800; }
+  tr.pchg td { background: #F4EEFF; }
+  .sale { color: #6C4BD8; font-weight: 800; white-space: nowrap; }
+  .up { color: var(--red); font-weight: 700; font-size: 12px; } .down { color: var(--green); font-weight: 700; font-size: 12px; }
+  .warnbox { background: #FDECEC; border: 1.5px solid #F5B5B7; color: #A61B1F; border-radius: 12px; padding: 10px 12px; margin: 8px 0; font-weight: 700; }
+  .pricebox { background: #F4EEFF; border: 1.5px solid #D4C6FA; border-radius: 12px; padding: 10px 12px; margin: 10px 0; }
+  .pricebox label { display: flex; gap: 8px; align-items: center; font-weight: 800; color: #4B2FB5; cursor: pointer; }
+  .pricebox input { width: 22px; height: 22px; }
+  .report-form { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; align-items: end; }
+  @media (max-width: 800px) { .report-form { grid-template-columns: 1fr; } }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
   .box { border: 2px dashed #C9D8EA; border-radius: 16px; padding: 14px; margin-top: 12px; background: #FBFDFF; }
   .box h3 { margin: 0 0 10px; color: var(--navy); }
@@ -192,6 +201,7 @@
       <div class="nav">
         <button id="navInv" class="on" onclick="page('inv')">🧾 الفواتير</button>
         <button id="navPerf" onclick="page('perf')">🏆 أداء الدعم</button>
+        <button id="navRep" onclick="page('rep')">📊 تقارير الفروع</button>
       </div>
       <span class="sp"></span>
       <button class="btn soft bell" id="bellBtn" onclick="enableAlerts()" title="الإشعارات والصوت">🔔</button>
@@ -218,6 +228,7 @@
   </div>
 
   <div class="main hidden" id="pagePerf"></div>
+  <div class="main hidden" id="pageRep"></div>
 </div>
 
 <div id="viewerFull" class="hidden" onclick="this.classList.add('hidden')"><img id="viewerFullImg"></div>
@@ -301,6 +312,9 @@ function showApp() {
   setInterval(() => loadList(true), 20000);
 }
 function page(p) {
+  $('pageRep').classList.toggle('hidden', p !== 'rep');
+  $('navRep').classList.toggle('on', p === 'rep');
+  if (p === 'rep') renderRepForm();
   $('pageInv').classList.toggle('hidden', p !== 'inv');
   $('pagePerf').classList.toggle('hidden', p !== 'perf');
   $('navInv').classList.toggle('on', p === 'inv');
@@ -423,19 +437,28 @@ function renderDetail() {
   h += '<div class="info">' +
     i('المحل', v.store) + i('الموظف', v.user) + i('وقت الرفع', dt(v.createdAt)) +
     i('رقم فاتورة المورد', v.number || '-') + i('عدد الأصناف', v.count) + i('الإجمالي', money(v.total) + ' ج.م') +
+    (v.typedTotal !== null && v.typedTotal !== undefined ? i('الإجمالي المكتوب في الورقة', money(v.typedTotal) + ' ج.م') : '') +
+    (v.priceChanges ? i('تعديلات سعر البيع', v.priceChanges + ' صنف' + (v.pricesBy ? ' • عدّلها ' + v.pricesBy : '')) : '') +
     (v.notes ? i('ملاحظات', v.notes) : '') +
     (v.receivedBy ? i('استلمها', v.receivedBy + ' - ' + dt(v.receivedAt)) : '') +
     (v.status === ST_DONE ? i('رقم الفاتورة في السيستم', v.systemNo) + i('رصيد المورد', v.balance) + i('أدخلها', v.doneBy + ' - ' + dt(v.doneAt)) : '') +
     '</div>';
+  if (v.totalNote) h += '<div class="warnbox">⚠️ ' + esc(v.totalNote) + '</div>';
   h += '<div class="compare"><div class="viewer"><div class="vstage" id="vstage"><img id="vimg" alt=""></div>' +
     '<div class="vtools"><button onclick="zoom(1.25)">＋</button><button onclick="zoom(.8)">－</button><button onclick="rot()">⟳</button><button onclick="fit()">ملء</button><button onclick="full()">⛶</button><span class="pg" id="pg"></span></div>' +
     '<div class="thumbs" id="thumbs"></div></div><div>';
-  h += '<div class="tablebox"><table><thead><tr><th>م</th><th>اسم الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>' +
-    L.map(l => '<tr><td>' + l.n + '</td><td>' + esc(l.name) + (l.isNew ? ' <span class="new-item">🆕 جديد ' + esc(l.barcode) + '</span>' : '') +
+  const pDiff = l => l.oldPrice ? l.piecePrice - l.oldPrice : 0;
+  h += '<div class="tablebox"><table><thead><tr><th>م</th><th>اسم الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>سعر البيع</th></tr></thead><tbody>' +
+    L.map(l => '<tr' + (l.newSale !== null ? ' class="pchg"' : '') + '><td>' + l.n + '</td><td>' + esc(l.name) + (l.isNew ? ' <span class="new-item">🆕 جديد ' + esc(l.barcode) + '</span>' : '') +
       (l.unit === 'كرتونة' ? '<div style="color:var(--muted);font-size:12px">' + num(l.qty) + ' كرتونة × ' + esc(l.cartonSize) + '</div>' : '') +
-      '</td><td class="num">' + num(l.pieces) + '</td><td class="num">' + money(l.piecePrice) + '</td><td class="num">' + money(l.total) + '</td></tr>').join('') +
-    '<tr class="total-row"><td></td><td>الإجمالي</td><td></td><td></td><td class="num">' + money(v.total) + '</td></tr></tbody></table></div>';
-  h += '<div class="actions"><button class="btn ghost" onclick="excel()">⬇️ تنزيل الإكسل</button>' +
+      '</td><td class="num">' + num(l.pieces) + '</td><td class="num">' + money(l.piecePrice) +
+      (Math.abs(pDiff(l)) >= 0.01 ? '<div class="' + (pDiff(l) > 0 ? 'up' : 'down') + '">' + (pDiff(l) > 0 ? '▲' : '▼') + ' كان ' + money(l.oldPrice) + '</div>' : '') +
+      '</td><td class="num">' + money(l.total) + '</td><td class="num">' +
+      (l.newSale !== null ? '<span class="sale">🏷 ' + money(l.oldSale) + ' ← ' + money(l.newSale) + '</span>' : (l.oldSale !== null ? money(l.oldSale) : '')) + '</td></tr>').join('') +
+    '<tr class="total-row"><td></td><td>الإجمالي</td><td></td><td></td><td class="num">' + money(v.total) + '</td><td></td></tr></tbody></table></div>';
+  h += '<div class="actions"><button class="btn ghost" onclick="excel(\'xlsx\')">⬇️ إكسل</button>' +
+    '<button class="btn ghost" onclick="excel(\'xls\')">⬇️ إكسل 2003 (xls)</button>' +
+    (v.priceChanges ? '<button class="btn" style="background:linear-gradient(135deg,#6C4BD8,#4B2FB5)" onclick="pricesExcel()">🏷 إكسل أسعار البيع المعدلة (' + v.priceChanges + ')</button>' : '') +
     (v.status === ST_NEW ? '<button class="btn" id="recBtn" onclick="receive()">✋ استلام الفاتورة</button>' : '') + '</div>';
   if (canWork) {
     h += '<div class="box"><h3>✅ تم الإدخال على السيستم</h3>' +
@@ -444,6 +467,8 @@ function renderDetail() {
       '<div class="shots" id="shots"></div>' +
       '<div class="grid2"><div><small>رقم الفاتورة في السيستم</small><input id="sysNo" dir="ltr"></div>' +
       '<div><small>رصيد المورد على السيستم</small><input id="bal" dir="ltr"></div></div>' +
+      (v.priceChanges ? '<div class="pricebox"><label><input type="checkbox" id="pricesDone"> 🏷 تم تعديل أسعار البيع على السيستم (' + v.priceChanges + ' صنف)</label>' +
+        '<small style="color:var(--muted)">لازم تعدّل أسعار البيع المعلّمة بالبنفسجي قبل ما تقفل الفاتورة - الإكسل بتاعها في الزرار البنفسجي فوق</small></div>' : '') +
       '<div class="err" id="doneErr"></div>' +
       '<button class="btn green" id="doneBtn" style="width:100%;padding:13px;font-size:17px" onclick="done()">تم الإدخال ✓</button></div>';
   } else {
@@ -502,16 +527,26 @@ async function receive() {
   catch (e) { toast(msg(e)); b.disabled = false; }
 }
 
-// ---------- الإكسل: 4 أعمدة ----------
-function excel() {
-  const v = cur.invoice;
-  const rows = [['اسم الصنف', 'الكمية', 'السعر', 'الإجمالي']].concat(cur.lines.map(l => [l.name, l.pieces, Math.round(l.piecePrice * 10000) / 10000, l.total]));
+// ---------- الإكسل: 4 أعمدة (xlsx أو xls 2003) ----------
+function saveSheet(rows, cols, sheet, name, type) {
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 40 }, { wch: 10 }, { wch: 12 }, { wch: 14 }];
+  ws['!cols'] = cols.map(w => ({ wch: w }));
   const wb = XLSX.utils.book_new();
   wb.Workbook = { Views: [{ RTL: true }] };
-  XLSX.utils.book_append_sheet(wb, ws, 'الفاتورة');
-  XLSX.writeFile(wb, ('فاتورة ' + v.supplier + ' - ' + v.store).replace(/[\\/:*?"<>|]/g, '-') + '.xlsx');
+  XLSX.utils.book_append_sheet(wb, ws, sheet);
+  const file = name.replace(/[\\/:*?"<>|]/g, '-') + '.' + type;
+  XLSX.writeFile(wb, file, { bookType: type === 'xls' ? 'biff8' : 'xlsx' });
+}
+function excel(type) {
+  const v = cur.invoice;
+  const rows = [['اسم الصنف', 'الكمية', 'السعر', 'الإجمالي']].concat(cur.lines.map(l => [l.name, l.pieces, Math.round(l.piecePrice * 10000) / 10000, l.total]));
+  saveSheet(rows, [40, 10, 12, 14], 'الفاتورة', 'فاتورة ' + v.supplier + ' - ' + v.store, type || 'xlsx');
+}
+// الأصناف اللي سعر بيعها اتعدل بس: اسم الصنف والسعر الجديد
+function pricesExcel() {
+  const v = cur.invoice;
+  const rows = [['اسم الصنف', 'سعر البيع الجديد']].concat(cur.lines.filter(l => l.newSale !== null).map(l => [l.name, l.newSale]));
+  saveSheet(rows, [40, 16], 'الأسعار', 'أسعار بيع - ' + v.supplier + ' - ' + v.store, 'xls');
 }
 
 // ---------- سكرينات السيستم ----------
@@ -556,9 +591,11 @@ async function done() {
   if (!shots.length) return err.textContent = 'ارفع سكرين واحد على الأقل من السيستم';
   if (!sys) return err.textContent = 'اكتب رقم الفاتورة في السيستم';
   if (!bal) return err.textContent = 'اكتب رصيد المورد على السيستم';
+  const pricesDone = !!($('pricesDone') && $('pricesDone').checked);
+  if (cur.invoice.priceChanges && !pricesDone) return err.textContent = 'عدّل أسعار البيع على السيستم وعلّم "تم تعديل أسعار البيع" الأول';
   b.disabled = true; b.innerHTML = '<span class="spin"></span> بيترفع...';
   try {
-    cur = await api('dDone', { token, id: cur.invoice.id, systemNo: sys, balance: bal, screens: shots.map(s => s.split(',')[1]) }, true);
+    cur = await api('dDone', { token, id: cur.invoice.id, systemNo: sys, balance: bal, screens: shots.map(s => s.split(',')[1]), pricesDone }, true);
     shots = []; pIdx = 0; toast('تم الإدخال ✅'); renderDetail(); loadList(true);
   } catch (e) { err.textContent = msg(e); b.disabled = false; b.textContent = 'تم الإدخال ✓'; }
 }
@@ -673,6 +710,61 @@ function download() { const a = document.createElement('a'); a.href = $('mergedI
 async function copyCap() {
   try { await navigator.clipboard.writeText(captionText(cur.invoice)); toast('اتنسخت الجملة 📋'); }
   catch (e) { const r = document.createRange(); r.selectNode($('cap')); getSelection().removeAllRanges(); getSelection().addRange(r); toast('حدّد الجملة وانسخها'); }
+}
+
+// ---------- تقارير الفروع (للطباعة / PDF) ----------
+function isoDay(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function renderRepForm() {
+  if ($('repStore')) return;
+  const today = new Date(now()), first = new Date(today.getFullYear(), today.getMonth(), 1);
+  $('pageRep').innerHTML = '<div class="pane"><h2 style="margin-top:0;color:var(--navy)">📊 تقرير فواتير فرع</h2>' +
+    '<p style="color:var(--muted);margin-top:-6px">الفواتير اللي اتدخلت على السيستم خلال الفترة، بشكل جاهز للطباعة أو الحفظ PDF</p>' +
+    '<div class="report-form"><div><small>الفرع</small><select id="repStore">' + stores.map(s => '<option>' + esc(s) + '</option>').join('') + '</select></div>' +
+    '<div><small>من</small><input type="date" id="repFrom" value="' + isoDay(first) + '"></div>' +
+    '<div><small>إلى</small><input type="date" id="repTo" value="' + isoDay(today) + '"></div>' +
+    '<button class="btn" style="padding:12px 20px" onclick="makeReport()">📄 اعمل التقرير</button></div></div>';
+}
+function makeReport() {
+  const st = $('repStore').value, from = new Date($('repFrom').value + 'T00:00:00'), to = new Date($('repTo').value + 'T23:59:59');
+  const done = all.filter(v => v.store === st && v.status === ST_DONE && v.doneAt && new Date(v.doneAt) >= from && new Date(v.doneAt) <= to)
+    .sort((a, b) => a.doneAt.localeCompare(b.doneAt));
+  const pending = all.filter(v => v.store === st && v.status !== ST_DONE).length;
+  const total = done.reduce((s, v) => s + v.total, 0);
+  const avg = done.length ? done.reduce((s, v) => s + mins(v.createdAt, v.doneAt), 0) / done.length : 0;
+  const ontime = done.length ? done.filter(v => mins(v.createdAt, v.doneAt) <= SLA_MIN).length / done.length : 0;
+  const pch = done.reduce((s, v) => s + (v.priceChanges || 0), 0);
+  const bySup = {};
+  done.forEach(v => { const x = bySup[v.supplier] = bySup[v.supplier] || { n: 0, t: 0 }; x.n++; x.t += v.total; });
+  const supRows = Object.entries(bySup).sort((a, b) => b[1].t - a[1].t);
+  const d2 = x => new Date(x).toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric', year: 'numeric' });
+  const logo = new URL('logo_wide.png', location.href).href;
+  const html = '<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير ' + esc(st) + '</title>' +
+    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap">' +
+    '<style>body{font-family:Cairo,Tahoma,sans-serif;margin:0;color:#17212E;background:#fff}.page{max-width:1000px;margin:0 auto;padding:28px}' +
+    '.hd{display:flex;align-items:center;justify-content:space-between;border-bottom:4px solid #1479D3;padding-bottom:14px}.hd img{height:70px}' +
+    '.hd h1{margin:0;font-size:24px;color:#0B3D6E}.hd p{margin:2px 0;color:#6B7785}.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:18px 0}' +
+    '.k{border-radius:14px;padding:12px;color:#fff}.k small{opacity:.9}.k b{display:block;font-size:22px}.k1{background:#1479D3}.k2{background:#22A04B}.k3{background:#E67E00}.k4{background:#6C4BD8}.k5{background:#0B3D6E}' +
+    'table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}th{background:#0B3D6E;color:#fff;padding:8px 6px;text-align:right}td{padding:7px 6px;border-bottom:1px solid #DFE7F1}' +
+    'tr:nth-child(even) td{background:#F6F9FD}.num{direction:ltr;text-align:left;font-variant-numeric:tabular-nums}h2{color:#0B3D6E;margin:24px 0 6px;font-size:18px}' +
+    '.ft{margin-top:26px;border-top:1px solid #DFE7F1;padding-top:10px;color:#6B7785;font-size:12px;display:flex;justify-content:space-between}' +
+    '.pb{position:fixed;top:14px;left:14px}.pb button{font-family:Cairo;font-size:15px;font-weight:700;background:#1479D3;color:#fff;border:0;border-radius:10px;padding:10px 18px;cursor:pointer}' +
+    '@media print{.pb{display:none}.page{padding:0}}</style></head><body><div class="pb"><button onclick="print()">🖨 طباعة / حفظ PDF</button></div><div class="page">' +
+    '<div class="hd"><div><h1>تقرير فواتير المشتريات</h1><p><b>' + esc(st) + '</b></p><p>من ' + d2(from) + ' إلى ' + d2(to) + '</p></div><img src="' + logo + '"></div>' +
+    '<div class="grid"><div class="k k1"><small>فواتير اتدخلت</small><b>' + done.length + '</b></div><div class="k k2"><small>إجمالي المشتريات</small><b>' + money(total) + '</b></div>' +
+    '<div class="k k3"><small>متوسط وقت الإدخال</small><b>' + durTxt(avg) + '</b></div><div class="k k4"><small>في الميعاد (≤ ' + SLA_MIN + ' د)</small><b>' + Math.round(ontime * 100) + '%</b></div>' +
+    '<div class="k k5"><small>تعديلات أسعار البيع</small><b>' + pch + '</b></div></div>' +
+    (pending ? '<p style="color:#E67E00;font-weight:700">⏳ فيه ' + pending + ' فاتورة للفرع لسه ما دخلتش السيستم</p>' : '') +
+    '<h2>الفواتير</h2><table><thead><tr><th>#</th><th>تاريخ الإدخال</th><th>المورد</th><th>رقم فاتورة المورد</th><th>رقم السيستم</th><th>أصناف</th><th>الإجمالي</th><th>رصيد المورد</th><th>أدخلها</th><th>المدة</th></tr></thead><tbody>' +
+    (done.length ? done.map((v, k) => '<tr><td>' + (k + 1) + '</td><td>' + dt(v.doneAt) + '</td><td>' + esc(v.supplier) + '</td><td>' + esc(v.number || '-') + '</td><td>' + esc(v.systemNo) +
+      '</td><td class="num">' + v.count + '</td><td class="num">' + money(v.total) + '</td><td class="num">' + esc(v.balance) + '</td><td>' + esc(v.doneBy) + '</td><td>' + durTxt(mins(v.createdAt, v.doneAt)) + '</td></tr>').join('')
+      : '<tr><td colspan="10" style="text-align:center;padding:20px">مفيش فواتير اتدخلت في الفترة دي</td></tr>') +
+    (done.length ? '<tr><td></td><td colspan="5"><b>الإجمالي</b></td><td class="num"><b>' + money(total) + '</b></td><td colspan="3"></td></tr>' : '') + '</tbody></table>' +
+    (supRows.length ? '<h2>ملخص الموردين</h2><table><thead><tr><th>المورد</th><th>عدد الفواتير</th><th>الإجمالي</th></tr></thead><tbody>' +
+      supRows.map(([n, x]) => '<tr><td>' + esc(n) + '</td><td class="num">' + x.n + '</td><td class="num">' + money(x.t) + '</td></tr>').join('') + '</tbody></table>' : '') +
+    '<div class="ft"><span>مدقق - Mudaqeq</span><span>اتعمل ' + dt(new Date(now()).toISOString()) + ' بواسطة ' + esc(me) + '</span></div></div></body></html>';
+  const w = window.open('', '_blank');
+  if (!w) return toast('المتصفح منع فتح التقرير - اسمح بالنوافذ المنبثقة للموقع ده');
+  w.document.open(); w.document.write(html); w.document.close();
 }
 
 // ---------- أداء الدعم ----------
