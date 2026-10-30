@@ -751,7 +751,7 @@ async function done() {
 
 // ---------- الصورة المدمجة (بلوجو مدقق) ----------
 function captionText(v) {
-  return 'فاتورة مورد ' + v.supplier + ' اتدخلت على السيستم برقم ' + v.systemNo + ' - رصيد المورد ' + v.balance + ' - ' + v.store;
+  return 'فاتورة مورد ' + v.supplier + ' دخلت على السيستم برقم ' + v.systemNo + ' - رصيد المورد ' + v.balance + ' - ' + v.store;
 }
 function loadImage(src) { return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
 async function buildMerged() {
@@ -867,7 +867,7 @@ function renderRepForm() {
   if ($('repStore')) return;
   const today = new Date(now()), first = new Date(today.getFullYear(), today.getMonth(), 1);
   $('pageRep').innerHTML = '<div class="pane"><h2 style="margin-top:0;color:var(--navy)">📊 تقرير فواتير فرع</h2>' +
-    '<p style="color:var(--muted);margin-top:-6px">الفواتير اللي اتدخلت على السيستم خلال الفترة، بشكل جاهز للطباعة أو الحفظ PDF</p>' +
+    '<p style="color:var(--muted);margin-top:-6px">الفواتير اللي دخلت على السيستم خلال الفترة، بشكل جاهز للطباعة أو الحفظ PDF</p>' +
     '<div class="report-form"><div><small>الفرع</small><select id="repStore">' + stores.map(s => '<option>' + esc(s) + '</option>').join('') + '</select></div>' +
     '<div><small>من</small><input type="date" id="repFrom" value="' + isoDay(first) + '"></div>' +
     '<div><small>إلى</small><input type="date" id="repTo" value="' + isoDay(today) + '"></div>' +
@@ -899,14 +899,14 @@ function makeReport() {
     '.pb{position:fixed;top:14px;left:14px}.pb button{font-family:Cairo;font-size:15px;font-weight:700;background:#1479D3;color:#fff;border:0;border-radius:10px;padding:10px 18px;cursor:pointer}' +
     '@media print{.pb{display:none}.page{padding:0}}</style></head><body><div class="pb"><button onclick="print()">🖨 طباعة / حفظ PDF</button></div><div class="page">' +
     '<div class="hd"><div><h1>تقرير فواتير المشتريات</h1><p><b>' + esc(st) + '</b></p><p>من ' + d2(from) + ' إلى ' + d2(to) + '</p></div><img src="' + logo + '"></div>' +
-    '<div class="grid"><div class="k k1"><small>فواتير اتدخلت</small><b>' + done.length + '</b></div><div class="k k2"><small>إجمالي المشتريات</small><b>' + money(total) + '</b></div>' +
+    '<div class="grid"><div class="k k1"><small>فواتير دخلت</small><b>' + done.length + '</b></div><div class="k k2"><small>إجمالي المشتريات</small><b>' + money(total) + '</b></div>' +
     '<div class="k k3"><small>متوسط وقت الإدخال</small><b>' + durTxt(avg) + '</b></div><div class="k k4"><small>في الميعاد (≤ ' + SLA_MIN + ' د)</small><b>' + Math.round(ontime * 100) + '%</b></div>' +
     '<div class="k k5"><small>تعديلات أسعار البيع</small><b>' + pch + '</b></div></div>' +
     (waiting ? '<p style="color:#E67E00;font-weight:700">⏳ فيه ' + waiting + ' فاتورة للفرع لسه ما دخلتش السيستم</p>' : '') +
     '<h2>الفواتير</h2><table><thead><tr><th>#</th><th>تاريخ الإدخال</th><th>المورد</th><th>رقم فاتورة المورد</th><th>رقم السيستم</th><th>أصناف</th><th>الإجمالي</th><th>رصيد المورد</th><th>أدخلها</th><th>المدة</th></tr></thead><tbody>' +
     (done.length ? done.map((v, k) => '<tr><td>' + (k + 1) + '</td><td>' + dt(v.doneAt) + '</td><td>' + esc(v.supplier) + '</td><td>' + esc(v.number || '-') + '</td><td>' + esc(v.systemNo) +
       '</td><td class="num">' + v.count + '</td><td class="num">' + money(v.total) + '</td><td class="num">' + esc(v.balance) + '</td><td>' + esc(v.doneBy) + '</td><td>' + durTxt(mins(v.createdAt, v.doneAt)) + '</td></tr>').join('')
-      : '<tr><td colspan="10" style="text-align:center;padding:20px">مفيش فواتير اتدخلت في الفترة دي</td></tr>') +
+      : '<tr><td colspan="10" style="text-align:center;padding:20px">مفيش فواتير دخلت في الفترة دي</td></tr>') +
     (done.length ? '<tr><td></td><td colspan="5"><b>الإجمالي</b></td><td class="num"><b>' + money(total) + '</b></td><td colspan="3"></td></tr>' : '') + '</tbody></table>' +
     (supRows.length ? '<h2>ملخص الموردين</h2><table><thead><tr><th>المورد</th><th>عدد الفواتير</th><th>الإجمالي</th></tr></thead><tbody>' +
       supRows.map(([n, x]) => '<tr><td>' + esc(n) + '</td><td class="num">' + x.n + '</td><td class="num">' + money(x.t) + '</td></tr>').join('') + '</tbody></table>' : '') +
@@ -948,7 +948,7 @@ function renderPerf() {
     '</select></div>';
   const tot = done.length, avgAll = tot ? done.reduce((s, v) => s + mins(v.createdAt, v.doneAt), 0) / tot : 0;
   const onAll = tot ? done.filter(v => mins(v.createdAt, v.doneAt) <= SLA_MIN).length / tot : 0;
-  h += '<div class="stats"><div class="stat s3"><small>فواتير اتدخلت</small><b>' + tot + '</b></div>' +
+  h += '<div class="stats"><div class="stat s3"><small>فواتير دخلت</small><b>' + tot + '</b></div>' +
     '<div class="stat s2"><small>متوسط الوقت</small><b>' + durTxt(avgAll) + '</b></div>' +
     '<div class="stat s1"><small>في الميعاد (≤ ' + SLA_MIN + ' د)</small><b>' + Math.round(onAll * 100) + '%</b></div>' +
     '<div class="stat s4"><small>متأخرة دلوقتي</small><b>' + all.filter(v => pending(v) && mins(v.createdAt, now()) > SLA_MIN).length + '</b></div></div>';
@@ -963,7 +963,7 @@ function renderPerf() {
     '<div class="kpi"><small>شغّال عليها دلوقتي</small><b>' + (p.open || 0) + '</b></div>' +
     '</div><div class="bar"><i style="width:' + p.score + '%;background:' + colors(p.rate) + '"></i></div>' +
     '<small style="color:var(--muted)">الدرجة ' + p.score + '/100 (الالتزام بالوقت 60 + عدد الفواتير 40)</small></div>'
-  ).join('') + '</div>' : '<div class="pane empty">مفيش فواتير اتدخلت في الفترة دي</div>';
+  ).join('') + '</div>' : '<div class="pane empty">مفيش فواتير دخلت في الفترة دي</div>';
   // الفروع
   const byStore = {};
   all.filter(v => new Date(v.createdAt) >= start).forEach(v => {
@@ -972,7 +972,7 @@ function renderPerf() {
     if (v.status === ST_DONE) { s.done++; s.mins += mins(v.createdAt, v.doneAt); }
   });
   const sl = Object.entries(byStore).sort((a, b) => b[1].n - a[1].n);
-  if (sl.length) h += '<div class="pane stores-perf"><h3 style="margin-top:0;color:var(--navy)">🏪 الفروع</h3><table><thead><tr><th>الفرع</th><th>فواتير</th><th>اتدخلت</th><th>متوسط وقت الإدخال</th><th>قيمة الفواتير</th></tr></thead><tbody>' +
+  if (sl.length) h += '<div class="pane stores-perf"><h3 style="margin-top:0;color:var(--navy)">🏪 الفروع</h3><table><thead><tr><th>الفرع</th><th>فواتير</th><th>دخلت</th><th>متوسط وقت الإدخال</th><th>قيمة الفواتير</th></tr></thead><tbody>' +
     sl.map(([n, s]) => '<tr><td>' + esc(n) + '</td><td class="num">' + s.n + '</td><td class="num">' + s.done + '</td><td>' + (s.done ? durTxt(s.mins / s.done) : '-') + '</td><td class="num">' + money(s.total) + '</td></tr>').join('') + '</tbody></table></div>';
   $('pagePerf').innerHTML = h;
 }
