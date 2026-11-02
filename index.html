@@ -53,6 +53,26 @@
   .nav button { background: transparent; color: var(--muted); padding: 8px 14px; }
   .nav button.on { background: var(--sky); color: var(--blue-2); }
   .bell { position: relative; }
+  /* عداد النت */
+  .net { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; border: 1px solid transparent; transition: background .4s, color .4s; white-space: nowrap; }
+  .net .bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
+  .net .bars i { width: 4px; border-radius: 2px; background: currentColor; opacity: .25; transition: opacity .4s; }
+  .net .bars i:nth-child(1) { height: 5px; } .net .bars i:nth-child(2) { height: 9px; } .net .bars i:nth-child(3) { height: 14px; }
+  .net .bars i.on { opacity: 1; }
+  .net.good { background: #E7F6EC; color: #1E7D3A; border-color: #BFE5CB; }
+  .net.ok { background: #FFF6E0; color: #9A6700; border-color: #F5DD9C; }
+  .net.slow { background: #FFEBD9; color: #C25400; border-color: #F7C9A0; }
+  .net.off { background: #FDECEA; color: #B3261E; border-color: #F5C2BD; animation: netblink 1s infinite; }
+  @keyframes netblink { 50% { opacity: .55; } }
+  /* الاستعجال */
+  .urge { display: inline-block; background: #B3261E; color: #fff; border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 800; animation: urgepulse 1.2s infinite; }
+  @keyframes urgepulse { 50% { box-shadow: 0 0 0 5px rgba(179,38,30,.18); } }
+  .card.urged { border-inline-start: 5px solid #B3261E; }
+  .urgebox { background: #FDECEA; border: 1px solid #F5C2BD; color: #8C1D18; border-radius: 12px; padding: 10px 14px; margin: 10px 0; line-height: 1.8; }
+  .urgebox ul { margin: 4px 0 0; padding-inline-start: 20px; }
+  .pricebox { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
+  .pricebox .up { background: #FDECEA; color: #B3261E; border-radius: 999px; padding: 3px 10px; font-weight: 700; }
+  .pricebox .down { background: #E7F6EC; color: #1E7D3A; border-radius: 999px; padding: 3px 10px; font-weight: 700; }
   .bell.off::after { content: ''; position: absolute; top: 6px; left: 8px; width: 9px; height: 9px; background: var(--red); border-radius: 50%; }
 
   /* ---------- الإحصائيات ---------- */
@@ -225,6 +245,7 @@
         <button id="navRep" onclick="page('rep')">📊 تقارير الفروع</button>
       </div>
       <span class="sp"></span>
+      <span class="net good" id="netPill" onclick="netInfo()" title="سرعة النت"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><span id="netTxt">النت...</span></span>
       <button class="btn soft bell" id="bellBtn" onclick="enableAlerts()" title="الإشعارات والصوت">🔔</button>
       <button class="btn soft" onclick="loadList()" title="تحديث">⟳</button>
       <span class="who" id="who"></span>
@@ -397,6 +418,25 @@ function ding() {
     });
   } catch (e) {}
 }
+// نغمة مزعجة (إنذار) - للفواتير المستنية كل 5 دقايق وللاستعجال
+function alarm(times) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume();
+    const t0 = audioCtx.currentTime, n = times || 8;
+    for (let k = 0; k < n; k++) {
+      const d = k * .42;
+      [[1400, 0], [700, .21]].forEach(([f, e]) => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'square'; o.frequency.value = f;
+        g.gain.setValueAtTime(0, t0 + d + e); g.gain.linearRampToValueAtTime(.22, t0 + d + e + .01);
+        g.gain.setValueAtTime(.22, t0 + d + e + .18); g.gain.linearRampToValueAtTime(0, t0 + d + e + .2);
+        o.connect(g); g.connect(audioCtx.destination); o.start(t0 + d + e); o.stop(t0 + d + e + .21);
+      });
+    }
+  } catch (e) {}
+  if (navigator.vibrate) try { navigator.vibrate([400, 150, 400, 150, 400]); } catch (e) {}
+}
 function alertNew(list) {
   ding();
   const t = list.length === 1 ? (list[0].rejectCount ? 'الفرع عدّل وبعت تاني: ' : 'فاتورة جديدة من ') + list[0].store : list.length + ' فواتير جديدة';
@@ -429,10 +469,61 @@ function pendingAlert() {
   const t = '⏳ ' + list.length + (list.length === 1 ? ' فاتورة مستنية' : ' فواتير مستنية') + ' الإدخال';
   const b = (nNew ? nNew + ' لسه محدش استلمها' : '') + (nNew && nWork ? ' • ' : '') + (nWork ? nWork + ' بيتدخلوا' : '') + '\n' +
     list.slice(0, 4).map(v => v.store + ' - ' + v.supplier + ' (' + durTxt(mins(v.createdAt, now())) + ')').join('\n');
-  ding(); notify(t, b, list[0].id, 'pending');
+  alarm(8); notify(t, b, list[0].id, 'pending');
   toast(t);
 }
 setInterval(pendingAlert, 60000);
+let urgeKnown = null;
+
+// ---------- تقرير الزيادة والنقص PDF ----------
+async function reportPdf() {
+  const v = cur.invoice;
+  toast('بجهز التقرير...');
+  try {
+    const r = await api('dReport', { token, id: v.id }, true);
+    const bin = atob(r.pdf), arr = new Uint8Array(bin.length);
+    for (let k = 0; k < bin.length; k++) arr[k] = bin.charCodeAt(k);
+    await saveBlob(new Blob([arr], { type: 'application/pdf' }), r.name || ('تقرير ' + v.supplier + '.pdf'));
+  } catch (e) { toast(msg(e)); }
+}
+
+// ---------- عداد النت (شغال على طول) ----------
+const net = { ms: [], fails: 0, last: 0, state: 'good' };
+async function netProbe() {
+  if (!navigator.onLine) return netSet(null);
+  const t = performance.now();
+  try {
+    const c = new AbortController(), to = setTimeout(() => c.abort(), 8000);
+    await fetch('icon.png?n=' + Date.now(), { method: 'HEAD', cache: 'no-store', signal: c.signal });
+    clearTimeout(to);
+    netSet(performance.now() - t);
+  } catch (e) { netSet(null); }
+}
+function netSet(ms) {
+  if (ms === null) { net.fails++; } else { net.fails = 0; net.ms.push(ms); if (net.ms.length > 5) net.ms.shift(); net.last = ms; }
+  const avg = net.ms.length ? net.ms.reduce((a, b) => a + b, 0) / net.ms.length : 0;
+  const st = net.fails >= 2 || !navigator.onLine ? 'off' : net.fails === 1 || avg > 1500 ? 'slow' : avg > 600 ? 'ok' : 'good';
+  const bars = { good: 3, ok: 2, slow: 1, off: 0 }[st];
+  const txt = { good: 'النت ممتاز', ok: 'النت كويس', slow: 'النت بطيء', off: 'النت فاصل' }[st];
+  const pill = $('netPill');
+  if (!pill) return;
+  pill.className = 'net ' + st;
+  pill.querySelectorAll('.bars i').forEach((b, k) => b.classList.toggle('on', k < bars));
+  $('netTxt').textContent = txt + (st !== 'off' && net.last ? ' • ' + Math.round(net.last) + 'ms' : '');
+  if (st === 'off' && net.state !== 'off') toast('⚠️ النت فاصل - الفواتير الجديدة مش هتوصلك لحد ما يرجع');
+  if (st !== 'off' && net.state === 'off') { toast('✅ النت رجع'); loadList(true); }
+  net.state = st;
+}
+function netInfo() {
+  const c = navigator.connection || {};
+  const avg = net.ms.length ? Math.round(net.ms.reduce((a, b) => a + b, 0) / net.ms.length) : 0;
+  toast('سرعة الرد: ' + (net.last ? Math.round(net.last) + 'ms' : '-') + ' • المتوسط: ' + (avg || '-') + 'ms' +
+    (c.downlink ? ' • التحميل تقريبًا ' + c.downlink + ' Mbps' : '') + (c.effectiveType ? ' (' + c.effectiveType + ')' : ''));
+}
+window.addEventListener('online', netProbe);
+window.addEventListener('offline', () => netSet(null));
+setInterval(netProbe, 5000);
+netProbe();
 function updateTitle() {
   const n = all.filter(v => v.status === ST_NEW).length;
   document.title = (n ? '(' + n + ') ' : '') + 'فواتير المشتريات - مدقق';
@@ -445,6 +536,8 @@ async function loadList(quiet) {
     if (r.now) skew = new Date(r.now).getTime() - Date.now();
     const fresh = known ? r.invoices.filter(v => (!known.has(v.id) && v.status === ST_NEW) || (prevStatus[v.id] === ST_REJ && v.status === ST_NEW)) : [];
     const reviews = revKnown ? r.invoices.filter(v => v.reviewedBy && !revKnown.has(v.id)) : [];
+    const urged = urgeKnown ? r.invoices.filter(v => (v.urgeCount || 0) > (urgeKnown[v.id] || 0) && pending(v)) : [];
+    urgeKnown = {}; r.invoices.forEach(v => { urgeKnown[v.id] = v.urgeCount || 0; });
     known = new Set(r.invoices.map(v => v.id));
     revKnown = new Set(r.invoices.filter(v => v.reviewedBy).map(v => v.id));
     prevStatus = {}; r.invoices.forEach(v => { prevStatus[v.id] = v.status; });
@@ -455,6 +548,14 @@ async function loadList(quiet) {
     renderStats(); renderList(); updateTitle();
     if (!$('pagePerf').classList.contains('hidden')) renderPerf();
     if (fresh.length) { alertNew(fresh); pendAt = now(); }
+    if (urged.length) {
+      alarm(10);
+      const u = urged[0], who = (u.urgeLog || '').split('\n').pop().split(' - ')[0];
+      const t = '🔥 ' + u.store + ' بيستعجل فاتورة ' + u.supplier + (u.urgeCount > 1 ? ' (للمرة ' + u.urgeCount + ')' : '');
+      notify(t, (who ? who + ' داس استعجال' : 'الفرع داس استعجال') + ' - مستنية من ' + durTxt(mins(u.createdAt, now())) +
+        (urged.length > 1 ? '\nو' + (urged.length - 1) + ' فواتير تانية مستعجلة' : ''), u.id, 'urge-' + u.id);
+      toast(t);
+    }
     reviews.forEach(v => {
       if (v.reviewNotes) {
         ding();
@@ -471,6 +572,7 @@ function renderStats() {
   const doneToday = all.filter(v => v.status === ST_DONE && new Date(v.doneAt) >= today).length;
   const late = all.filter(v => pending(v) && mins(v.createdAt, now()) > SLA_MIN).length;
   const nRej = all.filter(v => v.status === ST_REJ).length;
+  const nUrge = all.filter(v => pending(v) && v.urgeCount).length;
   const nRev = all.filter(v => v.status === ST_DONE && !v.reviewedBy && new Date(v.doneAt) >= new Date(now() - 3 * 86400000)).length;
   const work = inWork(now());
   $('stats').innerHTML =
@@ -480,6 +582,7 @@ function renderStats() {
     '<div class="stat s3"><small>✅ تم الإدخال</small><b>' + doneToday + '</b></div>' +
     '<div class="stat s4"><small>⚠️ متأخرة (أكتر من ' + SLA_MIN + ' د)</small><b>' + late + '</b></div>' +
     '<div class="stat s6"><small>↩️ مرفوضة عند الفرع</small><b>' + nRej + '</b></div>' +
+    (nUrge ? '<div class="stat s4"><small>🔥 الفرع مستعجلها</small><b>' + nUrge + '</b></div>' : '') +
     '<div class="stat s5"><small>👀 مستنية مراجعة الفرع</small><b>' + nRev + '</b></div>';
 }
 function renderList() {
@@ -490,10 +593,11 @@ function renderList() {
   $('tabs').innerHTML = [[ST_NEW, cnt(ST_NEW)], [ST_WORK, cnt(ST_WORK)], [ST_DONE, cnt(ST_DONE)], [ST_REJ, cnt(ST_REJ)], [TAB_NOTES, notes], ['الكل', base.length]]
     .map(([t, n]) => '<button class="tab' + (tab === t ? ' on' : '') + '" onclick="tab=\'' + t + '\';renderList()">' + t + '<span class="n">' + n + '</span></button>').join('');
   let list = base.filter(v => tab === 'الكل' || (tab === TAB_NOTES ? !!v.reviewNotes : v.status === tab));
-  if (tab === ST_NEW || tab === ST_WORK) list = list.slice().sort((a, b) => a.createdAt.localeCompare(b.createdAt)); // الأقدم الأول
+  // الأقدم الأول، والمستعجلة فوق خالص
+  if (tab === ST_NEW || tab === ST_WORK) list = list.slice().sort((a, b) => (b.urgeCount ? 1 : 0) - (a.urgeCount ? 1 : 0) || a.createdAt.localeCompare(b.createdAt));
   $('list').innerHTML = list.length ? list.map(v =>
-    '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
-    '<div class="top"><span class="sup">' + esc(v.supplier) + '</span>' + timerHtml(v) + '</div>' +
+    '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : '') + (v.urgeCount && pending(v) ? ' urged' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
+    '<div class="top"><span class="sup">' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + '</span>' + timerHtml(v) + '</div>' +
     '<div class="meta">🏪 ' + esc(v.store) + ' • ' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
     '<div class="meta">' + badge(v.status) + ' ' + v.count + ' صنف • <span class="money">' + money(v.total) + ' ج.م</span>' +
     (v.receivedBy ? ' • 👤 ' + esc(v.receivedBy) : '') + (v.systemNo ? ' • #' + esc(v.systemNo) : '') +
@@ -540,6 +644,13 @@ function renderDetail() {
     (v.status === ST_DONE ? i('رقم الفاتورة في السيستم', v.systemNo) + i('رصيد المورد', v.balance) + i('أدخلها', v.doneBy + ' - ' + dt(v.doneAt)) : '') +
     '</div>';
   if (v.totalNote) h += '<div class="warnbox">⚠️ ' + esc(v.totalNote) + '</div>';
+  if (v.urgeCount) {
+    h += '<div class="urgebox"><b>🔥 الفرع استعجل الفاتورة دي ' + v.urgeCount + (v.urgeCount === 1 ? ' مرة' : ' مرات') + '</b><ul>' +
+      (v.urgeLog || '').split('\n').filter(Boolean).map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></div>';
+  }
+  h += '<div class="pricebox">' + (v.priceUps ? '<span class="up">📈 ' + v.priceUps + ' صنف سعره زاد</span>' : '') +
+    (v.priceDowns ? '<span class="down">📉 ' + v.priceDowns + ' صنف سعره نقص</span>' : '') +
+    '<button class="btn soft" onclick="reportPdf()">📄 تقرير الزيادة والنقص (PDF)</button></div>';
   if (v.status === ST_REJ) {
     h += '<div class="rejbox"><b>❌ الفاتورة مرفوضة ورجعت للفرع</b><br>السبب: <b>' + esc(v.rejectReason) + '</b><br>' +
       'رجّعها ' + esc(v.rejectedBy) + ' - ' + dt(v.rejectedAt) + '<br>مستنية الفرع يعدّلها ويبعتها تاني</div>';
