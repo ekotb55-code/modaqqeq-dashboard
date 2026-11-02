@@ -184,6 +184,19 @@
   .b-work { background: #E3F0FD; color: var(--blue); }
   .b-done { background: #E2F5E6; color: var(--green); }
   .b-rej { background: #FDE2E2; color: #C62828; }
+  .b-qa { background: #EDE7F6; color: #5B3CC4; }
+  .card.st-qa, .bcard.st-qa { border-inline-start-color: #6C4BD8; }
+  .s11 { background: linear-gradient(135deg, #7E57C2, #4527A0); }
+  .qabox { background: #F6F2FF; border: 1px solid #D9CCF7; border-radius: 16px; padding: 14px; margin: 12px 0; }
+  .qabox h3 { margin: 0 0 8px; color: #4527A0; font-size: 16px; }
+  .qaitems { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin: 8px 0; }
+  .qait { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #fff; border: 1px solid #E3DAF7; border-radius: 12px; padding: 7px 10px; font-weight: 700; }
+  .qait .tg { display: inline-flex; gap: 4px; }
+  .qait .tg button { border: 1px solid #D6DFEA; background: #fff; border-radius: 10px; width: 40px; height: 32px; font-size: 16px; cursor: pointer; }
+  .qait .tg button.ok.on { background: #2BB45A; color: #fff; border-color: #2BB45A; }
+  .qait .tg button.bad.on { background: #E53935; color: #fff; border-color: #E53935; }
+  .qaret { background: #FDECEA; border: 1px solid #F5C2BD; border-radius: 14px; padding: 12px; margin: 10px 0; color: #8C1D18; line-height: 1.8; }
+  .qalog { font-size: 13px; color: #4A5868; margin-top: 6px; line-height: 1.8; }
   .card.st-rej { border-inline-start-color: var(--red); opacity: .85; }
   .rv { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 20px; }
   .rv-ok { background: #E2F5E6; color: #15803D; } .rv-wait { background: #FFF5D6; color: #A16207; } .rv-note { background: #F4EEFF; color: #4B2FB5; }
@@ -364,6 +377,9 @@
 const API = 'https://script.google.com/macros/s/AKfycbxUjxuVtROKO7MrxHtmBfzOxsjgwgfvWMVodCHxUdxuFszmgTyWMQFavjt82iJ8U0s/exec';
 const SLA_MIN = 30, WARN_MIN = 20;          // الفاتورة لازم تدخل خلال 30 دقيقة (أصفر من 20)
 const ST_NEW = 'جديدة', ST_WORK = 'يتم الادخال', ST_DONE = 'تم الإدخال', ST_REJ = 'مرفوضة', TAB_NOTES = '📝 ملاحظات الفروع';
+const ST_QA = 'مستنية الجودة', QA_SLA_MIN = 15; // قسم الجودة بيراجع بعد إدخال الدعم
+const QA_ITEMS = ['الأصناف', 'الكميات', 'أسعار الشراء', 'أسعار البيع', 'المورد', 'رقم فاتورة المورد', 'الإجمالي', 'صورة السيستم'];
+let myRole = '';
 // مواعيد العمل: من 9 الصبح لحد 1 بالليل - برة المواعيد العداد بيقف
 const OFF_FROM = 1, OFF_TO = 9;
 const PENDING_ALERT_MIN = 5; // تنبيه كل 5 دقايق طول ما فيه فواتير مستنية
@@ -391,7 +407,14 @@ function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 function money(v) { return Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function num(v) { return Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 3 }); }
 function dt(s) { if (!s) return ''; const d = new Date(s); return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric' }) + ' ' + d.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' }); }
-function badge(s) { return '<span class="badge ' + (s === ST_DONE ? 'b-done' : s === ST_WORK ? 'b-work' : s === ST_REJ ? 'b-rej' : 'b-new') + '">' + esc(s || ST_NEW) + '</span>'; }
+function badge(s) { return '<span class="badge ' + (s === ST_DONE ? 'b-done' : s === ST_WORK ? 'b-work' : s === ST_REJ ? 'b-rej' : s === ST_QA ? 'b-qa' : 'b-new') + '">' + esc(s || ST_NEW) + '</span>'; }
+function isQA() { return myRole === 'جودة'; }
+function canQA() { return myRole === 'جودة' || myRole === 'مدير'; }
+function qaLate(v) { return v.status === ST_QA && v.doneAt && mins(v.doneAt, now()) > QA_SLA_MIN; }
+// سجل الجودة: سطور "نوع|وقت|اسم|ملاحظة"
+function qaLogList(v) {
+  return String(v.qaLog || '').split('\n').filter(Boolean).map(l => { const p = l.split('|'); return { type: p[0], at: p[1], name: p[2], note: p[3] || '' }; });
+}
 function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
 function now() { return Date.now() + skew; }
 // وقت الشغل بس بين وقتين (من غير الفترة من 1 بالليل لـ 9 الصبح)
@@ -547,6 +570,18 @@ function notify(title, body, id, tag) {
 }
 function pendingAlert() {
   if (!token || !all.length || !inWork(now())) return;
+  // الجودة: التنبيه على الفواتير المستنية مراجعتهم
+  if (isQA()) {
+    const q = all.filter(v => v.status === ST_QA);
+    if (!q.length) { pendAt = 0; return; }
+    if (pendAt && now() - pendAt < PENDING_ALERT_MIN * 60000) return;
+    if (!pendAt) { pendAt = now(); return; }
+    pendAt = now();
+    const t = '🔍 ' + q.length + (q.length === 1 ? ' فاتورة مستنية' : ' فواتير مستنية') + ' مراجعة الجودة';
+    alarm(8); notify(t, q.slice(0, 4).map(v => v.store + ' - ' + v.supplier + ' (' + durTxt(mins(v.doneAt, now())) + ')').join('\n'), q[0].id, 'pending');
+    toast(t);
+    return;
+  }
   const list = all.filter(pending).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   if (!list.length) { pendAt = 0; return; }
   if (pendAt && now() - pendAt < PENDING_ALERT_MIN * 60000) return;
@@ -627,9 +662,11 @@ async function loadList(quiet) {
     urgeKnown = {}; r.invoices.forEach(v => { urgeKnown[v.id] = v.urgeCount || 0; });
     known = new Set(r.invoices.map(v => v.id));
     revKnown = new Set(r.invoices.filter(v => v.reviewedBy).map(v => v.id));
+    const oldStatus = prevStatus;
     prevStatus = {}; r.invoices.forEach(v => { prevStatus[v.id] = v.status; });
     all = r.invoices; stores = r.stores;
     chatSum = r.chat || { threads: [], replies: [] };
+    if (r.me) { const first = !myRole; myRole = r.me.role || 'دعم'; $('who').textContent = '👤 ' + me + (isQA() ? ' (الجودة)' : ''); if (first && isQA()) { tab = ST_QA; } }
     const newMsgs = chatKnown ? chatSum.threads.filter(t => t.unread > (chatKnown[t.store + '|' + t.inv] || 0) && t.lastFrom === 'فرع') : [];
     chatKnown = {}; chatSum.threads.forEach(t => { chatKnown[t.store + '|' + t.inv] = t.unread; });
     const sel = $('fStore'), val = sel.value;
@@ -638,7 +675,22 @@ async function loadList(quiet) {
     renderStats(); renderList(); updateTitle();
     if (!$('pagePerf').classList.contains('hidden')) renderPerf();
     if (!$('pageStores').classList.contains('hidden')) renderBoard();
-    if (fresh.length) { alertNew(fresh); pendAt = now(); }
+    if (fresh.length && !isQA()) { alertNew(fresh); pendAt = now(); }
+    // الجودة: فاتورة جديدة وصلت للمراجعة
+    const toQA = Object.keys(oldStatus).length ? r.invoices.filter(v => v.status === ST_QA && oldStatus[v.id] !== ST_QA) : [];
+    if (toQA.length && canQA()) {
+      ding();
+      notify('🔍 ' + (toQA.length === 1 ? 'فاتورة مستنية مراجعة الجودة' : toQA.length + ' فواتير مستنية مراجعة الجودة'),
+        toQA.map(v => v.store + ' - ' + v.supplier + ' (دخّلها ' + v.doneBy + ')').join('\n'), toQA[0].id, 'qa');
+      toast('🔍 فاتورة جديدة للجودة: ' + toQA[0].supplier);
+    }
+    // الدعم: الجودة رجّعتلي فاتورة
+    const back = Object.keys(oldStatus).length ? r.invoices.filter(v => oldStatus[v.id] === ST_QA && v.status === ST_WORK && v.receivedBy === me) : [];
+    back.forEach(v => {
+      alarm(4);
+      notify('↩️ الجودة رجّعتلك فاتورة ' + v.supplier, v.qaNotes, v.id, 'qaret-' + v.id);
+      toast('↩️ الجودة رجّعت فاتورة ' + v.supplier + ': ' + v.qaNotes);
+    });
     newMsgs.forEach(t => {
       const v = t.inv ? all.find(x => x.id === t.inv) : null;
       const title = '💬 ' + t.store + (v ? ' - فاتورة ' + v.supplier : ' - شات الفرع');
@@ -674,8 +726,9 @@ async function loadList(quiet) {
 const CARD_TABS = [
   { k: ST_NEW, c: 's1', t: '🆕 جديدة', f: v => v.status === ST_NEW || !v.status },
   { k: ST_WORK, c: 's2', t: '⚙️ يتم الادخال', f: v => v.status === ST_WORK },
+  { k: ST_QA, c: 's11', t: '🔍 قسم الجودة', f: v => v.status === ST_QA },
   { k: ST_DONE, c: 's3', t: '✅ تم الإدخال', f: v => v.status === ST_DONE },
-  { k: 'late', c: 's4', t: '⚠️ متأخرة (أكتر من ' + SLA_MIN + ' د)', f: v => pending(v) && mins(v.createdAt, now()) > SLA_MIN },
+  { k: 'late', c: 's4', t: '⚠️ متأخرة (أكتر من ' + SLA_MIN + ' د)', f: v => (pending(v) && mins(v.createdAt, now()) > SLA_MIN) || qaLate(v) },
   { k: 'urge', c: 's7', t: '🔥 الفرع مستعجلها', f: v => pending(v) && v.urgeCount, hideEmpty: true },
   { k: ST_REJ, c: 's6', t: '↩️ مرفوضة عند الفرع', f: v => v.status === ST_REJ },
   { k: 'review', c: 's5', t: '👀 مستنية مراجعة الفرع', f: v => v.status === ST_DONE && !v.reviewedBy && new Date(v.doneAt) >= new Date(now() - 3 * 86400000) },
@@ -701,7 +754,8 @@ function renderStats() {
       const n = base.filter(x.f).length;
       if (x.hideEmpty && !n && tab !== x.k) return '';
       return '<button class="stat ' + x.c + (tab === x.k ? ' on' : '') + '" onclick="pickTab(\'' + x.k + '\')"><small>' + x.t + '</small><b>' + n + '</b>' +
-        (x.k === ST_DONE ? '<span class="hint">النهارده: ' + doneToday + '</span>' : '') + '</button>';
+        (x.k === ST_DONE ? '<span class="hint">النهارده: ' + doneToday + '</span>' : '') +
+        (x.k === ST_QA && base.filter(qaLate).length ? '<span class="hint">⚠️ ' + base.filter(qaLate).length + ' متأخرة (أكتر من ' + QA_SLA_MIN + ' د)</span>' : '') + '</button>';
     }).join('');
 }
 function renderList() {
@@ -712,14 +766,17 @@ function renderList() {
   let list = base.filter(ct.f);
   // الأحدث الأول في المنتهية، والأقدم الأول في الشغالة، والمستعجلة فوق خالص
   if (tab === ST_DONE || tab === 'review') list = list.slice().sort((a, b) => String(b.doneAt).localeCompare(String(a.doneAt)));
+  if (tab === ST_QA) list = list.slice().sort((a, b) => String(a.doneAt).localeCompare(String(b.doneAt)));
   if (tab === ST_NEW || tab === ST_WORK || tab === 'late' || tab === 'urge') list = list.slice().sort((a, b) => (b.urgeCount ? 1 : 0) - (a.urgeCount ? 1 : 0) || a.createdAt.localeCompare(b.createdAt));
   $('list').innerHTML = list.length ? list.map(v =>
-    '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : '') + (v.urgeCount && pending(v) ? ' urged' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
+    '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : v.status === ST_QA ? 'st-qa' : '') + (v.urgeCount && pending(v) ? ' urged' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
     '<div class="top"><span class="sup">' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</span>' + timerHtml(v) + '</div>' +
     '<div class="meta">🏪 ' + esc(v.store) + ' • ' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
     '<div class="meta">' + badge(v.status) + ' ' + v.count + ' صنف • <span class="money">' + money(v.total) + ' ج.م</span>' +
     (v.receivedBy ? ' • 👤 ' + esc(v.receivedBy) : '') + (v.systemNo ? ' • #' + esc(v.systemNo) : '') +
-    (v.rejectCount && v.status !== ST_REJ ? ' • ↩️ اتبعتت تاني' : '') + '</div>' +
+    (v.rejectCount && v.status !== ST_REJ ? ' • ↩️ اتبعتت تاني' : '') +
+    (v.status === ST_QA ? ' • 🔍 دخّلها ' + esc(v.doneBy) + ' من ' + durTxt(mins(v.doneAt, now())) + (qaLate(v) ? ' ⚠️' : '') : '') +
+    (v.status === ST_WORK && v.qaRejects ? ' • <b style="color:#C62828">↩️ رجعت من الجودة</b>' : '') + '</div>' +
     (v.status === ST_REJ ? '<div class="meta" style="color:#C62828">❌ ' + esc(v.rejectReason) + '</div>' : '') +
     (v.status === ST_DONE ? '<div class="meta">' + revTag(v) + '</div>' : '') + '</div>'
   ).join('') : '<div class="empty">مفيش فواتير هنا 🎉</div>';
@@ -747,7 +804,7 @@ function pics() { const v = cur.invoice; return v.photos.map(id => ({ id, label:
 
 function renderDetail() {
   const v = cur.invoice, L = cur.lines;
-  const canWork = v.status !== ST_DONE && v.status !== ST_REJ;
+  const canWork = (v.status === ST_NEW || v.status === ST_WORK || !v.status) && !isQA();
   let h = '<button class="btn ghost back" onclick="closeInv()">→ رجوع للقايمة</button>';
   h += '<div class="dhead"><h2>' + esc(v.supplier) + '</h2>' + badge(v.status) + timerHtml(v) + '<span class="sp"></span>' +
     (v.groupUrl ? '<a class="wabtn" href="' + esc(v.groupUrl) + '" target="_blank" rel="noopener">💬 جروب الفرع</a>' : '') +
@@ -759,8 +816,10 @@ function renderDetail() {
     (v.priceChanges ? i('تعديلات سعر البيع', v.priceChanges + ' صنف' + (v.pricesBy ? ' • عدّلها ' + v.pricesBy : '')) : '') +
     (v.notes ? i('ملاحظات', v.notes) : '') +
     (v.receivedBy ? i('استلمها', v.receivedBy + ' - ' + dt(v.receivedAt)) : '') +
-    (v.status === ST_DONE ? i('رقم الفاتورة في السيستم', v.systemNo) + i('رصيد المورد', v.balance) + i('أدخلها', v.doneBy + ' - ' + dt(v.doneAt)) : '') +
+    (v.status === ST_DONE || v.status === ST_QA ? i('رقم الفاتورة في السيستم', v.systemNo) + i('رصيد المورد', v.balance) + i('أدخلها', v.doneBy + ' - ' + dt(v.doneAt)) : '') +
+    (v.qaBy ? i('🔍 راجعتها الجودة', v.qaBy + ' - ' + dt(v.qaAt)) : '') +
     '</div>';
+  h += qaPanel(v);
   if (v.totalNote) h += '<div class="warnbox">⚠️ ' + esc(v.totalNote) + '</div>';
   if (v.urgeCount) {
     h += '<div class="urgebox"><b>🔥 الفرع استعجل الفاتورة دي ' + v.urgeCount + (v.urgeCount === 1 ? ' مرة' : ' مرات') + '</b><ul>' +
@@ -976,7 +1035,9 @@ async function done() {
   b.disabled = true; b.innerHTML = '<span class="spin"></span> بيترفع...';
   try {
     cur = await api('dDone', { token, id: cur.invoice.id, systemNo: sys, balance: bal, screens: shots.map(s => s.split(',')[1]), pricesDone }, true);
-    shots = []; pIdx = 0; toast('تم الإدخال ✅'); renderDetail(); loadList(true);
+    shots = []; pIdx = 0;
+    toast(cur.invoice.status === ST_QA ? 'اتبعتت لقسم الجودة 🔍 - هتبقى "تم الإدخال" بعد ما يعتمدوها' : 'تم الإدخال ✅');
+    renderDetail(); loadList(true);
   } catch (e) { err.textContent = msg(e); b.disabled = false; b.textContent = 'تم الإدخال ✓'; }
 }
 
@@ -1147,6 +1208,73 @@ function makeReport() {
   w.document.open(); w.document.write(html); w.document.close();
 }
 
+// ---------- قسم الجودة ----------
+let qaChecks = {};
+function qaPanel(v) {
+  let h = '';
+  const log = qaLogList(v);
+  // راجعة من الجودة للدعم
+  if (v.status === ST_WORK && v.qaRejects) {
+    const last = log.filter(x => x.type === 'رجوع').pop();
+    h += '<div class="qaret"><b>↩️ الجودة رجّعت الفاتورة دي' + (v.qaRejects > 1 ? ' (' + v.qaRejects + ' مرات)' : '') + '</b><br>' +
+      (last ? 'رجّعها <b>' + esc(last.name) + '</b> - ' + dt(last.at) + '<br>' : '') +
+      'الملاحظة: <b>' + esc(v.qaNotes) + '</b>' + (v.qaChecks ? '<br><small>' + esc(v.qaChecks) + '</small>' : '') +
+      '<br><small>صلّح الغلط على السيستم وارفع سكرين جديد ودوس "تم الإدخال" تاني</small></div>';
+  }
+  if (v.status === ST_QA) {
+    if (!canQA()) {
+      h += '<div class="qabox"><h3>🔍 الفاتورة عند قسم الجودة</h3>دخّلها ' + esc(v.doneBy) + ' من ' + durTxt(mins(v.doneAt, now())) +
+        ' - مستنية مراجعة الجودة قبل ما تبقى "تم الإدخال" وتوصل للفرع</div>';
+    } else {
+      if (!qaChecks._id || qaChecks._id !== v.id) qaChecks = { _id: v.id };
+      const items = QA_ITEMS.filter(k => k !== 'أسعار البيع' || v.priceChanges > 0);
+      h += '<div class="qabox"><h3>🔍 مراجعة الجودة</h3>' +
+        '<small>قارن صورة الفاتورة (الفرع) بسكرين السيستم وجدول الأصناف، وعلّم على كل بند ✓ مظبوط أو ✗ فيه غلط.' +
+        (qaLate(v) ? ' <b style="color:#C62828">⚠️ متأخرة - بقالها ' + durTxt(mins(v.doneAt, now())) + '</b>' : ' بقالها ' + durTxt(mins(v.doneAt, now()))) + '</small>' +
+        '<div class="qaitems">' + items.map(k => '<div class="qait"><span>' + esc(k) + '</span><span class="tg">' +
+          '<button class="ok' + (qaChecks[k] === true ? ' on' : '') + '" onclick="qaSet(this,\'' + k + '\',true)">✓</button>' +
+          '<button class="bad' + (qaChecks[k] === false ? ' on' : '') + '" onclick="qaSet(this,\'' + k + '\',false)">✗</button></span></div>').join('') + '</div>' +
+        '<button class="btn soft" onclick="qaAllOk()">✓ كله مظبوط</button>' +
+        '<textarea id="qaNotes" placeholder="ملاحظة للدعم (لازم لو فيه ✗) - داخلية والفرع مش هيشوفها" style="margin-top:8px;display:block;width:100%;min-height:64px"></textarea>' +
+        '<div class="err" id="qaErr"></div>' +
+        '<div style="display:flex;gap:8px;margin-top:6px"><button class="btn green" id="qaOk" style="flex:2;padding:12px;font-size:16px" onclick="qaApprove()">✅ اعتمد الفاتورة (تبقى تم الإدخال)</button>' +
+        '<button class="btn red" id="qaRet" style="flex:1;padding:12px" onclick="qaReturn()">↩️ رجّعها للدعم</button></div></div>';
+    }
+  }
+  if (log.length) {
+    const icon = { 'للجودة': '📤', 'رجوع': '↩️', 'اعتماد': '✅' };
+    const txt = { 'للجودة': 'دخّلها وبعتها للجودة', 'رجوع': 'رجّعتها الجودة', 'اعتماد': 'اعتمدتها الجودة' };
+    h += '<details class="qalog"><summary>🔍 سجل الجودة (' + log.length + ')</summary>' +
+      log.map(x => (icon[x.type] || '•') + ' ' + esc(x.name) + ' ' + (txt[x.type] || x.type) + ' - ' + dt(x.at) + (x.note ? ' - ' + esc(x.note) : '')).join('<br>') + '</details>';
+  }
+  return h;
+}
+function qaSet(btn, k, ok) {
+  qaChecks[k] = ok;
+  btn.parentNode.querySelectorAll('button').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+function qaAllOk() {
+  QA_ITEMS.forEach(k => { qaChecks[k] = true; });
+  document.querySelectorAll('.qait .ok').forEach(b => b.classList.add('on'));
+  document.querySelectorAll('.qait .bad').forEach(b => b.classList.remove('on'));
+}
+function qaPayload() { const c = {}; QA_ITEMS.forEach(k => { if (k in qaChecks) c[k] = qaChecks[k]; }); return c; }
+async function qaApprove() {
+  const b = $('qaOk'); $('qaErr').textContent = ''; b.disabled = true;
+  try {
+    cur = await api('dQaApprove', { token, id: cur.invoice.id, checks: qaPayload() }, true);
+    qaChecks = {}; toast('✅ اتعتمدت - الفرع وصله إشعار إنها دخلت'); renderDetail(); loadList(true);
+  } catch (e) { $('qaErr').textContent = msg(e); b.disabled = false; }
+}
+async function qaReturn() {
+  const b = $('qaRet'); $('qaErr').textContent = ''; b.disabled = true;
+  try {
+    cur = await api('dQaReturn', { token, id: cur.invoice.id, checks: qaPayload(), notes: $('qaNotes').value }, true);
+    qaChecks = {}; toast('↩️ رجعت للدعم بالملاحظة'); renderDetail(); loadList(true);
+  } catch (e) { $('qaErr').textContent = msg(e); b.disabled = false; }
+}
+
 // ---------- الشات بين الفرع والدعم ----------
 const QUICK_REPLIES = ['تمام، جاري الإدخال 👍', 'الصورة مش واضحة - صوّرها تاني من فضلك', 'ناقص صفحة من الفاتورة', 'راجع الإجمالي من فضلك', 'الفاتورة دخلت السيستم ✅', 'شكرًا 🙏'];
 let chatOpen = null, chatTimer = 0;
@@ -1248,7 +1376,14 @@ function invEvents(v) {
   });
   if (v.receivedAt) ev.push({ t: v.receivedAt, i: '📥', x: 'استلمها ' + v.receivedBy + ' (بعد ' + durTxt(mins(v.createdAt, v.receivedAt)) + ')' });
   if (v.rejectedAt) ev.push({ t: v.rejectedAt, i: '❌', x: 'رفضها ' + v.rejectedBy + ': ' + v.rejectReason, cls: 'note' });
-  if (v.doneAt) ev.push({ t: v.doneAt, i: '✅', x: 'دخلت السيستم #' + v.systemNo + ' - ' + v.doneBy + ' (بعد ' + durTxt(mins(v.createdAt, v.doneAt)) + ')' });
+  const ql = qaLogList(v);
+  if (ql.length) {
+    ql.forEach(x => {
+      if (x.type === 'للجودة') ev.push({ t: x.at, i: '📤', x: 'دخّلها ' + x.name + ' وبعتها للجودة' });
+      else if (x.type === 'رجوع') ev.push({ t: x.at, i: '↩️', x: 'الجودة (' + x.name + ') رجّعتها: ' + x.note, cls: 'note' });
+      else if (x.type === 'اعتماد') ev.push({ t: x.at, i: '✅', x: 'اعتمدتها الجودة (' + x.name + ') - دخلت السيستم #' + v.systemNo + ' (بعد ' + durTxt(mins(v.createdAt, x.at)) + ')' });
+    });
+  } else if (v.doneAt) ev.push({ t: v.doneAt, i: '✅', x: 'دخلت السيستم #' + v.systemNo + ' - ' + v.doneBy + ' (بعد ' + durTxt(mins(v.createdAt, v.doneAt)) + ')' });
   if (v.reviewedAt) ev.push({ t: v.reviewedAt, i: v.reviewNotes ? '📝' : '👀', x: 'راجعها الفرع: ' + v.reviewedBy + (v.reviewNotes ? ' - ' + v.reviewNotes : ''), cls: v.reviewNotes ? 'note' : '' });
   ev.forEach(e => { e.ms = e.local ? new Date(e.t).getTime() : new Date(e.t).getTime(); });
   return ev.sort((a, b) => a.ms - b.ms);
@@ -1287,7 +1422,7 @@ function renderBoard() {
       '<div class="bbody">' + (vs.length ? vs.map(v => {
         const isLate = pending(v) && mins(v.createdAt, now()) > SLA_MIN;
         return '<div class="bcard ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : '') + (isLate ? ' late' : '') +
-          '" onclick="page(\'inv\');tab=\'الكل\';openInv(\'' + v.id + '\')">' +
+          (v.status === ST_QA ? ' st-qa' : '') + '" onclick="page(\'inv\');tab=\'الكل\';openInv(\'' + v.id + '\')">' +
           '<div class="bt"><b>' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥' + (v.urgeCount > 1 ? '×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</b>' + badge(v.status) + '</div>' +
           '<div class="bm">' + v.count + ' صنف • <b>' + money(v.total) + ' ج.م</b>' + (v.priceUps ? ' • 📈' + v.priceUps : '') + (v.priceDowns ? ' • 📉' + v.priceDowns : '') +
           (pending(v) ? ' • ' + timerHtml(v) : '') + '</div>' +
@@ -1311,6 +1446,7 @@ function renderPerf() {
     p.n++; p.total += v.total; p.mins += m; p.lines += v.count;
     if (m <= SLA_MIN) p.ontime++;
     if (v.receivedAt) { p.pick += mins(v.createdAt, v.receivedAt); p.pickN++; }
+    if (v.qaBy) { p.qaN = (p.qaN || 0) + 1; if (!v.qaRejects) p.first = (p.first || 0) + 1; p.qaR = (p.qaR || 0) + v.qaRejects; }
   });
   all.filter(v => v.status === ST_WORK && v.receivedBy).forEach(v => {
     const p = ppl[v.receivedBy] = ppl[v.receivedBy] || { name: v.receivedBy, n: 0, total: 0, mins: 0, ontime: 0, pick: 0, pickN: 0, lines: 0 };
@@ -1324,7 +1460,9 @@ function renderPerf() {
   });
   const list = Object.values(ppl).map(p => {
     p.avg = p.n ? p.mins / p.n : 0; p.rate = p.n ? p.ontime / p.n : 0;
-    p.score = p.n ? Math.round(p.rate * 60 + Math.min(1, p.n / Math.max(...Object.values(ppl).map(x => x.n || 0), 1)) * 40) : 0;
+    const cnt = Math.min(1, p.n / Math.max(...Object.values(ppl).map(x => x.n || 0), 1));
+    p.fp = p.qaN ? p.first / p.qaN : null; // نسبة اللي عدّت من الجودة من أول مرة
+    p.score = !p.n ? 0 : p.fp === null ? Math.round(p.rate * 60 + cnt * 40) : Math.round(p.rate * 40 + cnt * 30 + p.fp * 30);
     return p;
   }).sort((a, b) => b.score - a.score || b.n - a.n);
   const colors = r => r >= .9 ? 'var(--green)' : r >= .7 ? 'var(--yellow)' : 'var(--red)';
@@ -1349,9 +1487,36 @@ function renderPerf() {
     '<div class="kpi"><small>في الميعاد</small><b style="color:' + colors(p.rate) + '">' + Math.round(p.rate * 100) + '%</b></div>' +
     '<div class="kpi"><small>شغّال عليها دلوقتي</small><b>' + (p.open || 0) + '</b></div>' +
     '<div class="kpi"><small>💬 متوسط الرد على الشات</small><b>' + (p.crN ? durTxt(p.cr / p.crN) + ' (' + p.crN + ')' : '-') + '</b></div>' +
+    '<div class="kpi"><small>🔍 عدّت الجودة من أول مرة</small><b style="color:' + (p.fp === null ? 'inherit' : colors(p.fp)) + '">' + (p.fp === null ? '-' : Math.round(p.fp * 100) + '%') + '</b></div>' +
+    '<div class="kpi"><small>↩️ رجوع من الجودة</small><b>' + (p.qaR || 0) + '</b></div>' +
     '</div><div class="bar"><i style="width:' + p.score + '%;background:' + colors(p.rate) + '"></i></div>' +
-    '<small style="color:var(--muted)">الدرجة ' + p.score + '/100 (الالتزام بالوقت 60 + عدد الفواتير 40)</small></div>'
+    '<small style="color:var(--muted)">الدرجة ' + p.score + '/100 ' + (p.fp === null ? '(الالتزام بالوقت 60 + عدد الفواتير 40)' : '(الوقت 40 + عدد الفواتير 30 + الجودة من أول مرة 30)') + '</small></div>'
   ).join('') + '</div>' : '<div class="pane empty">مفيش فواتير دخلت في الفترة دي</div>';
+  // ---------- تقييم قسم الجودة ----------
+  const qa = {};
+  all.forEach(v => {
+    const log = qaLogList(v);
+    log.forEach((x, k) => {
+      if ((x.type !== 'اعتماد' && x.type !== 'رجوع') || new Date(x.at) < start) return;
+      const q = qa[x.name] = qa[x.name] || { name: x.name, ok: 0, ret: 0, mins: 0, n: 0, compl: 0, late: 0 };
+      const sent = log.slice(0, k).reverse().find(y => y.type === 'للجودة');
+      if (sent) { const m = mins(sent.at, x.at); q.mins += m; q.n++; if (m > QA_SLA_MIN) q.late++; }
+      if (x.type === 'اعتماد') { q.ok++; if (v.reviewNotes) q.compl++; } else q.ret++;
+    });
+  });
+  const qal = Object.values(qa).sort((a, b) => (b.ok + b.ret) - (a.ok + a.ret));
+  if (qal.length) {
+    h += '<div class="pane stores-perf"><h3 style="margin-top:0;color:#4527A0">🔍 تقييم قسم الجودة</h3>' +
+      '<small style="color:var(--muted)">الشكاوى = فواتير الجودة اعتمدتها والفرع كتب عليها ملاحظة وهو بيراجع صورة الإثبات</small>' +
+      '<table><thead><tr><th>الاسم</th><th>اعتمد</th><th>رجّع للدعم</th><th>متوسط وقت المراجعة</th><th>متأخرة (&gt; ' + QA_SLA_MIN + ' د)</th><th>شكاوى الفروع</th><th>التقييم</th></tr></thead><tbody>' +
+      qal.map(q => {
+        const rate = q.ok ? 1 - q.compl / q.ok : 1, onT = q.n ? 1 - q.late / q.n : 1;
+        const sc = Math.round(rate * 60 + onT * 40);
+        return '<tr><td>' + esc(q.name) + '</td><td class="num">' + q.ok + '</td><td class="num">' + q.ret + '</td><td>' + (q.n ? durTxt(q.mins / q.n) : '-') +
+          '</td><td class="num">' + q.late + '</td><td class="num" style="color:' + (q.compl ? '#C62828' : 'inherit') + '">' + q.compl +
+          '</td><td><b style="color:' + colors(sc / 100) + '">' + sc + '/100</b></td></tr>';
+      }).join('') + '</tbody></table><small style="color:var(--muted)">التقييم = خلو الفواتير من شكاوى الفروع 60 + المراجعة في الميعاد 40</small></div>';
+  }
   // الفروع
   const byStore = {};
   all.filter(v => new Date(v.createdAt) >= start).forEach(v => {
