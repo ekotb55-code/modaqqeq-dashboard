@@ -77,6 +77,38 @@
 
   /* ---------- الإحصائيات ---------- */
   .main { max-width: 1500px; margin: 0 auto; padding: 16px; }
+  /* ---------- لوحة المحلات (زي تريلو) ---------- */
+  .board-page { padding: 12px 16px 0; }
+  .bbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .bbar > b { font-size: 18px; color: #0B3D6E; }
+  .bbar input#bText { width: 240px; max-width: 100%; }
+  .seg { display: inline-flex; background: #fff; border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  .seg button { border: 0; background: none; padding: 8px 14px; font: inherit; font-weight: 700; color: #4A5868; cursor: pointer; }
+  .seg button.on { background: #1479D3; color: #fff; }
+  .chk { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #4A5868; cursor: pointer; }
+  .chk input { width: auto; }
+  .board { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 14px; height: calc(100vh - 150px); align-items: flex-start; }
+  .bcol { flex: 0 0 310px; background: #E9EEF5; border-radius: 16px; display: flex; flex-direction: column; max-height: 100%; }
+  .bhead { padding: 12px 14px 8px; border-bottom: 1px solid #D6DFEA; }
+  .bhead h3 { margin: 0; font-size: 16px; color: #0B3D6E; display: flex; align-items: center; gap: 6px; }
+  .bhead h3 .dot { width: 10px; height: 10px; border-radius: 50%; background: #2BB45A; display: inline-block; }
+  .bhead h3 .dot.warn { background: #E67E00; } .bhead h3 .dot.bad { background: #C62828; }
+  .bstats { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .bstats span { background: #fff; border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 700; color: #4A5868; }
+  .bstats span.r { color: #C62828; } .bstats span.o { color: #E67E00; } .bstats span.g { color: #1A8A3E; }
+  .bbody { overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .bcard { background: #fff; border-radius: 12px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(16,40,70,.12); cursor: pointer; border-inline-start: 5px solid #FF9F1C; transition: transform .12s; }
+  .bcard:hover { transform: translateY(-2px); }
+  .bcard.st-work { border-inline-start-color: #1E90FF; } .bcard.st-done { border-inline-start-color: #2BB45A; } .bcard.st-rej { border-inline-start-color: #5B6B7E; }
+  .bcard.late { box-shadow: 0 0 0 2px #F0504F; }
+  .bcard .bt { display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+  .bcard .bt b { font-size: 15px; }
+  .bcard .bm { font-size: 12px; color: #6B7785; margin: 2px 0 6px; }
+  .tl { list-style: none; margin: 0; padding: 0; border-top: 1px dashed #DFE7F1; padding-top: 6px; }
+  .tl li { font-size: 12.5px; line-height: 1.55; display: flex; gap: 6px; }
+  .tl li .tm { color: #6B7785; margin-inline-start: auto; white-space: nowrap; direction: ltr; font-size: 11.5px; }
+  .tl li.note { color: #8C1D18; }
+  .bempty { text-align: center; color: #8A96A3; padding: 18px 6px; font-size: 13px; }
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
   .stat { border-radius: 18px; padding: 14px 16px; color: #fff; box-shadow: var(--shadow); position: relative; overflow: hidden; }
   .stat::after { content: ''; position: absolute; width: 110px; height: 110px; border-radius: 50%; background: rgba(255,255,255,.12); left: -30px; top: -40px; }
@@ -251,6 +283,7 @@
       <span class="title">فواتير المشتريات</span>
       <div class="nav">
         <button id="navInv" class="on" onclick="page('inv')">🧾 الفواتير</button>
+        <button id="navStores" onclick="page('stores')">🏪 المحلات</button>
         <button id="navPerf" onclick="page('perf')">🏆 أداء الدعم</button>
         <button id="navRep" onclick="page('rep')">📊 تقارير الفروع</button>
       </div>
@@ -280,6 +313,18 @@
   </div>
 
   <div class="main hidden" id="pagePerf"></div>
+  <div class="board-page hidden" id="pageStores">
+    <div class="bbar">
+      <b>🏪 المحلات</b>
+      <div class="seg" id="bRange">
+        <button data-d="1">النهارده</button><button data-d="3" class="on">3 أيام</button><button data-d="7">أسبوع</button><button data-d="30">شهر</button>
+      </div>
+      <input id="bText" placeholder="🔍 بحث بالمورد أو الموظف" oninput="renderBoard()">
+      <label class="chk"><input type="checkbox" id="bOpen" onchange="renderBoard()"> الشغالة بس</label>
+      <span class="sp"></span><span class="muted" id="bInfo"></span>
+    </div>
+    <div class="board" id="board"></div>
+  </div>
   <div class="main hidden" id="pageRep"></div>
 </div>
 
@@ -394,6 +439,9 @@ function page(p) {
   if (p === 'rep') renderRepForm();
   $('pageInv').classList.toggle('hidden', p !== 'inv');
   $('pagePerf').classList.toggle('hidden', p !== 'perf');
+  $('pageStores').classList.toggle('hidden', p !== 'stores');
+  $('navStores').classList.toggle('on', p === 'stores');
+  if (p === 'stores') renderBoard();
   $('navInv').classList.toggle('on', p === 'inv');
   $('navPerf').classList.toggle('on', p === 'perf');
   if (p === 'perf') renderPerf();
@@ -557,6 +605,7 @@ async function loadList(quiet) {
     sel.value = val;
     renderStats(); renderList(); updateTitle();
     if (!$('pagePerf').classList.contains('hidden')) renderPerf();
+    if (!$('pageStores').classList.contains('hidden')) renderBoard();
     if (fresh.length) { alertNew(fresh); pendAt = now(); }
     if (urged.length) {
       alarm(10);
@@ -1048,6 +1097,71 @@ function makeReport() {
   const w = window.open('', '_blank');
   if (!w) return toast('المتصفح منع فتح التقرير - اسمح بالنوافذ المنبثقة للموقع ده');
   w.document.open(); w.document.write(html); w.document.close();
+}
+
+// ---------- لوحة المحلات: عمود لكل محل، وكل فاتورة كارت بالأحداث بتاعتها بالترتيب ----------
+let boardDays = 3;
+function tm(s) {
+  if (!s) return '';
+  const d = new Date(s), today = new Date(now());
+  const t = d.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' });
+  return d.toDateString() === today.toDateString() ? t : d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric' }) + ' ' + t;
+}
+// أحداث الفاتورة بالترتيب الزمني
+function invEvents(v) {
+  const ev = [];
+  if (v.createdAt) ev.push({ t: v.createdAt, i: '📤', x: 'رفعها ' + (v.user || 'الفرع') + (v.rejectCount ? ' (اتبعتت تاني بعد الرفض)' : '') });
+  (v.urgeLog || '').split('\n').filter(Boolean).forEach(line => {
+    const m = line.match(/^(.*) - (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/);
+    ev.push({ t: m ? m[2] + 'T' + m[3] + ':00' : v.urgedAt, i: '🔥', x: 'استعجال من ' + (m ? m[1] : line), local: !!m });
+  });
+  if (v.receivedAt) ev.push({ t: v.receivedAt, i: '📥', x: 'استلمها ' + v.receivedBy + ' (بعد ' + durTxt(mins(v.createdAt, v.receivedAt)) + ')' });
+  if (v.rejectedAt) ev.push({ t: v.rejectedAt, i: '❌', x: 'رفضها ' + v.rejectedBy + ': ' + v.rejectReason, cls: 'note' });
+  if (v.doneAt) ev.push({ t: v.doneAt, i: '✅', x: 'دخلت السيستم #' + v.systemNo + ' - ' + v.doneBy + ' (بعد ' + durTxt(mins(v.createdAt, v.doneAt)) + ')' });
+  if (v.reviewedAt) ev.push({ t: v.reviewedAt, i: v.reviewNotes ? '📝' : '👀', x: 'راجعها الفرع: ' + v.reviewedBy + (v.reviewNotes ? ' - ' + v.reviewNotes : ''), cls: v.reviewNotes ? 'note' : '' });
+  ev.forEach(e => { e.ms = e.local ? new Date(e.t).getTime() : new Date(e.t).getTime(); });
+  return ev.sort((a, b) => a.ms - b.ms);
+}
+function renderBoard() {
+  if (!$('board')) return;
+  document.querySelectorAll('#bRange button').forEach(b => {
+    b.classList.toggle('on', Number(b.dataset.d) === boardDays);
+    b.onclick = () => { boardDays = Number(b.dataset.d); renderBoard(); };
+  });
+  const since = new Date(now()); since.setHours(0, 0, 0, 0); since.setDate(since.getDate() - (boardDays - 1));
+  const q = $('bText').value.trim(), onlyOpen = $('bOpen').checked;
+  const last = v => Math.max(...invEvents(v).map(e => e.ms).filter(x => !isNaN(x)), 0);
+  const list = all.filter(v => (pending(v) || v.status === ST_REJ || last(v) >= since.getTime()) &&
+    (!onlyOpen || pending(v) || v.status === ST_REJ) &&
+    (!q || (v.supplier + ' ' + v.user + ' ' + v.number + ' ' + v.systemNo + ' ' + (v.receivedBy || '') + ' ' + (v.doneBy || '')).indexOf(q) !== -1));
+  const names = stores.length ? stores.slice() : [...new Set(all.map(v => v.store))];
+  // المحلات اللي فيها شغل مستني الأول
+  const by = {}; names.forEach(n => by[n] = []);
+  list.forEach(v => (by[v.store] = by[v.store] || []).push(v));
+  const score = n => by[n].filter(pending).length * 1000 + by[n].length;
+  const order = Object.keys(by).sort((a, b) => score(b) - score(a) || a.localeCompare(b));
+  $('bInfo').textContent = list.length + ' فاتورة في ' + order.filter(n => by[n].length).length + ' محل';
+  $('board').innerHTML = order.map(n => {
+    const vs = by[n].slice().sort((a, b) => (pending(b) ? 1 : 0) - (pending(a) ? 1 : 0) || last(b) - last(a));
+    const pend = vs.filter(pending), late = pend.filter(v => mins(v.createdAt, now()) > SLA_MIN).length;
+    const today = new Date(now()); today.setHours(0, 0, 0, 0);
+    const doneToday = all.filter(v => v.store === n && v.status === ST_DONE && new Date(v.doneAt) >= today).length;
+    const rej = vs.filter(v => v.status === ST_REJ).length, rev = vs.filter(v => v.status === ST_DONE && !v.reviewedBy).length;
+    const urge = pend.filter(v => v.urgeCount).length;
+    return '<div class="bcol"><div class="bhead"><h3><span class="dot' + (late || urge ? ' bad' : pend.length ? ' warn' : '') + '"></span>' + esc(n) + '</h3>' +
+      '<div class="bstats">' + (pend.length ? '<span class="o">⏳ ' + pend.length + ' مستنية</span>' : '') + (late ? '<span class="r">⚠️ ' + late + ' متأخرة</span>' : '') +
+      (urge ? '<span class="r">🔥 ' + urge + ' مستعجلة</span>' : '') + '<span class="g">✅ ' + doneToday + ' النهارده</span>' +
+      (rej ? '<span>↩️ ' + rej + ' مرفوضة</span>' : '') + (rev ? '<span>👀 ' + rev + ' مستنية مراجعة</span>' : '') + '</div></div>' +
+      '<div class="bbody">' + (vs.length ? vs.map(v => {
+        const isLate = pending(v) && mins(v.createdAt, now()) > SLA_MIN;
+        return '<div class="bcard ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : '') + (isLate ? ' late' : '') +
+          '" onclick="page(\'inv\');tab=\'الكل\';openInv(\'' + v.id + '\')">' +
+          '<div class="bt"><b>' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥' + (v.urgeCount > 1 ? '×' + v.urgeCount : '') + '</span>' : '') + '</b>' + badge(v.status) + '</div>' +
+          '<div class="bm">' + v.count + ' صنف • <b>' + money(v.total) + ' ج.م</b>' + (v.priceUps ? ' • 📈' + v.priceUps : '') + (v.priceDowns ? ' • 📉' + v.priceDowns : '') +
+          (pending(v) ? ' • ' + timerHtml(v) : '') + '</div>' +
+          '<ul class="tl">' + invEvents(v).map(e => '<li class="' + (e.cls || '') + '"><span>' + e.i + '</span><span>' + esc(e.x) + '</span><span class="tm">' + tm(e.t) + '</span></li>').join('') + '</ul></div>';
+      }).join('') : '<div class="bempty">مفيش حركة في الفترة دي</div>') + '</div></div>';
+  }).join('');
 }
 
 // ---------- أداء الدعم ----------
