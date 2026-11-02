@@ -77,6 +77,33 @@
 
   /* ---------- الإحصائيات ---------- */
   .main { max-width: 1500px; margin: 0 auto; padding: 16px; }
+  /* ---------- الشات ---------- */
+  .s10 { background: linear-gradient(135deg, #00ACC1, #00838F); }
+  .chatwrap { background: #fff; border-radius: 16px; box-shadow: var(--shadow); padding: 12px; margin: 12px 0; }
+  .chatwrap h3 { margin: 0 0 8px; font-size: 16px; color: #0B3D6E; display: flex; align-items: center; gap: 8px; }
+  .msgs { max-height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 6px; background: #F4F7FB; border-radius: 12px; }
+  .msg { max-width: 82%; padding: 8px 12px; border-radius: 14px; line-height: 1.6; font-size: 14px; white-space: pre-wrap; word-break: break-word; }
+  .msg.br { align-self: flex-start; background: #fff; border: 1px solid #DFE7F1; border-start-start-radius: 4px; }
+  .msg.sp { align-self: flex-end; background: #DCEBFB; border-start-end-radius: 4px; }
+  .msg.int { align-self: flex-end; background: #FFF6D6; border: 1px dashed #E6C14D; }
+  .msg.auto { align-self: center; background: #EEF1F5; color: #4A5868; font-size: 13px; }
+  .msg .who { font-size: 12px; font-weight: 800; color: #0B3D6E; display: block; }
+  .msg .mt { display: block; font-size: 11px; color: #6B7785; margin-top: 2px; direction: rtl; }
+  .msg .tick { color: #1479D3; font-weight: 800; }
+  .msg .tick.no { color: #9AA6B2; }
+  .qr { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 6px; }
+  .qr button { border: 1px solid #CFE0F3; background: #F2F7FD; color: #0F5FA8; border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+  .chatin { display: flex; gap: 8px; align-items: flex-end; }
+  .chatin textarea { flex: 1; min-height: 44px; max-height: 120px; resize: vertical; }
+  .chatin .btn { padding: 11px 16px; }
+  .chatopt { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #6B7785; margin-top: 4px; }
+  .chatopt label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+  .chatopt input { width: auto; }
+  .cbadge { display: inline-block; background: #00838F; color: #fff; border-radius: 999px; padding: 0 8px; font-size: 12px; font-weight: 800; line-height: 20px; }
+  .cbadge.new { background: #C62828; animation: urgepulse 1.2s infinite; }
+  .bchat { border: 0; background: #fff; border-radius: 10px; padding: 4px 10px; font: inherit; font-size: 12.5px; font-weight: 700; color: #00838F; cursor: pointer; margin-top: 6px; }
+  #chatModal { position: fixed; inset: 0; background: rgba(10,25,45,.45); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  #chatModal .chatwrap { width: min(620px, 100%); margin: 0; }
   /* ---------- لوحة المحلات (زي تريلو) ---------- */
   .board-page { padding: 12px 16px 0; }
   .bbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -330,6 +357,7 @@
 
 <div id="viewerFull" class="hidden" onclick="this.classList.add('hidden')"><img id="viewerFullImg"></div>
 <div id="toast" class="hidden"></div>
+<div id="chatModal" class="hidden" onclick="if(event.target===this)closeChatModal()"><div class="chatwrap" id="chatModalBox"></div></div>
 
 <script>
 // رابط سكريبت "دليل الموظفين" (نفس اللي في التطبيق)
@@ -341,6 +369,7 @@ const OFF_FROM = 1, OFF_TO = 9;
 const PENDING_ALERT_MIN = 5; // تنبيه كل 5 دقايق طول ما فيه فواتير مستنية
 let token = '', me = '', all = [], stores = [], tab = ST_NEW, cur = null, shots = [], skew = 0;
 let known = null, pIdx = 0, perfRange = 'today', prevStatus = {}, revKnown = null, pendAt = 0;
+let chatSum = { threads: [], replies: [] }, chatKnown = null;
 const imgCache = {};
 
 // ---------- أدوات ----------
@@ -600,6 +629,9 @@ async function loadList(quiet) {
     revKnown = new Set(r.invoices.filter(v => v.reviewedBy).map(v => v.id));
     prevStatus = {}; r.invoices.forEach(v => { prevStatus[v.id] = v.status; });
     all = r.invoices; stores = r.stores;
+    chatSum = r.chat || { threads: [], replies: [] };
+    const newMsgs = chatKnown ? chatSum.threads.filter(t => t.unread > (chatKnown[t.store + '|' + t.inv] || 0) && t.lastFrom === 'فرع') : [];
+    chatKnown = {}; chatSum.threads.forEach(t => { chatKnown[t.store + '|' + t.inv] = t.unread; });
     const sel = $('fStore'), val = sel.value;
     sel.innerHTML = '<option value="">كل المحلات</option>' + stores.map(s => '<option>' + esc(s) + '</option>').join('');
     sel.value = val;
@@ -607,6 +639,19 @@ async function loadList(quiet) {
     if (!$('pagePerf').classList.contains('hidden')) renderPerf();
     if (!$('pageStores').classList.contains('hidden')) renderBoard();
     if (fresh.length) { alertNew(fresh); pendAt = now(); }
+    newMsgs.forEach(t => {
+      const v = t.inv ? all.find(x => x.id === t.inv) : null;
+      const title = '💬 ' + t.store + (v ? ' - فاتورة ' + v.supplier : ' - شات الفرع');
+      ding();
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          const n = new Notification(title, { body: t.lastName + ': ' + t.lastText, icon: 'icon.png', tag: 'chat-' + t.store + t.inv, renotify: true });
+          n.onclick = () => { window.focus(); if (t.inv) { page('inv'); openInv(t.inv); } else openChatModal(t.store); n.close(); };
+        } catch (e) {}
+      }
+      toast(title + ': ' + t.lastText);
+    });
+    if (chatOpen && newMsgs.some(t => t.store === chatOpen.store && t.inv === chatOpen.inv)) loadChat(true);
     if (urged.length) {
       alarm(10);
       const u = urged[0], who = (u.urgeLog || '').split('\n').pop().split(' - ')[0];
@@ -634,6 +679,7 @@ const CARD_TABS = [
   { k: 'urge', c: 's7', t: '🔥 الفرع مستعجلها', f: v => pending(v) && v.urgeCount, hideEmpty: true },
   { k: ST_REJ, c: 's6', t: '↩️ مرفوضة عند الفرع', f: v => v.status === ST_REJ },
   { k: 'review', c: 's5', t: '👀 مستنية مراجعة الفرع', f: v => v.status === ST_DONE && !v.reviewedBy && new Date(v.doneAt) >= new Date(now() - 3 * 86400000) },
+  { k: 'chat', c: 's10', t: '💬 رسايل مستنية رد', f: v => chatUnread(v.store, v.id) > 0, hideEmpty: true },
   { k: TAB_NOTES, c: 's8', t: '📝 ملاحظات الفروع', f: v => !!v.reviewNotes },
   { k: 'الكل', c: 's9', t: '📋 الكل', f: () => true }
 ];
@@ -669,7 +715,7 @@ function renderList() {
   if (tab === ST_NEW || tab === ST_WORK || tab === 'late' || tab === 'urge') list = list.slice().sort((a, b) => (b.urgeCount ? 1 : 0) - (a.urgeCount ? 1 : 0) || a.createdAt.localeCompare(b.createdAt));
   $('list').innerHTML = list.length ? list.map(v =>
     '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : '') + (v.urgeCount && pending(v) ? ' urged' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
-    '<div class="top"><span class="sup">' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + '</span>' + timerHtml(v) + '</div>' +
+    '<div class="top"><span class="sup">' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</span>' + timerHtml(v) + '</div>' +
     '<div class="meta">🏪 ' + esc(v.store) + ' • ' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
     '<div class="meta">' + badge(v.status) + ' ' + v.count + ' صنف • <span class="money">' + money(v.total) + ' ج.م</span>' +
     (v.receivedBy ? ' • 👤 ' + esc(v.receivedBy) : '') + (v.systemNo ? ' • #' + esc(v.systemNo) : '') +
@@ -736,6 +782,7 @@ function renderDetail() {
         (v.reviewNotes ? '<span class="note">📝 ملاحظة الفرع: ' + esc(v.reviewNotes) + '</span>' : '') + '</div>'
       : '<div class="revbox wait">👀 الفرع لسه ما راجعش صورة الإثبات - بيوصله تذكير كل 10 دقايق لحد ما يراجع</div>';
   }
+  h += '<div class="chatwrap" id="chatBox"></div>';
   h += '<div class="compare"><div class="viewer"><div class="vstage" id="vstage"><img id="vimg" alt=""></div>' +
     '<div class="vtools"><button onclick="zoom(1.25)">＋</button><button onclick="zoom(.8)">－</button><button onclick="rot()">⟳</button><button onclick="fit()">ملء</button><button onclick="full()">⛶</button><span class="pg" id="pg"></span></div>' +
     '<div class="thumbs" id="thumbs"></div></div><div>';
@@ -776,6 +823,7 @@ function renderDetail() {
   }
   h += '</div></div>';
   $('detailPane').innerHTML = h;
+  openChat(v.store, v.id, 'chatBox', 'فاتورة ' + v.supplier);
   initViewer();
   if (canWork) { renderShots(); bindDrop(); } else if (v.status === ST_DONE) buildMerged();
 }
@@ -1099,6 +1147,89 @@ function makeReport() {
   w.document.open(); w.document.write(html); w.document.close();
 }
 
+// ---------- الشات بين الفرع والدعم ----------
+const QUICK_REPLIES = ['تمام، جاري الإدخال 👍', 'الصورة مش واضحة - صوّرها تاني من فضلك', 'ناقص صفحة من الفاتورة', 'راجع الإجمالي من فضلك', 'الفاتورة دخلت السيستم ✅', 'شكرًا 🙏'];
+let chatOpen = null, chatTimer = 0;
+function chatUnread(store, inv) {
+  const t = chatSum.threads.find(x => x.store === store && x.inv === String(inv || ''));
+  return t ? t.unread : 0;
+}
+function chatCount(store, inv) {
+  const t = chatSum.threads.find(x => x.store === store && x.inv === String(inv || ''));
+  return t ? t.count : 0;
+}
+function chatTag(store, inv) {
+  const u = chatUnread(store, inv), c = chatCount(store, inv);
+  if (u) return ' <span class="cbadge new">💬 ' + u + '</span>';
+  return c ? ' <span class="cbadge">💬 ' + c + '</span>' : '';
+}
+// عناصر الشات جوه الصندوق المفتوح (فيه صندوق في الفاتورة وصندوق في نافذة شات الفرع)
+function chatEl(sel) { const b = chatOpen && $(chatOpen.box); return b ? b.querySelector(sel) : null; }
+function openChat(store, inv, boxId, title) {
+  if (boxId === 'chatModalBox' && $('chatBox')) $('chatBox').innerHTML = '';
+  chatOpen = { store, inv: String(inv || ''), box: boxId, title, msgs: null };
+  const box = $(boxId);
+  box.innerHTML = '<h3>💬 ' + esc(title) + '</h3><div class="msgs"><div class="empty"><span class="spin"></span></div></div>' +
+    '<div class="qr">' + QUICK_REPLIES.map((q, k) => '<button onclick="chatQuick(' + k + ')">' + esc(q) + '</button>').join('') + '</div>' +
+    '<div class="chatin"><textarea placeholder="اكتب رسالة للفرع..." onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>' +
+    '<button class="btn" onclick="sendChat()">إرسال</button></div>' +
+    '<div class="chatopt"><label><input type="checkbox"> 🔒 ملاحظة داخلية (للدعم بس - الفرع مش هيشوفها)</label></div>';
+  loadChat();
+  clearInterval(chatTimer);
+  chatTimer = setInterval(() => { if (chatEl('.msgs')) loadChat(true); else clearInterval(chatTimer); }, 10000);
+}
+async function loadChat(quiet) {
+  if (!chatOpen) return;
+  const c = chatOpen;
+  try {
+    const r = await api('dChat', { token, store: c.store, inv: c.inv });
+    if (chatOpen !== c) return;
+    c.msgs = r.messages;
+    renderMsgs();
+    // اتقرت: نصفّر العداد محليًا
+    const t = chatSum.threads.find(x => x.store === c.store && x.inv === c.inv);
+    if (t && t.unread) { t.unread = 0; if (chatKnown) chatKnown[c.store + '|' + c.inv] = 0; renderStats(); renderList(); if (!$('pageStores').classList.contains('hidden')) renderBoard(); }
+  } catch (e) { if (!quiet && chatEl('.msgs')) chatEl('.msgs').innerHTML = '<div class="err">' + esc(msg(e)) + '</div>'; }
+}
+function renderMsgs() {
+  const el = chatEl('.msgs');
+  if (!el || !chatOpen.msgs) return;
+  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  const L = chatOpen.msgs;
+  el.innerHTML = L.length ? L.map(m => {
+    const cls = m.auto ? 'auto' : m.internal ? 'int' : m.from === 'دعم' ? 'sp' : 'br';
+    let foot = tm(m.at);
+    if (m.from === 'دعم' && !m.internal && !m.auto) foot += ' • ' + (m.seenBy ? '<span class="tick">✓✓</span> شافها ' + esc(m.seenBy) + ' ' + tm(m.seenAt) : '<span class="tick no">✓</span> لسه ما اتشافتش');
+    return '<div class="msg ' + cls + '">' + (m.auto ? '' : '<span class="who">' + (m.internal ? '🔒 ' : '') + esc(m.name) + (m.from === 'فرع' ? ' (الفرع)' : '') + '</span>') +
+      esc(m.text) + '<span class="mt">' + foot + '</span></div>';
+  }).join('') : '<div class="empty" style="padding:16px">مفيش رسايل لسه - ابدأ المحادثة 👋</div>';
+  if (atBottom || !el.dataset.done) { el.scrollTop = el.scrollHeight; el.dataset.done = '1'; }
+}
+function chatQuick(k) { const t = chatEl('textarea'); t.value = QUICK_REPLIES[k]; t.focus(); }
+async function sendChat() {
+  if (!chatOpen) return;
+  const t = chatEl('textarea'), box = chatEl('.chatopt input'), btn = chatEl('.chatin .btn'), text = t.value.trim(), internal = box.checked;
+  if (!text) return;
+  btn.disabled = true;
+  try {
+    await api('dChatSend', { token, store: chatOpen.store, inv: chatOpen.inv, text, internal }, true);
+    t.value = ''; box.checked = false;
+    await loadChat(true);
+    const el = chatEl('.msgs'); if (el) el.scrollTop = el.scrollHeight;
+  } catch (e) { toast(msg(e)); }
+  btn.disabled = false;
+}
+function openChatModal(store) {
+  $('chatModal').classList.remove('hidden');
+  openChat(store, '', 'chatModalBox', 'شات ' + store);
+  $('chatModalBox').querySelector('h3').insertAdjacentHTML('beforeend', '<span class="sp" style="flex:1"></span><button class="btn ghost" onclick="closeChatModal()">✕</button>');
+}
+function closeChatModal() {
+  $('chatModal').classList.add('hidden');
+  chatOpen = null; clearInterval(chatTimer);
+  if (cur && $('chatBox') && !$('pageInv').classList.contains('hidden')) openChat(cur.invoice.store, cur.invoice.id, 'chatBox', 'فاتورة ' + cur.invoice.supplier);
+}
+
 // ---------- لوحة المحلات: عمود لكل محل، وكل فاتورة كارت بالأحداث بتاعتها بالترتيب ----------
 let boardDays = 3;
 function tm(s) {
@@ -1151,12 +1282,13 @@ function renderBoard() {
     return '<div class="bcol"><div class="bhead"><h3><span class="dot' + (late || urge ? ' bad' : pend.length ? ' warn' : '') + '"></span>' + esc(n) + '</h3>' +
       '<div class="bstats">' + (pend.length ? '<span class="o">⏳ ' + pend.length + ' مستنية</span>' : '') + (late ? '<span class="r">⚠️ ' + late + ' متأخرة</span>' : '') +
       (urge ? '<span class="r">🔥 ' + urge + ' مستعجلة</span>' : '') + '<span class="g">✅ ' + doneToday + ' النهارده</span>' +
-      (rej ? '<span>↩️ ' + rej + ' مرفوضة</span>' : '') + (rev ? '<span>👀 ' + rev + ' مستنية مراجعة</span>' : '') + '</div></div>' +
+      (rej ? '<span>↩️ ' + rej + ' مرفوضة</span>' : '') + (rev ? '<span>👀 ' + rev + ' مستنية مراجعة</span>' : '') + '</div>' +
+      '<button class="bchat" onclick="openChatModal(\'' + esc(n).replace(/'/g, "\\'") + '\')">💬 شات الفرع' + (chatUnread(n, '') ? ' <span class="cbadge new">' + chatUnread(n, '') + '</span>' : '') + '</button></div>' +
       '<div class="bbody">' + (vs.length ? vs.map(v => {
         const isLate = pending(v) && mins(v.createdAt, now()) > SLA_MIN;
         return '<div class="bcard ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : '') + (isLate ? ' late' : '') +
           '" onclick="page(\'inv\');tab=\'الكل\';openInv(\'' + v.id + '\')">' +
-          '<div class="bt"><b>' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥' + (v.urgeCount > 1 ? '×' + v.urgeCount : '') + '</span>' : '') + '</b>' + badge(v.status) + '</div>' +
+          '<div class="bt"><b>' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥' + (v.urgeCount > 1 ? '×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</b>' + badge(v.status) + '</div>' +
           '<div class="bm">' + v.count + ' صنف • <b>' + money(v.total) + ' ج.م</b>' + (v.priceUps ? ' • 📈' + v.priceUps : '') + (v.priceDowns ? ' • 📉' + v.priceDowns : '') +
           (pending(v) ? ' • ' + timerHtml(v) : '') + '</div>' +
           '<ul class="tl">' + invEvents(v).map(e => '<li class="' + (e.cls || '') + '"><span>' + e.i + '</span><span>' + esc(e.x) + '</span><span class="tm">' + tm(e.t) + '</span></li>').join('') + '</ul></div>';
@@ -1184,6 +1316,12 @@ function renderPerf() {
     const p = ppl[v.receivedBy] = ppl[v.receivedBy] || { name: v.receivedBy, n: 0, total: 0, mins: 0, ontime: 0, pick: 0, pickN: 0, lines: 0 };
     p.open = (p.open || 0) + 1;
   });
+  // وقت الرد على الشات (بمواعيد العمل)
+  const reps = (chatSum.replies || []).filter(x => new Date(x.at) >= start);
+  reps.forEach(x => {
+    const p = ppl[x.by] = ppl[x.by] || { name: x.by, n: 0, total: 0, mins: 0, ontime: 0, pick: 0, pickN: 0, lines: 0 };
+    p.cr = (p.cr || 0) + mins(x.asked, x.at); p.crN = (p.crN || 0) + 1;
+  });
   const list = Object.values(ppl).map(p => {
     p.avg = p.n ? p.mins / p.n : 0; p.rate = p.n ? p.ontime / p.n : 0;
     p.score = p.n ? Math.round(p.rate * 60 + Math.min(1, p.n / Math.max(...Object.values(ppl).map(x => x.n || 0), 1)) * 40) : 0;
@@ -1199,7 +1337,8 @@ function renderPerf() {
   h += '<div class="stats"><div class="stat s3"><small>فواتير دخلت</small><b>' + tot + '</b></div>' +
     '<div class="stat s2"><small>متوسط الوقت</small><b>' + durTxt(avgAll) + '</b></div>' +
     '<div class="stat s1"><small>في الميعاد (≤ ' + SLA_MIN + ' د)</small><b>' + Math.round(onAll * 100) + '%</b></div>' +
-    '<div class="stat s4"><small>متأخرة دلوقتي</small><b>' + all.filter(v => pending(v) && mins(v.createdAt, now()) > SLA_MIN).length + '</b></div></div>';
+    '<div class="stat s4"><small>متأخرة دلوقتي</small><b>' + all.filter(v => pending(v) && mins(v.createdAt, now()) > SLA_MIN).length + '</b></div>' +
+    '<div class="stat s10"><small>💬 متوسط الرد على الشات</small><b>' + (reps.length ? durTxt(reps.reduce((a, x) => a + mins(x.asked, x.at), 0) / reps.length) : '-') + '</b></div></div>';
   h += list.length ? '<div class="people">' + list.map((p, k) =>
     '<div class="person"><div class="ph"><div class="av">' + esc((p.name || '?').trim().charAt(0)) + '</div><div class="nm">' + esc(p.name) + '</div><div class="medal">' + (p.n ? (medals[k] || '') : '') + '</div></div>' +
     '<div class="kpis">' +
@@ -1209,6 +1348,7 @@ function renderPerf() {
     '<div class="kpi"><small>متوسط الاستلام</small><b>' + (p.pickN ? durTxt(p.pick / p.pickN) : '-') + '</b></div>' +
     '<div class="kpi"><small>في الميعاد</small><b style="color:' + colors(p.rate) + '">' + Math.round(p.rate * 100) + '%</b></div>' +
     '<div class="kpi"><small>شغّال عليها دلوقتي</small><b>' + (p.open || 0) + '</b></div>' +
+    '<div class="kpi"><small>💬 متوسط الرد على الشات</small><b>' + (p.crN ? durTxt(p.cr / p.crN) + ' (' + p.crN + ')' : '-') + '</b></div>' +
     '</div><div class="bar"><i style="width:' + p.score + '%;background:' + colors(p.rate) + '"></i></div>' +
     '<small style="color:var(--muted)">الدرجة ' + p.score + '/100 (الالتزام بالوقت 60 + عدد الفواتير 40)</small></div>'
   ).join('') + '</div>' : '<div class="pane empty">مفيش فواتير دخلت في الفترة دي</div>';
