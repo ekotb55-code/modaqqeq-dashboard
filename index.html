@@ -77,7 +77,7 @@
 
   /* ---------- الإحصائيات ---------- */
   .main { max-width: 1500px; margin: 0 auto; padding: 16px; }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
   .stat { border-radius: 18px; padding: 14px 16px; color: #fff; box-shadow: var(--shadow); position: relative; overflow: hidden; }
   .stat::after { content: ''; position: absolute; width: 110px; height: 110px; border-radius: 50%; background: rgba(255,255,255,.12); left: -30px; top: -40px; }
   .stat small { opacity: .9; font-weight: 600; }
@@ -88,6 +88,15 @@
   .s4 { background: linear-gradient(135deg, #F0504F, #C62828); }
   .s5 { background: linear-gradient(135deg, #8B6CF0, #5B3CC4); }
   .s6 { background: linear-gradient(135deg, #5B6B7E, #36414F); }
+  .s7 { background: linear-gradient(135deg, #F06292, #C2185B); }
+  .s8 { background: linear-gradient(135deg, #26A69A, #00796B); }
+  .s9 { background: linear-gradient(135deg, #455A64, #263238); }
+  /* الكروت الملونة هي الفلاتر: الكارت المختار عليه إطار */
+  button.stat { border: 0; font: inherit; text-align: right; cursor: pointer; transition: transform .15s, box-shadow .15s, opacity .15s; }
+  button.stat:hover { transform: translateY(-2px); }
+  .stats.picking button.stat:not(.on) { opacity: .78; }
+  button.stat.on { opacity: 1; transform: translateY(-3px); box-shadow: 0 0 0 3px #fff, 0 0 0 6px #0B3D6E, var(--shadow); }
+  button.stat .hint { display: block; font-size: 11px; opacity: .85; margin-top: 2px; }
   .hours { grid-column: 1 / -1; border-radius: 12px; padding: 8px 14px; font-weight: 700; background: #E2F5E6; color: #15803D; }
   .hours.off { background: #EEF1F5; color: #4A5868; }
   @media (max-width: 800px) { .stats { grid-template-columns: repeat(2, 1fr); } }
@@ -96,6 +105,7 @@
   .wrap { display: grid; grid-template-columns: 360px 1fr; gap: 16px; }
   @media (max-width: 1000px) { .wrap { grid-template-columns: 1fr; } .wrap.open #listPane { display: none; } .wrap:not(.open) #detailPane { display: none; } }
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tabnow { font-size: 14px; color: #4A5868; padding: 2px 4px; }
   .tab { background: #fff; color: var(--text); border: 1.5px solid var(--line); padding: 7px 12px; }
   .tab.on { background: var(--navy); color: #fff; border-color: var(--navy); }
   .tab .n { display: inline-block; min-width: 22px; padding: 0 6px; margin-inline-start: 6px; border-radius: 10px; background: rgba(0,0,0,.08); font-size: 13px; }
@@ -566,35 +576,48 @@ async function loadList(quiet) {
     if (cur && !quiet) openInv(cur.invoice.id, true);
   } catch (e) { if (!quiet) toast(msg(e)); }
 }
+// الفلاتر = الكروت الملونة اللي فوق (بتعدّ على حسب المحل والبحث المختارين)
+const CARD_TABS = [
+  { k: ST_NEW, c: 's1', t: '🆕 جديدة', f: v => v.status === ST_NEW || !v.status },
+  { k: ST_WORK, c: 's2', t: '⚙️ يتم الادخال', f: v => v.status === ST_WORK },
+  { k: ST_DONE, c: 's3', t: '✅ تم الإدخال', f: v => v.status === ST_DONE },
+  { k: 'late', c: 's4', t: '⚠️ متأخرة (أكتر من ' + SLA_MIN + ' د)', f: v => pending(v) && mins(v.createdAt, now()) > SLA_MIN },
+  { k: 'urge', c: 's7', t: '🔥 الفرع مستعجلها', f: v => pending(v) && v.urgeCount, hideEmpty: true },
+  { k: ST_REJ, c: 's6', t: '↩️ مرفوضة عند الفرع', f: v => v.status === ST_REJ },
+  { k: 'review', c: 's5', t: '👀 مستنية مراجعة الفرع', f: v => v.status === ST_DONE && !v.reviewedBy && new Date(v.doneAt) >= new Date(now() - 3 * 86400000) },
+  { k: TAB_NOTES, c: 's8', t: '📝 ملاحظات الفروع', f: v => !!v.reviewNotes },
+  { k: 'الكل', c: 's9', t: '📋 الكل', f: () => true }
+];
+function baseList() {
+  const st = $('fStore').value, q = $('fText').value.trim();
+  return all.filter(v => (!st || v.store === st) && (!q || (v.supplier + ' ' + v.number + ' ' + v.systemNo + ' ' + v.user + ' ' + v.store).indexOf(q) !== -1));
+}
+function pickTab(k) { tab = k; renderList(); }
 function renderStats() {
   const today = new Date(now()); today.setHours(0, 0, 0, 0);
-  const nNew = all.filter(v => v.status === ST_NEW).length, nWork = all.filter(v => v.status === ST_WORK).length;
-  const doneToday = all.filter(v => v.status === ST_DONE && new Date(v.doneAt) >= today).length;
-  const late = all.filter(v => pending(v) && mins(v.createdAt, now()) > SLA_MIN).length;
-  const nRej = all.filter(v => v.status === ST_REJ).length;
-  const nUrge = all.filter(v => pending(v) && v.urgeCount).length;
-  const nRev = all.filter(v => v.status === ST_DONE && !v.reviewedBy && new Date(v.doneAt) >= new Date(now() - 3 * 86400000)).length;
+  const base = baseList();
+  const doneToday = base.filter(v => v.status === ST_DONE && new Date(v.doneAt) >= today).length;
   const work = inWork(now());
+  if (!CARD_TABS.some(x => x.k === tab)) tab = ST_NEW;
+  $('stats').classList.add('picking');
   $('stats').innerHTML =
     '<div class="hours' + (work ? '' : ' off') + '">' + (work ? '🕘 مواعيد العمل من 9 الصبح لحد 1 بالليل - العداد شغال' : '⏸ برة مواعيد العمل (من 1 بالليل لـ 9 الصبح) - العداد واقف') + '</div>' +
-    '<div class="stat s1"><small>🆕 جديدة</small><b>' + nNew + '</b></div>' +
-    '<div class="stat s2"><small>⚙️ يتم الادخال</small><b>' + nWork + '</b></div>' +
-    '<div class="stat s3"><small>✅ تم الإدخال</small><b>' + doneToday + '</b></div>' +
-    '<div class="stat s4"><small>⚠️ متأخرة (أكتر من ' + SLA_MIN + ' د)</small><b>' + late + '</b></div>' +
-    '<div class="stat s6"><small>↩️ مرفوضة عند الفرع</small><b>' + nRej + '</b></div>' +
-    (nUrge ? '<div class="stat s4"><small>🔥 الفرع مستعجلها</small><b>' + nUrge + '</b></div>' : '') +
-    '<div class="stat s5"><small>👀 مستنية مراجعة الفرع</small><b>' + nRev + '</b></div>';
+    CARD_TABS.map(x => {
+      const n = base.filter(x.f).length;
+      if (x.hideEmpty && !n && tab !== x.k) return '';
+      return '<button class="stat ' + x.c + (tab === x.k ? ' on' : '') + '" onclick="pickTab(\'' + x.k + '\')"><small>' + x.t + '</small><b>' + n + '</b>' +
+        (x.k === ST_DONE ? '<span class="hint">النهارده: ' + doneToday + '</span>' : '') + '</button>';
+    }).join('');
 }
 function renderList() {
-  const st = $('fStore').value, q = $('fText').value.trim();
-  const base = all.filter(v => (!st || v.store === st) && (!q || (v.supplier + ' ' + v.number + ' ' + v.systemNo + ' ' + v.user + ' ' + v.store).indexOf(q) !== -1));
-  const cnt = s => base.filter(v => v.status === s).length;
-  const notes = base.filter(v => v.reviewNotes).length;
-  $('tabs').innerHTML = [[ST_NEW, cnt(ST_NEW)], [ST_WORK, cnt(ST_WORK)], [ST_DONE, cnt(ST_DONE)], [ST_REJ, cnt(ST_REJ)], [TAB_NOTES, notes], ['الكل', base.length]]
-    .map(([t, n]) => '<button class="tab' + (tab === t ? ' on' : '') + '" onclick="tab=\'' + t + '\';renderList()">' + t + '<span class="n">' + n + '</span></button>').join('');
-  let list = base.filter(v => tab === 'الكل' || (tab === TAB_NOTES ? !!v.reviewNotes : v.status === tab));
-  // الأقدم الأول، والمستعجلة فوق خالص
-  if (tab === ST_NEW || tab === ST_WORK) list = list.slice().sort((a, b) => (b.urgeCount ? 1 : 0) - (a.urgeCount ? 1 : 0) || a.createdAt.localeCompare(b.createdAt));
+  renderStats(); // الكروت هي الفلاتر وعدّها بيتغير مع المحل والبحث
+  const base = baseList();
+  const ct = CARD_TABS.find(x => x.k === tab) || CARD_TABS[0];
+  $('tabs').innerHTML = '<span class="tabnow">بتعرض: <b>' + ct.t + '</b></span>';
+  let list = base.filter(ct.f);
+  // الأحدث الأول في المنتهية، والأقدم الأول في الشغالة، والمستعجلة فوق خالص
+  if (tab === ST_DONE || tab === 'review') list = list.slice().sort((a, b) => String(b.doneAt).localeCompare(String(a.doneAt)));
+  if (tab === ST_NEW || tab === ST_WORK || tab === 'late' || tab === 'urge') list = list.slice().sort((a, b) => (b.urgeCount ? 1 : 0) - (a.urgeCount ? 1 : 0) || a.createdAt.localeCompare(b.createdAt));
   $('list').innerHTML = list.length ? list.map(v =>
     '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : '') + (v.urgeCount && pending(v) ? ' urged' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
     '<div class="top"><span class="sup">' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + '</span>' + timerHtml(v) + '</div>' +
