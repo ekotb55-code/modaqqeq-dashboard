@@ -1298,10 +1298,11 @@ function openChat(store, inv, boxId, title) {
   chatOpen = { store, inv: String(inv || ''), box: boxId, title, msgs: null };
   const box = $(boxId);
   box.innerHTML = '<h3>💬 ' + esc(title) + '</h3><div class="msgs"><div class="empty"><span class="spin"></span></div></div>' +
-    '<div class="qr">' + QUICK_REPLIES.map((q, k) => '<button onclick="chatQuick(' + k + ')">' + esc(q) + '</button>').join('') + '</div>' +
-    '<div class="chatin"><textarea placeholder="اكتب رسالة للفرع..." onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>' +
+    (isQA() ? '' : '<div class="qr">' + QUICK_REPLIES.map((q, k) => '<button onclick="chatQuick(' + k + ')">' + esc(q) + '</button>').join('') + '</div>') +
+    '<div class="chatin"><textarea placeholder="' + (isQA() ? 'ملاحظة داخلية للدعم...' : 'اكتب رسالة للفرع...') + '" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>' +
     '<button class="btn" onclick="sendChat()">إرسال</button></div>' +
-    '<div class="chatopt"><label><input type="checkbox"> 🔒 ملاحظة داخلية (للدعم بس - الفرع مش هيشوفها)</label></div>';
+    (isQA() ? '<div class="chatopt"><label><input type="checkbox" checked disabled> 🔒 رسايل الجودة داخلية دايمًا - الفرع مش بيشوفها خالص</label></div>'
+      : '<div class="chatopt"><label><input type="checkbox"> 🔒 ملاحظة داخلية (للدعم بس - الفرع مش هيشوفها)</label></div>');
   loadChat();
   clearInterval(chatTimer);
   chatTimer = setInterval(() => { if (chatEl('.msgs')) loadChat(true); else clearInterval(chatTimer); }, 10000);
@@ -1336,12 +1337,12 @@ function renderMsgs() {
 function chatQuick(k) { const t = chatEl('textarea'); t.value = QUICK_REPLIES[k]; t.focus(); }
 async function sendChat() {
   if (!chatOpen) return;
-  const t = chatEl('textarea'), box = chatEl('.chatopt input'), btn = chatEl('.chatin .btn'), text = t.value.trim(), internal = box.checked;
+  const t = chatEl('textarea'), box = chatEl('.chatopt input'), btn = chatEl('.chatin .btn'), text = t.value.trim(), internal = isQA() || box.checked;
   if (!text) return;
   btn.disabled = true;
   try {
     await api('dChatSend', { token, store: chatOpen.store, inv: chatOpen.inv, text, internal }, true);
-    t.value = ''; box.checked = false;
+    t.value = ''; if (!isQA()) box.checked = false;
     await loadChat(true);
     const el = chatEl('.msgs'); if (el) el.scrollTop = el.scrollHeight;
   } catch (e) { toast(msg(e)); }
