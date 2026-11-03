@@ -137,6 +137,27 @@
   .tl li.note { color: #8C1D18; }
   .bempty { text-align: center; color: #8A96A3; padding: 18px 6px; font-size: 13px; }
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  /* رحلة الفاتورة: 4 كروت كبيرة بأسهم + فلاتر صغيرة تحتها */
+  #stats { display: block; }
+  #stats .hours { margin-bottom: 10px; }
+  .flow { display: flex; align-items: stretch; gap: 8px; }
+  .flow .stat.big { flex: 1; min-width: 0; padding: 14px 16px; }
+  .flow .stat.big b { font-size: 34px; }
+  .flow .arrow { align-self: center; font-size: 22px; color: #A8B4C2; font-weight: 900; }
+  .extras { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer; font: inherit; font-weight: 700; font-size: 13.5px;
+    color: #fff; border-radius: 999px; padding: 7px 8px 7px 14px; box-shadow: 0 2px 6px rgba(16,40,70,.12); opacity: .8; transition: opacity .15s, transform .15s, box-shadow .15s; }
+  .chip b { background: rgba(255,255,255,.25); border-radius: 999px; min-width: 28px; padding: 1px 8px; text-align: center; font-size: 14px; }
+  .chip:hover { opacity: 1; transform: translateY(-1px); }
+  .chip.on { opacity: 1; box-shadow: 0 0 0 3px #fff, 0 0 0 5px #0B3D6E; }
+  .chip.hot { opacity: 1; animation: urgepulse 1.6s infinite; }
+  @media (max-width: 800px) {
+    .flow { display: grid; grid-template-columns: 1fr 1fr; }
+    .flow .arrow { display: none; }
+    .flow .stat.big b { font-size: 28px; }
+    .extras { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+    .chip { flex: 0 0 auto; }
+  }
   .stat { border-radius: 18px; padding: 14px 16px; color: #fff; box-shadow: var(--shadow); position: relative; overflow: hidden; }
   .stat::after { content: ''; position: absolute; width: 110px; height: 110px; border-radius: 50%; background: rgba(255,255,255,.12); left: -30px; top: -40px; }
   .stat small { opacity: .9; font-weight: 600; }
@@ -158,7 +179,7 @@
   button.stat .hint { display: block; font-size: 11px; opacity: .85; margin-top: 2px; }
   .hours { grid-column: 1 / -1; border-radius: 12px; padding: 8px 14px; font-weight: 700; background: #E2F5E6; color: #15803D; }
   .hours.off { background: #EEF1F5; color: #4A5868; }
-  @media (max-width: 800px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 800px) { .stats { grid-template-columns: repeat(2, 1fr); } #stats { display: block; } }
 
   /* ---------- القايمة والتفاصيل ---------- */
   .wrap { display: grid; grid-template-columns: 360px 1fr; gap: 16px; }
@@ -187,6 +208,11 @@
   .b-qa { background: #EDE7F6; color: #5B3CC4; }
   .card.st-qa, .bcard.st-qa { border-inline-start-color: #6C4BD8; }
   .s11 { background: linear-gradient(135deg, #7E57C2, #4527A0); }
+  .sysbox { border: 2px solid #1479D3; border-radius: 16px; padding: 10px 14px 14px; margin: 12px 0; background: #F4F9FF; }
+  .sysbox legend { padding: 0 8px; font-weight: 800; color: #0F5FA8; font-size: 15px; }
+  .sysbox small { font-weight: 700; color: #0B3D6E; }
+  .sysbox input { font-size: 18px; font-weight: 800; letter-spacing: .5px; border: 1.5px solid #9CC4EC; background: #fff; }
+  .sysbox input:focus { border-color: #1479D3; box-shadow: 0 0 0 3px rgba(20,121,211,.15); }
   .qabox { background: #F6F2FF; border: 1px solid #D9CCF7; border-radius: 16px; padding: 14px; margin: 12px 0; }
   .qabox h3 { margin: 0 0 8px; color: #4527A0; font-size: 16px; }
   .qaitems { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin: 8px 0; }
@@ -297,6 +323,47 @@
 
   #viewerFull { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 40; display: flex; align-items: center; justify-content: center; }
   #viewerFull img { max-width: 96vw; max-height: 94vh; }
+  /* ---------- الموبايل ---------- */
+  @media (max-width: 760px) {
+    html, body { overflow-x: hidden; }
+    .hbar { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    .hbar img { height: 32px; }
+    .hbar .title { display: none; }
+    .hbar .sp { display: none; }
+    .hbar .btn { padding: 7px 10px; }
+    .hbar .who { font-size: 13px; max-width: 34vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #netTxt { display: none; }
+    .net { padding: 6px 8px; }
+    .nav { order: 10; width: 100%; overflow-x: auto; flex-wrap: nowrap; gap: 4px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+    .nav button { flex: 0 0 auto; padding: 7px 12px; font-size: 14px; }
+    .main { padding: 10px; }
+    .board-page { padding: 10px 10px 0; }
+    .pane { padding: 12px; border-radius: 16px; }
+    .dhead h2 { font-size: 19px; width: 100%; }
+    .dhead .wabtn, .dhead .sysbtn { font-size: 13px; }
+    .info { grid-template-columns: 1fr 1fr; }
+    .vstage { height: 62vh; min-height: 300px; }
+    .tablebox { max-height: none; }
+    .grid2 { grid-template-columns: 1fr; }
+    .people { grid-template-columns: 1fr; }
+    .stores-perf { overflow-x: auto; }
+    .board { height: auto; min-height: 60vh; scroll-snap-type: x mandatory; }
+    .bcol { flex: 0 0 86vw; scroll-snap-align: start; max-height: 75vh; }
+    .bbar input#bText { width: 100%; }
+    .msg { max-width: 92%; }
+    #chatModal { padding: 0; align-items: stretch; }
+    #chatModal .chatwrap { border-radius: 0; height: 100%; display: flex; flex-direction: column; }
+    #chatModal .msgs { flex: 1; max-height: none; }
+    #toast { width: calc(100% - 24px); text-align: center; bottom: 12px; }
+    .qaitems { grid-template-columns: 1fr; }
+    .flow .stat.big { padding: 12px; }
+    .wrap { grid-template-columns: minmax(0, 1fr) !important; }
+    .compare { grid-template-columns: minmax(0, 1fr) !important; }
+    .wrap > *, .compare > *, .pane, .chatwrap, .tablebox { min-width: 0; max-width: 100%; }
+    .chatin textarea { min-width: 0; }
+    /* الفاتورة مفتوحة: نخبّي الكروت علشان المساحة */
+    #pageInv.detail #stats { display: none; }
+  }
   #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 11px 20px; border-radius: 14px; z-index: 50; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
   .spin { display: inline-block; width: 16px; height: 16px; border: 2.5px solid currentColor; border-left-color: transparent; border-radius: 50%; animation: s .8s linear infinite; vertical-align: middle; }
   @keyframes s { to { transform: rotate(360deg); } }
@@ -724,11 +791,13 @@ async function loadList(quiet) {
 }
 // الفلاتر = الكروت الملونة اللي فوق (بتعدّ على حسب المحل والبحث المختارين)
 const CARD_TABS = [
-  { k: ST_NEW, c: 's1', t: '🆕 جديدة', f: v => v.status === ST_NEW || !v.status },
-  { k: ST_WORK, c: 's2', t: '⚙️ يتم الادخال', f: v => v.status === ST_WORK },
-  { k: ST_QA, c: 's11', t: '🔍 قسم الجودة', f: v => v.status === ST_QA },
-  { k: ST_DONE, c: 's3', t: '✅ تم الإدخال', f: v => v.status === ST_DONE },
-  { k: 'late', c: 's4', t: '⚠️ متأخرة (أكتر من ' + SLA_MIN + ' د)', f: v => (pending(v) && mins(v.createdAt, now()) > SLA_MIN) || qaLate(v) },
+  // مراحل الفاتورة (الكروت الكبيرة)
+  { k: ST_NEW, c: 's1', t: '🆕 جديدة', stage: 1, f: v => v.status === ST_NEW || !v.status },
+  { k: ST_WORK, c: 's2', t: '⚙️ يتم الادخال', stage: 2, f: v => v.status === ST_WORK },
+  { k: ST_QA, c: 's11', t: '🔍 قسم الجودة', stage: 3, f: v => v.status === ST_QA },
+  { k: ST_DONE, c: 's3', t: '✅ تم الإدخال', stage: 4, f: v => v.status === ST_DONE },
+  // فلاتر تانية (كروت صغيرة)
+  { k: 'late', c: 's4', t: '⚠️ متأخرة', f: v => (pending(v) && mins(v.createdAt, now()) > SLA_MIN) || qaLate(v) },
   { k: 'urge', c: 's7', t: '🔥 الفرع مستعجلها', f: v => pending(v) && v.urgeCount, hideEmpty: true },
   { k: ST_REJ, c: 's6', t: '↩️ مرفوضة عند الفرع', f: v => v.status === ST_REJ },
   { k: 'review', c: 's5', t: '👀 مستنية مراجعة الفرع', f: v => v.status === ST_DONE && !v.reviewedBy && new Date(v.doneAt) >= new Date(now() - 3 * 86400000) },
@@ -748,15 +817,25 @@ function renderStats() {
   const work = inWork(now());
   if (!CARD_TABS.some(x => x.k === tab)) tab = ST_NEW;
   $('stats').classList.add('picking');
+  const nQaLate = base.filter(qaLate).length;
+  const hint = x => x.k === ST_DONE ? 'النهارده: ' + doneToday
+    : x.k === ST_QA ? (nQaLate ? '⚠️ ' + nQaLate + ' متأخرة' : 'مراجعة قبل الاعتماد')
+    : x.k === ST_NEW ? 'محدش استلمها' : x.k === ST_WORK ? 'الدعم بيدخّلها' : '';
+  const stages = CARD_TABS.filter(x => x.stage), extras = CARD_TABS.filter(x => !x.stage);
   $('stats').innerHTML =
     '<div class="hours' + (work ? '' : ' off') + '">' + (work ? '🕘 مواعيد العمل من 9 الصبح لحد 1 بالليل - العداد شغال' : '⏸ برة مواعيد العمل (من 1 بالليل لـ 9 الصبح) - العداد واقف') + '</div>' +
-    CARD_TABS.map(x => {
+    // رحلة الفاتورة: جديدة ← يتم الادخال ← الجودة ← تم الإدخال
+    '<div class="flow">' + stages.map((x, k) =>
+      (k ? '<span class="arrow">←</span>' : '') +
+      '<button class="stat big ' + x.c + (tab === x.k ? ' on' : '') + '" onclick="pickTab(\'' + x.k + '\')"><small>' + x.t + '</small><b>' + base.filter(x.f).length + '</b>' +
+      '<span class="hint">' + hint(x) + '</span></button>').join('') + '</div>' +
+    // فلاتر سريعة
+    '<div class="extras">' + extras.map(x => {
       const n = base.filter(x.f).length;
       if (x.hideEmpty && !n && tab !== x.k) return '';
-      return '<button class="stat ' + x.c + (tab === x.k ? ' on' : '') + '" onclick="pickTab(\'' + x.k + '\')"><small>' + x.t + '</small><b>' + n + '</b>' +
-        (x.k === ST_DONE ? '<span class="hint">النهارده: ' + doneToday + '</span>' : '') +
-        (x.k === ST_QA && base.filter(qaLate).length ? '<span class="hint">⚠️ ' + base.filter(qaLate).length + ' متأخرة (أكتر من ' + QA_SLA_MIN + ' د)</span>' : '') + '</button>';
-    }).join('');
+      return '<button class="chip ' + x.c + (tab === x.k ? ' on' : '') + (n && (x.k === 'late' || x.k === 'urge' || x.k === 'chat') ? ' hot' : '') +
+        '" onclick="pickTab(\'' + x.k + '\')"><span>' + x.t + '</span><b>' + n + '</b></button>';
+    }).join('') + '</div>';
 }
 function renderList() {
   renderStats(); // الكروت هي الفلاتر وعدّها بيتغير مع المحل والبحث
@@ -791,6 +870,7 @@ function revTag(v) {
 // ---------- الفاتورة ----------
 async function openInv(id, silent) {
   $('wrap').classList.add('open');
+  $('pageInv').classList.add('detail');
   if (!silent) { $('detailPane').innerHTML = '<div class="empty"><span class="spin"></span></div>'; pIdx = 0; }
   try {
     cur = await api('dInvoice', { token, id });
@@ -799,7 +879,7 @@ async function openInv(id, silent) {
     renderList();
   } catch (e) { $('detailPane').innerHTML = '<div class="err">' + esc(msg(e)) + '</div>'; }
 }
-function closeInv() { $('wrap').classList.remove('open'); }
+function closeInv() { $('wrap').classList.remove('open'); $('pageInv').classList.remove('detail'); }
 function pics() { const v = cur.invoice; return v.photos.map(id => ({ id, label: 'الفرع' })).concat(v.screens.map(id => ({ id, label: 'السيستم' }))); }
 
 function renderDetail() {
@@ -863,8 +943,9 @@ function renderDetail() {
       '<div class="drop" id="drop" onclick="$(\'fileIn\').click()">📸 ارفع سكرين أو أكتر من السيستم<br><small>دوس هنا، أو اسحب الصور، أو الصق (Ctrl+V)</small></div>' +
       '<input type="file" id="fileIn" accept="image/*" multiple class="hidden" onchange="addFiles(this.files);this.value=\'\'">' +
       '<div class="shots" id="shots"></div>' +
-      '<div class="grid2"><div><small>رقم الفاتورة في السيستم</small><input id="sysNo" dir="ltr"></div>' +
-      '<div><small>رصيد المورد على السيستم</small><input id="bal" dir="ltr"></div></div>' +
+      '<fieldset class="sysbox"><legend>📌 بيانات السيستم</legend><div class="grid2">' +
+      '<div><small>🧾 رقم الفاتورة في السيستم</small><input id="sysNo" dir="ltr" placeholder="مثلاً 1182"></div>' +
+      '<div><small>💰 رصيد المورد على السيستم</small><input id="bal" dir="ltr" placeholder="مثلاً 15000"></div></div></fieldset>' +
       (v.priceChanges ? '<div class="pricebox"><label><input type="checkbox" id="pricesDone"> 🏷 تم تعديل أسعار البيع على السيستم (' + v.priceChanges + ' صنف)</label>' +
         '<small style="color:var(--muted)">لازم تعدّل أسعار البيع المعلّمة بالبنفسجي قبل ما تقفل الفاتورة - الإكسل بتاعها في الزرار البنفسجي فوق</small></div>' : '') +
       '<div class="err" id="doneErr"></div>' +
