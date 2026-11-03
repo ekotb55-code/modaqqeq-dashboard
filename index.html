@@ -50,7 +50,13 @@
   .who { color: var(--muted); font-weight: 600; }
   .accent { height: 4px; background: linear-gradient(90deg, var(--blue), var(--purple), #2BB45A, var(--yellow)); }
   .nav { display: flex; gap: 6px; }
-  .nav button { background: transparent; color: var(--muted); padding: 8px 14px; }
+  @media (max-width: 1320px) and (min-width: 761px) {
+    .hbar { flex-wrap: wrap; row-gap: 4px; }
+    .nav { order: 10; width: 100%; justify-content: center; }
+    .team-page { height: calc(100vh - 128px); }
+  }
+  .nav button { background: transparent; color: var(--muted); padding: 8px 12px; white-space: nowrap; }
+  .hbar .title { white-space: nowrap; }
   .nav button.on { background: var(--sky); color: var(--blue-2); }
   .bell { position: relative; }
   /* عداد النت */
@@ -345,6 +351,77 @@
   .bar i { display: block; height: 100%; border-radius: 6px; }
   .stores-perf { margin-top: 20px; }
 
+
+  /* ---------- دردشة الفريق (زي واتساب) ---------- */
+  .nbadge { display: inline-block; min-width: 20px; background: #C62828; color: #fff; border-radius: 999px; padding: 0 6px; font-size: 12px; font-weight: 800; line-height: 20px; margin-inline-start: 4px; }
+  .nbadge.at { background: #6C4BD8; }
+  .team-page { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 14px; padding: 12px 16px; height: calc(100vh - 82px); box-sizing: border-box; }
+  .tside { background: #fff; border-radius: 18px; box-shadow: var(--shadow); overflow-y: auto; }
+  .tside .th { padding: 14px 16px 8px; font-weight: 800; color: var(--navy); font-size: 17px; }
+  .troom { display: flex; gap: 10px; align-items: center; padding: 10px 14px; cursor: pointer; border-top: 1px solid #EEF2F7; }
+  .troom:hover { background: #F6F9FD; } .troom.on { background: var(--sky); }
+  .troom .av { width: 44px; height: 44px; flex-basis: 44px; font-size: 17px; }
+  .troom .tx { flex: 1; min-width: 0; }
+  .troom .tn { font-weight: 800; display: flex; gap: 6px; align-items: center; }
+  .troom .tn small { color: var(--muted); font-weight: 600; font-size: 11.5px; margin-inline-start: auto; }
+  .troom .tl { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .troom .tl.new { color: var(--text); font-weight: 700; }
+  .tmain { background: #fff; border-radius: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .thead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .thead .av { width: 40px; height: 40px; flex-basis: 40px; }
+  .thead b { font-size: 17px; color: var(--navy); } .thead small { display: block; color: var(--muted); font-size: 12px; }
+  .tback { display: none; }
+  .tmsgs { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 6px;
+    background: #EFE7DD url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='1.2' fill='%23d9cfc2'/%3E%3C/svg%3E"); }
+  .tday { align-self: center; background: #E1EEF9; color: #3D5873; font-size: 12px; font-weight: 700; border-radius: 8px; padding: 2px 10px; margin: 6px 0; }
+  .tm { display: flex; gap: 6px; align-items: flex-end; max-width: 78%; align-self: flex-start; }
+  .tm.me { align-self: flex-end; flex-direction: row-reverse; }
+  .tm .av { width: 30px; height: 30px; flex-basis: 30px; }
+  .tb2 { background: #fff; border-radius: 12px; border-start-start-radius: 3px; padding: 6px 10px 4px; box-shadow: 0 1px 1px rgba(0,0,0,.08); position: relative; min-width: 90px; }
+  .tm.me .tb2 { background: #D9FDD3; border-start-start-radius: 12px; border-start-end-radius: 3px; }
+  .tm.hl .tb2 { animation: hlpulse 1.4s; }
+  @keyframes hlpulse { 30% { box-shadow: 0 0 0 4px #FFD54F; } }
+  .tb2 .nm { font-size: 12.5px; font-weight: 800; color: #6C4BD8; display: block; }
+  .tb2 .tt { white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
+  .tb2 .tt .mn { color: #1479D3; font-weight: 800; background: #E8F2FC; border-radius: 4px; padding: 0 3px; }
+  .tb2 .tt .mn.mine { background: #FFF1B8; color: #8A5A00; }
+  .tb2 .ft { display: flex; gap: 6px; justify-content: flex-end; align-items: center; font-size: 11px; color: #667781; margin-top: 2px; }
+  .tb2 .tk { color: #53BDEB; font-weight: 800; } .tb2 .tk.no { color: #99A3AD; }
+  .tb2 .del { color: #8A96A3; font-style: italic; }
+  .tb2 .rq { border-inline-start: 4px solid #6C4BD8; background: rgba(0,0,0,.05); border-radius: 6px; padding: 4px 8px; margin: 2px 0 4px; font-size: 13px; cursor: pointer; }
+  .tb2 .rq b { color: #6C4BD8; display: block; font-size: 12px; }
+  .tb2 .media { display: block; max-width: min(300px, 60vw); max-height: 320px; border-radius: 8px; margin: 2px 0; background: #DDE4EC; cursor: pointer; }
+  .tb2 video.media { cursor: auto; }
+  .tb2 audio { width: 250px; max-width: 60vw; height: 40px; }
+  .tb2 .fileb { display: flex; gap: 8px; align-items: center; background: rgba(0,0,0,.05); border-radius: 8px; padding: 8px 10px; font-weight: 700; color: var(--navy); cursor: pointer; }
+  .tb2 .ld { width: 220px; height: 120px; display: flex; align-items: center; justify-content: center; background: #DDE4EC; border-radius: 8px; color: #556; font-size: 13px; }
+  .tacts { position: absolute; top: -12px; inset-inline-end: 6px; display: none; gap: 2px; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.15); padding: 2px; }
+  .tb2:hover .tacts { display: flex; }
+  .tacts button { border: 0; background: none; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 6px; }
+  .tacts button:hover { background: var(--sky); }
+  .tcomp { border-top: 1px solid var(--line); padding: 8px 10px; background: #F7F9FB; position: relative; }
+  .tcomp .bar2 { display: flex; gap: 8px; align-items: center; background: #fff; border-radius: 10px; padding: 6px 10px; margin-bottom: 6px; border-inline-start: 4px solid #6C4BD8; font-size: 13px; }
+  .tcomp .bar2 .x { margin-inline-start: auto; cursor: pointer; border: 0; background: none; font-size: 16px; }
+  .tcomp .bar2 img, .tcomp .bar2 video { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; }
+  .tcomp .row { display: flex; gap: 6px; align-items: flex-end; }
+  .tcomp textarea { flex: 1; min-height: 44px; max-height: 140px; resize: none; border-radius: 22px; padding: 11px 16px; }
+  .tcomp .ib { width: 44px; height: 44px; border-radius: 50%; padding: 0; font-size: 19px; flex: 0 0 44px; }
+  .tcomp .ib.soft { background: #fff; color: var(--blue-2); box-shadow: none; border: 1.5px solid var(--line); }
+  .tcomp .ib.rec { background: #E0393E; animation: urgepulse 1s infinite; }
+  .recbar { display: flex; flex: 1; align-items: center; gap: 10px; background: #fff; border-radius: 22px; padding: 10px 16px; font-weight: 800; color: #C62828; }
+  .recbar i { width: 10px; height: 10px; border-radius: 50%; background: #E0393E; animation: netblink 1s infinite; }
+  .mpop { position: absolute; bottom: 100%; inset-inline-start: 60px; background: #fff; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.18); min-width: 220px; max-height: 260px; overflow-y: auto; z-index: 5; }
+  .mpop div { display: flex; gap: 8px; align-items: center; padding: 8px 12px; cursor: pointer; font-weight: 700; }
+  .mpop div.on, .mpop div:hover { background: var(--sky); }
+  .mpop .av { width: 28px; height: 28px; flex-basis: 28px; }
+  @media (max-width: 760px) {
+    .team-page { grid-template-columns: 1fr; padding: 8px; height: calc(100vh - 112px); }
+    .team-page.room .tside { display: none; }
+    .team-page:not(.room) .tmain { display: none; }
+    .tback { display: inline-block; }
+    .tm { max-width: 90%; }
+    .tacts { display: flex; position: static; box-shadow: none; background: none; justify-content: flex-end; }
+  }
   #viewerFull { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 40; display: flex; align-items: center; justify-content: center; }
   #viewerFull img { max-width: 96vw; max-height: 94vh; }
   /* ---------- الموبايل ---------- */
@@ -417,6 +494,7 @@
         <button id="navStores" onclick="page('stores')">🏪 المحلات</button>
         <button id="navPerf" onclick="page('perf')">🏆 أداء الدعم</button>
         <button id="navRep" onclick="page('rep')">📊 تقارير الفروع</button>
+        <button id="navTeam" onclick="page('team')">💬 الفريق <span class="nbadge hidden" id="teamBadge"></span></button>
       </div>
       <span class="sp"></span>
       <span class="net good" id="netPill" onclick="netInfo()" title="سرعة النت"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><span id="netTxt">النت...</span></span>
@@ -458,7 +536,12 @@
     <div class="board" id="board"></div>
   </div>
   <div class="main hidden" id="pageRep"></div>
+  <div class="team-page hidden" id="pageTeam">
+    <div class="tside" id="tSide"><div class="empty"><span class="spin"></span></div></div>
+    <div class="tmain" id="tMain"><div class="empty">👈 اختار محادثة</div></div>
+  </div>
 </div>
+<input type="file" id="teamFile" class="hidden" accept="image/*,video/*,.pdf,.xlsx,.xls,.doc,.docx" onchange="teamFilePicked(this)">
 
 <div id="viewerFull" class="hidden" onclick="this.classList.add('hidden')"><img id="viewerFullImg"></div>
 <div id="toast" class="hidden"></div>
@@ -580,6 +663,9 @@ function showApp() {
   setInterval(() => loadList(true), 20000);
 }
 function page(p) {
+  $('pageTeam').classList.toggle('hidden', p !== 'team');
+  $('navTeam').classList.toggle('on', p === 'team');
+  if (p === 'team') openTeam(); else teamStop();
   $('pageRep').classList.toggle('hidden', p !== 'rep');
   $('navRep').classList.toggle('on', p === 'rep');
   if (p === 'rep') renderRepForm();
@@ -760,6 +846,7 @@ async function loadList(quiet) {
     prevStatus = {}; r.invoices.forEach(v => { prevStatus[v.id] = v.status; });
     all = r.invoices; stores = r.stores;
     chatSum = r.chat || { threads: [], replies: [] };
+    if (r.team) teamTick(r.team);
     if (r.me) { const first = !myRole; myRole = r.me.role || 'دعم'; myPhoto = r.me.photo || ''; renderWho(); if (first && isQA()) { tab = ST_QA; } if (first) setTimeout(() => startTour(false), 900); }
     const newMsgs = chatKnown ? chatSum.threads.filter(t => t.unread > (chatKnown[t.store + '|' + t.inv] || 0) && t.lastFrom === 'فرع') : [];
     chatKnown = {}; chatSum.threads.forEach(t => { chatKnown[t.store + '|' + t.inv] = t.unread; });
@@ -1575,6 +1662,7 @@ function tourSteps() {
     { el: '#navStores', t: 'المحلات 🏪', b: 'لوحة زي تريلو: عمود لكل محل وكل فاتورة كارت بالأحداث بتاعتها بالترتيب. ومنها تفتح شات الفرع العام.' },
     { el: '#navPerf', t: 'الأداء 🏆', b: 'سرعة الاستلام والإدخال لكل موظف، تقييم الجودة، ونسبة الفواتير اللي عدّت من أول مرة.' },
     { el: '#navRep', t: 'تقارير الفروع 📊', b: 'تقرير PDF لأي فرع في أي فترة.' },
+    { el: '#navTeam', t: 'دردشة الفريق 💬', b: 'زي واتساب بين فريق الدعم والجودة: جروب للفريق كله ورسايل خاصة.\nاكتب @ وبعدها اسم زميلك علشان تعمل له منشن (هيوصله تنبيه)، وتقدر تبعت صور وفيديو وملفات ورسالة صوتية 🎤، وترد على أي رسالة ↩️.' },
     { el: '#bellBtn', t: 'الإشعارات والصوت 🔔', b: 'فعّلها مرة واحدة: هيرن مع كل فاتورة جديدة أو استعجال، وكل 5 دقايق طول ما فيه فواتير مستنية.' },
     { el: '#who', t: 'صورتك 🙂', b: 'دوس على اسمك علشان تحط صورتك - بتظهر جنب رسايلك في الشات.' },
     { el: '#helpBtn', t: 'خلصنا ✅', b: 'تقدر تعيد الجولة دي في أي وقت من زرار ؟' }
@@ -1637,6 +1725,298 @@ function endTour() {
   ls('dashTour1', '1');
   ['tourMask', 'tourHole', 'tourTip'].forEach(id => { const e = $(id); if (e) e.remove(); });
   window.removeEventListener('resize', tourPos);
+}
+
+// ---------- دردشة الفريق (زي واتساب): جروب للفريق كله + خاص بين أي اتنين ----------
+let team = { members: [], rooms: [], me: '', room: '', msgs: [], reads: [], reply: null, att: null, timer: 0, known: null, mpop: null };
+const teamFiles = {};
+function teamName(email) { const m = team.members.find(x => x.email === email); return m ? m.name : email; }
+function dmOf(email) { return 'dm:' + [team.me, email].sort().join('|'); }
+function roomTitle(room) {
+  if (room === 'all') return { name: '👥 الفريق كله', sub: team.members.map(m => m.name).join('، '), photo: '' };
+  const other = room.slice(3).split('|').find(e => e !== team.me) || team.me;
+  const m = team.members.find(x => x.email === other) || { name: other, role: '', photo: '' };
+  return { name: m.name, sub: m.role, photo: m.photo };
+}
+function teamTick(t) {
+  const n = t.unread || 0, at = t.mentions || 0, b = $('teamBadge');
+  b.textContent = at ? '@' + at : n; b.classList.toggle('hidden', !n); b.classList.toggle('at', !!at);
+  if (team.known !== null && t.last && t.last > team.known) {
+    const open = !$('pageTeam').classList.contains('hidden');
+    if (open) loadTeamSide(); 
+    if (!open || document.hidden) {
+      if (at) alarm(3); else ding();
+      const ttl = at ? '📣 حد عمل لك منشن في دردشة الفريق' : '💬 رسالة جديدة في دردشة الفريق';
+      toast(ttl);
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try { const nn = new Notification(ttl, { icon: 'icon.png', tag: 'team', renotify: true }); nn.onclick = () => { window.focus(); page('team'); nn.close(); }; } catch (e) {}
+      }
+    }
+  }
+  if (t.last && (team.known === null || t.last > team.known)) team.known = t.last;
+  else if (team.known === null) team.known = '';
+}
+async function openTeam() {
+  await loadTeamSide();
+  if (!team.room && innerWidth > 760) openRoom('all');
+  clearInterval(team.timer);
+  team.timer = setInterval(() => { if (!document.hidden) { loadTeamSide(true); if (team.room) loadRoom(true); } }, 6000);
+}
+function teamStop() { clearInterval(team.timer); team.timer = 0; }
+async function loadTeamSide(quiet) {
+  try {
+    const r = await api('dTeam', { token });
+    team.members = r.members; team.rooms = r.rooms; team.me = r.me;
+    renderTeamSide();
+  } catch (e) { if (!quiet) $('tSide').innerHTML = '<div class="err">' + esc(msg(e)) + '</div>'; }
+}
+function renderTeamSide() {
+  const info = room => team.rooms.find(x => x.room === room) || { unread: 0, mentions: 0, last: null };
+  const kindTxt = l => l.text || ({ image: '📷 صورة', video: '🎬 فيديو', audio: '🎤 رسالة صوتية', file: '📎 ملف' }[l.kind] || '');
+  const row = (room, name, photo, sub) => {
+    const i = info(room), l = i.last;
+    const last = l ? (l.from === team.me ? 'إنت: ' : room === 'all' ? l.name + ': ' : '') + kindTxt(l) : sub;
+    return '<div class="troom' + (team.room === room ? ' on' : '') + '" onclick="openRoom(\'' + esc(room) + '\')">' +
+      (room === 'all' ? '<span class="av">👥</span>' : avatar(photo, name)) +
+      '<div class="tx"><div class="tn">' + esc(name) + '<small>' + (l ? tm(l.at) : '') + '</small></div>' +
+      '<div class="tl' + (i.unread ? ' new' : '') + '">' + esc(last || '') + '</div></div>' +
+      (i.mentions ? '<span class="nbadge at">@</span>' : '') + (i.unread ? '<span class="nbadge">' + i.unread + '</span>' : '') + '</div>';
+  };
+  const others = team.members.filter(m => m.email !== team.me);
+  // المحادثات اللي فيها كلام الأول (الأحدث فوق)
+  const lastAt = e => { const i = info(dmOf(e)); return i.last ? i.last.at : ''; };
+  others.sort((a, b) => lastAt(b.email).localeCompare(lastAt(a.email)) || a.name.localeCompare(b.name));
+  $('tSide').innerHTML = '<div class="th">💬 دردشة الفريق</div>' + row('all', 'الفريق كله', '', 'جروب فريق الدعم والجودة') +
+    '<div class="th" style="font-size:14px;color:var(--muted)">رسايل خاصة</div>' +
+    others.map(m => row(dmOf(m.email), m.name, m.photo, m.role)).join('');
+  fillImages($('tSide'));
+}
+function openRoom(room) {
+  team.room = room; team.msgs = []; team.reply = null; team.att = null;
+  $('pageTeam').classList.add('room');
+  const t = roomTitle(room);
+  $('tMain').innerHTML = '<div class="thead"><button class="btn soft tback" onclick="closeRoom()">→</button>' +
+    (room === 'all' ? '<span class="av">👥</span>' : avatar(t.photo, t.name)) +
+    '<div style="min-width:0"><b>' + esc(t.name) + '</b><small style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(t.sub || '') + '</small></div></div>' +
+    '<div class="tmsgs" id="tMsgs"><div class="empty"><span class="spin"></span></div></div>' +
+    '<div class="tcomp" id="tComp"></div>';
+  fillImages($('tMain'));
+  renderComposer();
+  renderTeamSide();
+  loadRoom();
+}
+function closeRoom() { team.room = ''; $('pageTeam').classList.remove('room'); renderTeamSide(); }
+async function loadRoom(quiet) {
+  const room = team.room;
+  try {
+    const r = await api('dTeamMsgs', { token, room });
+    if (team.room !== room) return;
+    const changed = JSON.stringify(r.messages.map(m => m.id + m.deleted)) !== JSON.stringify(team.msgs.map(m => m.id + m.deleted)) ||
+      JSON.stringify(r.reads) !== JSON.stringify(team.reads);
+    team.msgs = r.messages; team.reads = r.reads;
+    if (changed || !quiet) renderTeamMsgs();
+    const i = team.rooms.find(x => x.room === room);
+    if (i && i.unread) { i.unread = 0; i.mentions = 0; renderTeamSide(); }
+  } catch (e) { if (!quiet) $('tMsgs').innerHTML = '<div class="err">' + esc(msg(e)) + '</div>'; }
+}
+// النص مع المنشن متلوّن
+function teamText(m) {
+  let h = esc(m.text);
+  const names = team.members.map(x => x.name).concat(['الكل']).sort((a, b) => b.length - a.length);
+  names.forEach(n => {
+    const mine = n === 'الكل' || teamName(team.me) === n;
+    h = h.split('@' + esc(n)).join('<span class="mn' + (mine ? ' mine' : '') + '">@' + esc(n) + '</span>');
+  });
+  return h;
+}
+function renderTeamMsgs() {
+  const el = $('tMsgs');
+  if (!el) return;
+  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+  let day = '';
+  const html = team.msgs.map(m => {
+    const d = new Date(m.at).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
+    const sep = d !== day ? '<div class="tday">' + d + '</div>' : '';
+    day = d;
+    const mine = m.from === team.me;
+    const seenBy = team.reads.filter(r => r.at >= m.at).map(r => teamName(r.email));
+    const tick = !mine || m.deleted ? '' : team.room === 'all'
+      ? '<span class="tk' + (seenBy.length ? '' : ' no') + '" title="' + esc(seenBy.length ? 'شافها: ' + seenBy.join('، ') : 'لسه محدش شافها') + '">✓✓' + (seenBy.length ? ' ' + seenBy.length : '') + '</span>'
+      : '<span class="tk' + (seenBy.length ? '' : ' no') + '">' + (seenBy.length ? '✓✓' : '✓') + '</span>';
+    let body = '';
+    if (m.deleted) body = '<div class="del">🚫 الرسالة دي اتمسحت</div>';
+    else {
+      if (m.reply) body += '<div class="rq" onclick="teamJump(\'' + esc(m.reply.id) + '\')"><b>' + esc(m.reply.name) + '</b>' + esc(m.reply.text) + '</div>';
+      if (m.file) body += '<div data-tfile="' + esc(m.file) + '" data-kind="' + esc(m.kind) + '" data-fname="' + esc(m.fileName) + '"><div class="ld">' +
+        ({ image: '📷', video: '🎬', audio: '🎤', file: '📎' }[m.kind] || '') + ' <span class="spin"></span></div></div>';
+      if (m.text) body += '<div class="tt">' + teamText(m) + '</div>';
+    }
+    const acts = m.deleted ? '' : '<div class="tacts"><button title="رد" onclick="teamReply(\'' + esc(m.id) + '\')">↩️</button>' +
+      (mine ? '<button title="مسح" onclick="teamDel(\'' + esc(m.id) + '\')">🗑</button>' : '') + '</div>';
+    return sep + '<div class="tm' + (mine ? ' me' : '') + '" id="tm-' + esc(m.id) + '">' + (mine ? '' : avatar(m.photo, m.name)) +
+      '<div class="tb2">' + acts + (mine || team.room !== 'all' ? '' : '<span class="nm">' + esc(m.name) + '</span>') + body +
+      '<div class="ft">' + new Date(m.at).toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' }) + ' ' + tick + '</div></div></div>';
+  }).join('');
+  el.innerHTML = html || '<div class="empty" style="margin:auto;background:#fff;border-radius:12px;padding:14px">ابدأ الكلام 👋 - اكتب @ علشان تعمل منشن لزميل</div>';
+  fillImages(el);
+  el.querySelectorAll('[data-tfile]').forEach(teamMedia);
+  if (atBottom || !el.dataset.done) { el.scrollTop = el.scrollHeight; el.dataset.done = '1'; }
+}
+function teamJump(id) {
+  const e = $('tm-' + id); if (!e) return toast('الرسالة دي قديمة');
+  e.scrollIntoView({ block: 'center', behavior: 'smooth' }); e.classList.remove('hl'); void e.offsetWidth; e.classList.add('hl');
+}
+function getTeamFile(id) {
+  if (!teamFiles[id]) teamFiles[id] = api('dTeamFile', { token, id }).then(r => {
+    const bin = atob(r.file), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return { url: URL.createObjectURL(new Blob([u8], { type: r.mime })), mime: r.mime, name: r.fileName };
+  }).catch(e => { delete teamFiles[id]; throw e; });
+  return teamFiles[id];
+}
+function teamMedia(box) {
+  const id = box.dataset.tfile, kind = box.dataset.kind, name = box.dataset.fname;
+  box.removeAttribute('data-tfile');
+  const show = f => {
+    if (kind === 'image') box.innerHTML = '<img class="media" src="' + f.url + '" onclick="$(\'viewerFullImg\').src=this.src;$(\'viewerFull\').classList.remove(\'hidden\')">';
+    else if (kind === 'video') box.innerHTML = '<video class="media" controls preload="metadata" src="' + f.url + '"></video>';
+    else if (kind === 'audio') box.innerHTML = '<audio controls preload="metadata" src="' + f.url + '"></audio>';
+    else box.innerHTML = '<a class="fileb" href="' + f.url + '" download="' + esc(f.name || name) + '">📎 ' + esc(f.name || name) + ' ⬇️</a>';
+  };
+  // الصور والصوت بيتحملوا على طول، الفيديو والملفات لما تدوس (علشان النت)
+  if (kind === 'image' || kind === 'audio' || teamFiles[id]) getTeamFile(id).then(show).catch(() => { box.innerHTML = '<div class="ld">⚠️ مش قادر أحمّله</div>'; });
+  else {
+    box.innerHTML = '<div class="ld" style="cursor:pointer">' + (kind === 'video' ? '🎬 فيديو - دوس علشان يشتغل' : '📎 ' + esc(name) + ' - دوس للتحميل') + '</div>';
+    box.firstChild.onclick = () => { box.innerHTML = '<div class="ld"><span class="spin"></span></div>'; getTeamFile(id).then(f => { show(f); const v = box.querySelector('video'); if (v) v.play().catch(() => {}); }).catch(e => { box.innerHTML = '<div class="ld">⚠️ ' + esc(msg(e)) + '</div>'; }); };
+  }
+}
+function renderComposer() {
+  const c = $('tComp');
+  if (!c) return;
+  const keep = c.querySelector('textarea') ? c.querySelector('textarea').value : '';
+  let bars = '';
+  if (team.reply) bars += '<div class="bar2"><div><b style="color:#6C4BD8">↩️ رد على ' + esc(team.reply.name) + '</b><div>' + esc((team.reply.text || '📎').slice(0, 90)) + '</div></div><button class="x" onclick="team.reply=null;renderComposer()">✕</button></div>';
+  if (team.att) bars += '<div class="bar2">' + (team.att.kind === 'image' ? '<img src="' + team.att.preview + '">' : team.att.kind === 'video' ? '<video src="' + team.att.preview + '" muted></video>' : team.att.kind === 'audio' ? '<audio controls src="' + team.att.preview + '"></audio>' : '📎') +
+    '<div><b>' + ({ image: 'صورة', video: 'فيديو', audio: 'رسالة صوتية', file: 'ملف' }[team.att.kind]) + '</b> جاهزة<div class="muted">' + esc(team.att.fileName) + ' • ' + (team.att.size / 1048576).toFixed(1) + ' ميجا</div></div><button class="x" onclick="team.att=null;renderComposer()">✕</button></div>';
+  if (team.recording) {
+    c.innerHTML = bars + '<div class="row"><button class="btn ib soft" title="إلغاء" onclick="recStop(false)">🗑</button><div class="recbar"><i></i> بيسجل... <span id="recT">0:00</span></div><button class="btn ib" title="ابعت" onclick="recStop(true)">➤</button></div>';
+    return;
+  }
+  c.innerHTML = bars + '<div class="row">' +
+    '<button class="btn ib soft" title="صورة / فيديو / ملف" onclick="$(\'teamFile\').click()">📎</button>' +
+    '<textarea id="tText" rows="1" placeholder="اكتب رسالة... و@ للمنشن" oninput="teamTyping(this)" onkeydown="teamKey(event)" onpaste="teamPaste(event)"></textarea>' +
+    '<button class="btn ib soft" title="سجّل رسالة صوتية" onclick="recStart()">🎤</button>' +
+    '<button class="btn ib" title="إرسال" id="tSend" onclick="teamSend()">➤</button></div>';
+  const t = $('tText'); t.value = keep; t.focus();
+}
+function teamReply(id) {
+  const m = team.msgs.find(x => x.id === id); if (!m) return;
+  team.reply = { id: m.id, name: m.name, text: m.text || ({ image: '📷 صورة', video: '🎬 فيديو', audio: '🎤 رسالة صوتية', file: '📎 ' + m.fileName }[m.kind] || '') };
+  renderComposer();
+}
+async function teamDel(id) {
+  if (!confirm('تمسح الرسالة دي عند الكل؟')) return;
+  try { await api('dTeamDelete', { token, id }, true); loadRoom(); } catch (e) { toast(msg(e)); }
+}
+// ---- المنشن: @ وبعدها اسم
+function teamTyping(t) {
+  t.style.height = 'auto'; t.style.height = Math.min(140, t.scrollHeight) + 'px';
+  const pre = t.value.slice(0, t.selectionStart), m = pre.match(/(^|\s)@([^\s@]*)$/);
+  const old = $('tComp').querySelector('.mpop'); if (old) old.remove();
+  team.mpop = null;
+  if (!m) return;
+  const q = m[2];
+  const list = [{ email: 'all', name: 'الكل', photo: '' }].concat(team.members.filter(x => x.email !== team.me)).filter(x => !q || x.name.indexOf(q) !== -1);
+  if (!list.length) return;
+  team.mpop = { list, i: 0, start: pre.length - q.length - 1 };
+  $('tComp').insertAdjacentHTML('beforeend', '<div class="mpop">' + list.map((x, k) => '<div class="' + (k ? '' : 'on') + '" onmousedown="event.preventDefault();teamMention(' + k + ')">' + (x.email === 'all' ? '<span class="av">👥</span>' : avatar(x.photo, x.name)) + esc(x.name) + '</div>').join('') + '</div>');
+  fillImages($('tComp').querySelector('.mpop'));
+}
+function teamMention(k) {
+  const t = $('tText'), p = team.mpop; if (!p) return;
+  const x = p.list[k], end = t.selectionStart;
+  t.value = t.value.slice(0, p.start) + '@' + x.name + ' ' + t.value.slice(end);
+  const pos = p.start + x.name.length + 2; t.setSelectionRange(pos, pos); t.focus();
+  const pop = $('tComp').querySelector('.mpop'); if (pop) pop.remove(); team.mpop = null;
+}
+function teamKey(e) {
+  const p = team.mpop;
+  if (p) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault(); p.i = (p.i + (e.key === 'ArrowDown' ? 1 : p.list.length - 1)) % p.list.length;
+      $('tComp').querySelectorAll('.mpop div').forEach((d, k) => d.classList.toggle('on', k === p.i)); return;
+    }
+    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); return teamMention(p.i); }
+    if (e.key === 'Escape') { $('tComp').querySelector('.mpop').remove(); team.mpop = null; return; }
+  }
+  if (e.key === 'Enter' && !e.shiftKey && innerWidth > 760) { e.preventDefault(); teamSend(); }
+}
+// ---- المرفقات
+const TEAM_MAX_MB = 20;
+function fileB64(file) {
+  return new Promise((ok, bad) => { const r = new FileReader(); r.onerror = bad; r.onload = () => ok(String(r.result).split(',')[1]); r.readAsDataURL(file); });
+}
+async function teamAttach(file, kind) {
+  if (!file) return;
+  if (file.size > TEAM_MAX_MB * 1048576) return toast('الملف أكبر من ' + TEAM_MAX_MB + ' ميجا - ابعت فيديو أقصر');
+  kind = kind || (file.type.indexOf('image/') === 0 ? 'image' : file.type.indexOf('video/') === 0 ? 'video' : file.type.indexOf('audio/') === 0 ? 'audio' : 'file');
+  try {
+    const b64 = kind === 'image' && !/gif/.test(file.type) ? await shrink(file, 1600, .8) : await fileB64(file);
+    const mime = kind === 'image' && !/gif/.test(file.type) ? 'image/jpeg' : (file.type || 'application/octet-stream');
+    team.att = { kind, b64, mime, fileName: file.name || kind, size: Math.round(b64.length * .75), preview: URL.createObjectURL(file) };
+    renderComposer();
+  } catch (e) { toast(msg(e)); }
+}
+function teamFilePicked(inp) { const f = inp.files[0]; inp.value = ''; teamAttach(f); }
+function teamPaste(e) {
+  const it = [...((e.clipboardData || {}).items || [])].find(x => x.kind === 'file');
+  if (it) { e.preventDefault(); teamAttach(it.getAsFile()); }
+}
+// ---- تسجيل صوت
+let rec = null;
+async function recStart() {
+  if (!navigator.mediaDevices || !window.MediaRecorder) return toast('المتصفح ده مش بيسجل صوت');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const type = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+    const mr = new MediaRecorder(stream, type ? { mimeType: type } : {});
+    rec = { mr, stream, chunks: [], t0: Date.now(), send: false, tick: 0 };
+    mr.ondataavailable = e => { if (e.data.size) rec.chunks.push(e.data); };
+    mr.onstop = async () => {
+      const r = rec; rec = null; clearInterval(r.tick);
+      r.stream.getTracks().forEach(t => t.stop());
+      team.recording = false;
+      if (r.send && r.chunks.length) {
+        const blob = new Blob(r.chunks, { type: mr.mimeType || 'audio/webm' });
+        const ext = /mp4/.test(blob.type) ? 'm4a' : /ogg/.test(blob.type) ? 'ogg' : 'webm';
+        const f = new File([blob], 'رسالة صوتية.' + ext, { type: blob.type.split(';')[0] });
+        await teamAttach(f, 'audio');
+        teamSend();
+      } else renderComposer();
+    };
+    mr.start(250);
+    team.recording = true; renderComposer();
+    rec.tick = setInterval(() => { const s = Math.floor((Date.now() - rec.t0) / 1000), el = $('recT'); if (el) el.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); if (s >= 300) recStop(true); }, 500);
+  } catch (e) { toast('اسمح للمتصفح يستخدم المايك 🎤'); }
+}
+function recStop(send) { if (!rec) return; rec.send = send; rec.mr.stop(); }
+// ---- الإرسال
+async function teamSend() {
+  const t = $('tText'), text = t ? t.value.trim() : '', att = team.att;
+  if (!text && !att) return;
+  const mentions = text.indexOf('@الكل') !== -1 ? ['all'] : [];
+  team.members.forEach(m => { if (text.indexOf('@' + m.name) !== -1) mentions.push(m.email); });
+  const btn = $('tSend'); if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>'; }
+  try {
+    await api('dTeamSend', { token, room: team.room, text, mentions, reply: team.reply ? team.reply.id : '',
+      kind: att ? att.kind : 'text', file: att ? att.b64 : '', mime: att ? att.mime : '', fileName: att ? att.fileName : '' }, true);
+    team.reply = null; team.att = null;
+    if (t) t.value = '';
+    renderComposer();
+    const el = $('tMsgs'); if (el) el.dataset.done = '';
+    await loadRoom();
+    loadTeamSide(true);
+  } catch (e) { toast(msg(e)); if (btn) { btn.disabled = false; btn.textContent = '➤'; } }
 }
 
 // ---------- لوحة المحلات: عمود لكل محل، وكل فاتورة كارت بالأحداث بتاعتها بالترتيب ----------
