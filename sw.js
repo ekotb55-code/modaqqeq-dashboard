@@ -1,6 +1,6 @@
 // تطبيق الداش بورد: بيشتغل من غير ما يحتاج تنزيل من المتجر
 // الصفحة بتتجاب من النت الأول (علشان أي تحديث يظهر على طول)، ولو النت قاطع بتفتح آخر نسخة محفوظة
-const CACHE = 'modaqqeq-dash-v1';
+const CACHE = 'modaqqeq-dash-v2';
 const SHELL = ['./', './index.html', './logo_wide.png', './icon.png', './icon-192.png', './icon-512.png', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {
@@ -20,6 +20,25 @@ self.addEventListener('fetch', e => {
     }).catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')))
   );
 });
+// إشعار من السيرفر (Firebase): بيظهر حتى والتطبيق مقفول
+self.addEventListener('push', e => {
+  let p = {};
+  try { p = e.data ? e.data.json() : {}; } catch (_) { p = { data: { body: e.data ? e.data.text() : '' } }; }
+  const d = p.data || {}, n = p.notification || {};
+  const title = d.title || n.title || 'داش بورد مدقق';
+  const opts = {
+    body: d.body || n.body || '', icon: 'icon-192.png', badge: 'icon-192.png', dir: 'rtl', lang: 'ar',
+    tag: d.tag || undefined, renotify: !!d.tag, vibrate: [200, 100, 200],
+    data: { inv: d.inv || '', store: d.store || '', team: d.team || '' }
+  };
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    list.forEach(c => c.postMessage({ type: 'push', data: d }));
+    // الداش بورد مفتوح قدامك دلوقتي: هو بيعمل الصوت والتنبيه بنفسه
+    if (list.some(c => c.visibilityState === 'visible' && c.focused)) return;
+    return self.registration.showNotification(title, opts);
+  }));
+});
+
 // الدوس على الإشعار: يفتح التطبيق ويروح للفاتورة / الدردشة
 self.addEventListener('notificationclick', e => {
   e.notification.close();
@@ -27,6 +46,6 @@ self.addEventListener('notificationclick', e => {
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
     const c = list[0];
     if (c) { c.postMessage({ type: 'note', data }); return c.focus(); }
-    return self.clients.openWindow('./?app=1');
+    return self.clients.openWindow('./?app=1&go=' + encodeURIComponent(JSON.stringify(data)));
   }));
 });

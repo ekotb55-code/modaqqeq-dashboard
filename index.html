@@ -16,6 +16,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Firebase: إشعارات حتى والداش بورد مقفول -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <style>
   :root {
     --blue: #1479D3; --blue-2: #0F5FA8; --navy: #0B3D6E; --sky: #E8F2FC; --red: #E0393E; --green: #22A04B;
@@ -689,14 +692,20 @@ async function doLogin() {
   b.disabled = false; b.textContent = 'دخول';
 }
 $('lPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-function logout() { ls('dashToken', null); token = ''; location.reload(); }
+async function logout() {
+  // الجهاز ده مايوصلوش إشعارات تاني بعد الخروج
+  const p = ls('pushTok');
+  if (p) { try { await api('dPushUnreg', { push: p }, true); } catch (e) {} ls('pushTok', null); }
+  ls('dashToken', null); token = ''; location.reload();
+}
 function showApp() {
   $('login').classList.add('hidden');
   $('app').classList.remove('hidden');
   renderWho();
   updateBell();
-  loadList();
+  loadList().then(() => { const g = new URLSearchParams(location.search).get('go'); if (g) { try { noteGo(JSON.parse(g)); } catch (e) {} history.replaceState(null, '', location.pathname + '?app=1'); } });
   setInterval(() => loadList(true), 20000);
+  if ('Notification' in window && Notification.permission === 'granted') setupPush();
 }
 function page(p) {
   $('pageTeam').classList.toggle('hidden', p !== 'team');
@@ -720,7 +729,10 @@ let audioCtx = null;
 function enableAlerts() {
   try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (e) {}
   if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission().then(updateBell);
+    Notification.requestPermission().then(p => { updateBell(); if (p === 'granted') setupPush(true); });
+  } else if ('Notification' in window && Notification.permission === 'granted') setupPush(true);
+  else if ('Notification' in window && Notification.permission === 'denied') {
+    setTimeout(() => toast('الإشعارات مقفولة للموقع ده - افتحها من إعدادات المتصفح (علامة القفل 🔒 جنب العنوان)'), 1500);
   }
   ding();
   ls('alerts', '1');
@@ -1772,7 +1784,41 @@ const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isApp = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').then(r => { swReg = r; }).catch(() => {});
-  navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'note') noteGo(e.data.data || {}); });
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (!e.data) return;
+    if (e.data.type === 'note') noteGo(e.data.data || {});
+    // إشعار وصل والداش بورد مفتوح قدامك: نحدّث على طول
+    if (e.data.type === 'push' && token) { loadList(true); if (!$('pageTeam').classList.contains('hidden')) { loadTeamSide(true); if (team.room) loadRoom(true); } }
+  });
+}
+// ---- إشعارات Push (Firebase): بتوصل حتى والتطبيق/المتصفح مقفول
+const FB_CFG = { apiKey: 'AIzaSyD9oDfJSrYrPa1iQEDcg-Oa-iGEmFnR1ok', authDomain: 'modaqqeq-54f57.firebaseapp.com', projectId: 'modaqqeq-54f57',
+  messagingSenderId: '894594212138', appId: '1:894594212138:web:35cf6a1aa4b99a7ccffe53' };
+const FB_VAPID = 'BKobeqFRKZa2eY7VwglxfttYN8pj4sHu3SNDTkJYuUAxPD4Ld0zveWKNGktx7U9-YAiJhwGSn_-hpfI-VxonoaI';
+let pushBusy = false;
+async function setupPush(loud) {
+  if (pushBusy || !token || !window.firebase || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (loud && !('PushManager' in window)) toast(isIOS ? 'على الآيفون: ثبّت التطبيق الأول (📲) وافتحه من الشاشة الرئيسية علشان الإشعارات توصل' : 'المتصفح ده مش بيدعم الإشعارات وهو مقفول');
+    return;
+  }
+  pushBusy = true;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FB_CFG);
+    const reg = await navigator.serviceWorker.ready;
+    const push = await firebase.messaging().getToken({ vapidKey: FB_VAPID, serviceWorkerRegistration: reg });
+    if (!push) throw new Error('مفيش توكن');
+    // بنسجّل الجهاز كل يوم (أو لو التوكن اتغير)
+    const day = new Date().toDateString();
+    if (push !== ls('pushTok') || ls('pushDay') !== day || loud) {
+      await api('dPushReg', { token, push, ua: (isIOS ? 'iPhone ' : /android/i.test(navigator.userAgent) ? 'Android ' : 'PC ') + (isApp() ? 'تطبيق' : 'متصفح') }, true);
+      ls('pushTok', push); ls('pushDay', day);
+      if (loud) { const r = await api('dPushTest', { token }, true); if (r.sent) toast('✅ الإشعارات اتفعّلت - هيوصلك إشعار تجربة دلوقتي'); }
+    }
+  } catch (e) {
+    console.warn('push', e);
+    if (loud) toast('مقدرتش أفعّل الإشعارات: ' + msg(e));
+  }
+  pushBusy = false;
 }
 // إشعار: على الموبايل لازم يتبعت من الـ service worker (new Notification مش شغالة على أندرويد)
 function showNote(title, opts, go) {
@@ -1782,7 +1828,7 @@ function showNote(title, opts, go) {
 }
 function noteGo(go) {
   window.focus();
-  if (go.team) return page('team');
+  if (go.team) { page('team'); if (go.team.indexOf('dm:') === 0 || go.team === 'all') setTimeout(() => openRoom(go.team), 600); return; }
   if (go.inv) { page('inv'); return openInv(go.inv); }
   if (go.store) return openChatModal(go.store);
   page('inv');
