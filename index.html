@@ -2,9 +2,17 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>فواتير المشتريات - مدقق</title>
 <link rel="icon" href="icon.png">
+<!-- تطبيق ويب: يتثبت على الموبايل والكمبيوتر زي أي تطبيق -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1479D3">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="داش بورد مدقق">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -422,6 +430,33 @@
     .tm { max-width: 90%; }
     .tacts { display: flex; position: static; box-shadow: none; background: none; justify-content: flex-end; }
   }
+
+  /* ---------- تطبيق الويب ---------- */
+  .nav button i { font-style: normal; margin-inline-end: 5px; }
+  .nav button { position: relative; }
+  #installHelp { position: fixed; inset: 0; background: rgba(8,25,45,.6); z-index: 70; display: flex; align-items: flex-end; justify-content: center; }
+  #installHelp .box { background: #fff; border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); width: min(520px, 100%); line-height: 1.9; }
+  #installHelp h3 { margin: 0 0 8px; color: var(--navy); }
+  @media (max-width: 760px) {
+    /* القايمة تحت زي التطبيقات */
+    body { padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
+    header { padding-top: env(safe-area-inset-top); }
+    .nav { position: fixed !important; bottom: 0; left: 0; right: 0; width: auto !important; z-index: 35; background: #fff; box-shadow: 0 -4px 18px rgba(11,61,110,.12);
+      display: flex; justify-content: space-around; gap: 0 !important; overflow: visible !important; padding: 4px 2px calc(4px + env(safe-area-inset-bottom)) !important; }
+    .nav button { flex: 1 1 0 !important; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px !important; font-size: 11.5px !important; border-radius: 12px; min-width: 0; }
+    .nav button i { font-size: 21px; margin: 0; line-height: 1.2; }
+    .nav button span:not(.nbadge) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .nav button .nbadge { position: absolute; top: 0; inset-inline-start: 52%; margin: 0; font-size: 11px; line-height: 17px; min-width: 17px; }
+    #toast { bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
+    .team-page { height: calc(100dvh - 130px - env(safe-area-inset-bottom) - env(safe-area-inset-top)) !important; }
+    #installBtn { font-size: 13px; }
+    .hbar { flex-wrap: nowrap !important; gap: 5px !important; }
+    .hbar img { height: 28px !important; }
+    .hbar .who span { display: none; }
+    .hbar .btn { padding: 7px 9px !important; font-size: 14px; }
+    .hbar .btn.ghost { padding: 6px 8px !important; }
+    #tourTip { z-index: 62; }
+  }
   #viewerFull { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 40; display: flex; align-items: center; justify-content: center; }
   #viewerFull img { max-width: 96vw; max-height: 94vh; }
   /* ---------- الموبايل ---------- */
@@ -490,16 +525,17 @@
       <img src="logo_wide.png" alt="مدقق">
       <span class="title">فواتير المشتريات</span>
       <div class="nav">
-        <button id="navInv" class="on" onclick="page('inv')">🧾 الفواتير</button>
-        <button id="navStores" onclick="page('stores')">🏪 المحلات</button>
-        <button id="navPerf" onclick="page('perf')">🏆 أداء الدعم</button>
-        <button id="navRep" onclick="page('rep')">📊 تقارير الفروع</button>
-        <button id="navTeam" onclick="page('team')">💬 الفريق <span class="nbadge hidden" id="teamBadge"></span></button>
+        <button id="navInv" class="on" onclick="page('inv')"><i>🧾</i><span>الفواتير</span><span class="nbadge hidden" id="invBadge"></span></button>
+        <button id="navStores" onclick="page('stores')"><i>🏪</i><span>المحلات</span></button>
+        <button id="navTeam" onclick="page('team')"><i>💬</i><span>الفريق</span><span class="nbadge hidden" id="teamBadge"></span></button>
+        <button id="navPerf" onclick="page('perf')"><i>🏆</i><span>أداء الدعم</span></button>
+        <button id="navRep" onclick="page('rep')"><i>📊</i><span>تقارير الفروع</span></button>
       </div>
       <span class="sp"></span>
       <span class="net good" id="netPill" onclick="netInfo()" title="سرعة النت"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><span id="netTxt">النت...</span></span>
       <button class="btn soft bell" id="bellBtn" onclick="enableAlerts()" title="الإشعارات والصوت">🔔</button>
       <button class="btn soft" onclick="loadList()" title="تحديث">⟳</button>
+      <button class="btn soft hidden" id="installBtn" onclick="installApp()" title="ثبّت الداش بورد كتطبيق على جهازك">📲 ثبّت التطبيق</button>
       <button class="btn soft" id="helpBtn" onclick="startTour(true)" title="الجولة الإرشادية - إزاي تشتغل على الداش بورد">؟</button>
       <span class="who" id="who" onclick="pickMyPhoto()" title="دوس علشان تغيّر صورتك"></span>
       <button class="btn ghost" onclick="logout()">خروج</button>
@@ -733,8 +769,7 @@ function alertNew(list) {
   const b = list.map(v => v.supplier + ' - ' + money(v.total) + ' ج.م').join('\n');
   if ('Notification' in window && Notification.permission === 'granted') {
     try {
-      const n = new Notification('🧾 ' + t, { body: b, icon: 'icon.png', tag: 'inv-' + list[0].id, requireInteraction: true });
-      n.onclick = () => { window.focus(); page('inv'); openInv(list[0].id); n.close(); };
+      showNote('🧾 ' + t, { body: b, tag: 'inv-' + list[0].id, requireInteraction: true }, { inv: list[0].id });
     } catch (e) {}
   }
   toast('🔔 ' + t);
@@ -743,8 +778,7 @@ function alertNew(list) {
 function notify(title, body, id, tag) {
   if ('Notification' in window && Notification.permission === 'granted') {
     try {
-      const n = new Notification(title, { body, icon: 'icon.png', tag: tag || ('inv-' + id), renotify: true, requireInteraction: true });
-      n.onclick = () => { window.focus(); page('inv'); if (id) openInv(id); n.close(); };
+      showNote(title, { body, tag: tag || ('inv-' + id), renotify: true, requireInteraction: true }, { inv: id || '' });
     } catch (e) {}
   }
 }
@@ -829,6 +863,11 @@ netProbe();
 function updateTitle() {
   const n = all.filter(v => v.status === ST_NEW).length;
   document.title = (n ? '(' + n + ') ' : '') + 'فواتير المشتريات - مدقق';
+  // الرقم على زرار الفواتير: الجديدة (وللجودة: المستنية مراجعتهم)
+  const k = isQA() ? all.filter(v => v.status === ST_QA).length : n, b = $('invBadge');
+  if (b) { b.textContent = k; b.classList.toggle('hidden', !k); }
+  // رقم على أيقونة التطبيق (لو الجهاز بيدعمها)
+  try { if (navigator.setAppBadge) { const tot = k + (Number(($('teamBadge') || {}).textContent) || 0); tot ? navigator.setAppBadge(tot) : navigator.clearAppBadge(); } } catch (e) {}
 }
 
 // ---------- القايمة ----------
@@ -878,8 +917,7 @@ async function loadList(quiet) {
       ding();
       if ('Notification' in window && Notification.permission === 'granted') {
         try {
-          const n = new Notification(title, { body: t.lastName + ': ' + t.lastText, icon: 'icon.png', tag: 'chat-' + t.store + t.inv, renotify: true });
-          n.onclick = () => { window.focus(); if (t.inv) { page('inv'); openInv(t.inv); } else openChatModal(t.store); n.close(); };
+          showNote(title, { body: t.lastName + ': ' + t.lastText, tag: 'chat-' + t.store + t.inv, renotify: true }, t.inv ? { inv: t.inv } : { store: t.store });
         } catch (e) {}
       }
       toast(title + ': ' + t.lastText);
@@ -1727,6 +1765,49 @@ function endTour() {
   window.removeEventListener('resize', tourPos);
 }
 
+
+// ---------- تطبيق الويب (PWA): التثبيت + الإشعارات على الموبايل ----------
+let swReg = null, installEvt = null;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isApp = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(r => { swReg = r; }).catch(() => {});
+  navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'note') noteGo(e.data.data || {}); });
+}
+// إشعار: على الموبايل لازم يتبعت من الـ service worker (new Notification مش شغالة على أندرويد)
+function showNote(title, opts, go) {
+  opts = Object.assign({ icon: 'icon-192.png', badge: 'icon-192.png', data: go || {}, dir: 'rtl', lang: 'ar' }, opts || {});
+  if (swReg && swReg.showNotification) return swReg.showNotification(title, opts).catch(() => {});
+  try { const n = new Notification(title, opts); n.onclick = () => { window.focus(); noteGo(go || {}); n.close(); }; } catch (e) {}
+}
+function noteGo(go) {
+  window.focus();
+  if (go.team) return page('team');
+  if (go.inv) { page('inv'); return openInv(go.inv); }
+  if (go.store) return openChatModal(go.store);
+  page('inv');
+}
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; showInstall(); });
+window.addEventListener('appinstalled', () => { installEvt = null; $('installBtn').classList.add('hidden'); toast('اتثبت التطبيق ✅ هتلاقيه على الشاشة الرئيسية'); });
+function showInstall() { if (!isApp() && (installEvt || isIOS)) $('installBtn').classList.remove('hidden'); }
+async function installApp() {
+  if (installEvt) {
+    installEvt.prompt();
+    const r = await installEvt.userChoice.catch(() => null);
+    if (r && r.outcome === 'accepted') $('installBtn').classList.add('hidden');
+    installEvt = null;
+    return;
+  }
+  // آيفون (أو المتصفح مش بيدعم التثبيت المباشر): نشرح الطريقة
+  const ios = isIOS;
+  document.body.insertAdjacentHTML('beforeend', '<div id="installHelp" onclick="if(event.target===this)this.remove()"><div class="box"><h3>📲 تثبيت داش بورد مدقق</h3>' +
+    (ios ? '1️⃣ افتح الصفحة دي من <b>Safari</b><br>2️⃣ دوس زرار المشاركة <b>⬆️</b> اللي تحت<br>3️⃣ اختار <b>"إضافة إلى الشاشة الرئيسية"</b> ← <b>إضافة</b>'
+      : '1️⃣ افتح الصفحة دي من <b>Chrome</b><br>2️⃣ دوس على <b>⋮</b> اللي فوق<br>3️⃣ اختار <b>"تثبيت التطبيق"</b> أو <b>"إضافة إلى الشاشة الرئيسية"</b>') +
+    '<br>وبعد كده هتلاقي أيقونة مدقق على الموبايل وتفتحه زي أي تطبيق 👌' +
+    '<div style="margin-top:12px;text-align:center"><button class="btn" onclick="$(\'installHelp\').remove()">تمام</button></div></div></div>');
+}
+showInstall();
+
 // ---------- دردشة الفريق (زي واتساب): جروب للفريق كله + خاص بين أي اتنين ----------
 let team = { members: [], rooms: [], me: '', room: '', msgs: [], reads: [], reply: null, att: null, timer: 0, known: null, mpop: null };
 const teamFiles = {};
@@ -1749,7 +1830,7 @@ function teamTick(t) {
       const ttl = at ? '📣 حد عمل لك منشن في دردشة الفريق' : '💬 رسالة جديدة في دردشة الفريق';
       toast(ttl);
       if ('Notification' in window && Notification.permission === 'granted') {
-        try { const nn = new Notification(ttl, { icon: 'icon.png', tag: 'team', renotify: true }); nn.onclick = () => { window.focus(); page('team'); nn.close(); }; } catch (e) {}
+        try { showNote(ttl, { tag: 'team', renotify: true }, { team: 1 }); } catch (e) {}
       }
     }
   }
