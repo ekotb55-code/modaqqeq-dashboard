@@ -96,6 +96,30 @@
   .chatin { display: flex; gap: 8px; align-items: flex-end; }
   .chatin textarea { flex: 1; min-height: 44px; max-height: 120px; resize: vertical; }
   .chatin .btn { padding: 11px 16px; }
+  .chatin .att { background: var(--sky); color: var(--blue-2); box-shadow: none; padding: 10px 12px; font-size: 18px; }
+  .msg .mimg { display: block; max-width: 230px; max-height: 230px; border-radius: 10px; margin: 4px 0; cursor: zoom-in; background: #E6ECF3; min-width: 120px; min-height: 80px; object-fit: cover; }
+  .mrow { display: flex; gap: 6px; align-items: flex-end; max-width: 88%; }
+  .mrow.br { align-self: flex-start; } .mrow.sp, .mrow.int { align-self: flex-end; flex-direction: row-reverse; }
+  .mrow .msg { max-width: 100%; }
+  .av { width: 30px; height: 30px; border-radius: 50%; flex: 0 0 30px; background: var(--sky); color: var(--blue-2); font-weight: 800; font-size: 13px;
+    display: inline-flex; align-items: center; justify-content: center; overflow: hidden; }
+  .av img { width: 100%; height: 100%; object-fit: cover; }
+  .who { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  .who .av { width: 34px; height: 34px; flex-basis: 34px; position: relative; }
+  .imgprev { display: flex; align-items: center; gap: 8px; padding: 6px; background: #FFF8E6; border-radius: 10px; margin-bottom: 6px; font-weight: 700; }
+  .imgprev img { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; }
+  /* ---------- الجولة الإرشادية ---------- */
+  #tourMask { position: fixed; inset: 0; z-index: 60; }
+  #tourHole { position: fixed; border-radius: 14px; box-shadow: 0 0 0 9999px rgba(8,25,45,.68); transition: all .25s ease; pointer-events: none; z-index: 61; outline: 3px solid #FFD54F; }
+  #tourTip { position: fixed; z-index: 62; background: #fff; border-radius: 16px; padding: 16px 18px; width: min(380px, calc(100vw - 32px)); box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+  #tourTip h4 { margin: 0 0 6px; color: var(--navy); font-size: 18px; }
+  #tourTip p { margin: 0 0 12px; line-height: 1.8; white-space: pre-line; }
+  #tourTip .tb { display: flex; gap: 8px; align-items: center; }
+  #tourTip .tb .sp { flex: 1; }
+  #tourTip .dots { color: var(--muted); font-size: 13px; font-weight: 700; }
+  .flowmap { display: grid; gap: 6px; margin: 4px 0 12px; }
+  .flowmap div { background: var(--sky); border-radius: 10px; padding: 6px 10px; font-weight: 700; font-size: 14px; }
+  .flowmap div b { color: var(--blue-2); }
   .chatopt { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #6B7785; margin-top: 4px; }
   .chatopt label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
   .chatopt input { width: auto; }
@@ -376,7 +400,7 @@
     <img src="logo_wide.png" alt="مدقق">
     <h2>فواتير المشتريات</h2>
     <p>داش بورد الدعم</p>
-    <input id="lEmail" type="text" placeholder="اسمك (أو الإيميل)" autocomplete="username">
+    <input id="lEmail" type="text" placeholder="رقم الموبايل أو اسمك أو الإيميل" autocomplete="username">
     <input id="lPass" type="password" placeholder="كلمة السر" dir="ltr" autocomplete="current-password">
     <button class="btn" id="lBtn" onclick="doLogin()">دخول</button>
     <div class="err" id="lErr"></div>
@@ -398,7 +422,8 @@
       <span class="net good" id="netPill" onclick="netInfo()" title="سرعة النت"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><span id="netTxt">النت...</span></span>
       <button class="btn soft bell" id="bellBtn" onclick="enableAlerts()" title="الإشعارات والصوت">🔔</button>
       <button class="btn soft" onclick="loadList()" title="تحديث">⟳</button>
-      <span class="who" id="who"></span>
+      <button class="btn soft" id="helpBtn" onclick="startTour(true)" title="الجولة الإرشادية - إزاي تشتغل على الداش بورد">؟</button>
+      <span class="who" id="who" onclick="pickMyPhoto()" title="دوس علشان تغيّر صورتك"></span>
       <button class="btn ghost" onclick="logout()">خروج</button>
     </div>
     <div class="accent"></div>
@@ -437,6 +462,8 @@
 
 <div id="viewerFull" class="hidden" onclick="this.classList.add('hidden')"><img id="viewerFullImg"></div>
 <div id="toast" class="hidden"></div>
+<input type="file" id="photoFile" accept="image/*" class="hidden" onchange="photoPicked(this)">
+<input type="file" id="chatFile" accept="image/*" class="hidden" onchange="chatFilePicked(this)">
 <div id="chatModal" class="hidden" onclick="if(event.target===this)closeChatModal()"><div class="chatwrap" id="chatModalBox"></div></div>
 
 <script>
@@ -547,7 +574,7 @@ function logout() { ls('dashToken', null); token = ''; location.reload(); }
 function showApp() {
   $('login').classList.add('hidden');
   $('app').classList.remove('hidden');
-  $('who').textContent = '👤 ' + me;
+  renderWho();
   updateBell();
   loadList();
   setInterval(() => loadList(true), 20000);
@@ -733,7 +760,7 @@ async function loadList(quiet) {
     prevStatus = {}; r.invoices.forEach(v => { prevStatus[v.id] = v.status; });
     all = r.invoices; stores = r.stores;
     chatSum = r.chat || { threads: [], replies: [] };
-    if (r.me) { const first = !myRole; myRole = r.me.role || 'دعم'; $('who').textContent = '👤 ' + me + (isQA() ? ' (الجودة)' : ''); if (first && isQA()) { tab = ST_QA; } }
+    if (r.me) { const first = !myRole; myRole = r.me.role || 'دعم'; myPhoto = r.me.photo || ''; renderWho(); if (first && isQA()) { tab = ST_QA; } if (first) setTimeout(() => startTour(false), 900); }
     const newMsgs = chatKnown ? chatSum.threads.filter(t => t.unread > (chatKnown[t.store + '|' + t.inv] || 0) && t.lastFrom === 'فرع') : [];
     chatKnown = {}; chatSum.threads.forEach(t => { chatKnown[t.store + '|' + t.inv] = t.unread; });
     const sel = $('fStore'), val = sel.value;
@@ -1380,7 +1407,7 @@ function openChat(store, inv, boxId, title) {
   const box = $(boxId);
   box.innerHTML = '<h3>💬 ' + esc(title) + '</h3><div class="msgs"><div class="empty"><span class="spin"></span></div></div>' +
     (isQA() ? '' : '<div class="qr">' + QUICK_REPLIES.map((q, k) => '<button onclick="chatQuick(' + k + ')">' + esc(q) + '</button>').join('') + '</div>') +
-    '<div class="chatin"><textarea placeholder="' + (isQA() ? 'ملاحظة داخلية للدعم...' : 'اكتب رسالة للفرع...') + '" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>' +
+    '<div class="imgslot"></div><div class="chatin"><button class="btn att" title="ابعت صورة (أو الزق صورة في خانة الكتابة)" onclick="$(\'chatFile\').click()">📷</button><textarea onpaste="chatPaste(event)" placeholder="' + (isQA() ? 'ملاحظة داخلية للدعم...' : 'اكتب رسالة للفرع...') + '" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>' +
     '<button class="btn" onclick="sendChat()">إرسال</button></div>' +
     (isQA() ? '<div class="chatopt"><label><input type="checkbox" checked disabled> 🔒 رسايل الجودة داخلية دايمًا - الفرع مش بيشوفها خالص</label></div>'
       : '<div class="chatopt"><label><input type="checkbox"> 🔒 ملاحظة داخلية (للدعم بس - الفرع مش هيشوفها)</label></div>');
@@ -1410,20 +1437,25 @@ function renderMsgs() {
     const cls = m.auto ? 'auto' : m.internal ? 'int' : m.from === 'دعم' ? 'sp' : 'br';
     let foot = tm(m.at);
     if (m.from === 'دعم' && !m.internal && !m.auto) foot += ' • ' + (m.seenBy ? '<span class="tick">✓✓</span> شافها ' + esc(m.seenBy) + ' ' + tm(m.seenAt) : '<span class="tick no">✓</span> لسه ما اتشافتش');
-    return '<div class="msg ' + cls + '">' + (m.auto ? '' : '<span class="who">' + (m.internal ? '🔒 ' : '') + esc(m.name) + (m.from === 'فرع' ? ' (الفرع)' : '') + '</span>') +
+    const body = '<div class="msg ' + cls + '">' + (m.auto ? '' : '<span class="who">' + (m.internal ? '🔒 ' : '') + esc(m.name) + (m.from === 'فرع' ? ' (الفرع)' : '') + '</span>') +
+      (m.image ? '<img class="mimg" data-cimg="' + esc(m.image) + '" alt="📷 صورة" onclick="chatImgFull(this)">' : '') +
       esc(m.text) + '<span class="mt">' + foot + '</span></div>';
+    return m.auto ? body : '<div class="mrow ' + cls + '">' + avatar(m.photo, m.name) + body + '</div>';
   }).join('') : '<div class="empty" style="padding:16px">مفيش رسايل لسه - ابدأ المحادثة 👋</div>';
   if (atBottom || !el.dataset.done) { el.scrollTop = el.scrollHeight; el.dataset.done = '1'; }
+  fillImages(el);
 }
 function chatQuick(k) { const t = chatEl('textarea'); t.value = QUICK_REPLIES[k]; t.focus(); }
 async function sendChat() {
   if (!chatOpen) return;
-  const t = chatEl('textarea'), box = chatEl('.chatopt input'), btn = chatEl('.chatin .btn'), text = t.value.trim(), internal = isQA() || box.checked;
-  if (!text) return;
+  const t = chatEl('textarea'), box = chatEl('.chatopt input'), btn = chatEl('.chatin .btn:not(.att)'), text = t.value.trim(), internal = isQA() || box.checked;
+  const image = chatOpen.image || '';
+  if (!text && !image) return;
   btn.disabled = true;
   try {
-    await api('dChatSend', { token, store: chatOpen.store, inv: chatOpen.inv, text, internal }, true);
+    await api('dChatSend', { token, store: chatOpen.store, inv: chatOpen.inv, text, internal, image }, true);
     t.value = ''; if (!isQA()) box.checked = false;
+    chatOpen.image = ''; const sl = chatEl('.imgslot'); if (sl) sl.innerHTML = '';
     await loadChat(true);
     const el = chatEl('.msgs'); if (el) el.scrollTop = el.scrollHeight;
   } catch (e) { toast(msg(e)); }
@@ -1438,6 +1470,173 @@ function closeChatModal() {
   $('chatModal').classList.add('hidden');
   chatOpen = null; clearInterval(chatTimer);
   if (cur && $('chatBox') && !$('pageInv').classList.contains('hidden')) openChat(cur.invoice.store, cur.invoice.id, 'chatBox', 'فاتورة ' + cur.invoice.supplier);
+}
+
+// ---------- الصور: صورة الموظف + صور الشات ----------
+let myPhoto = '';
+const photoCache = {}, chatImgCache = {};
+function getPhoto(id) {
+  if (!photoCache[id]) photoCache[id] = api('dPhoto', { token, id }).then(r => 'data:image/jpeg;base64,' + r.image).catch(e => { delete photoCache[id]; throw e; });
+  return photoCache[id];
+}
+function getChatImg(id) {
+  if (!chatImgCache[id]) chatImgCache[id] = api('dChatImage', { token, id }).then(r => 'data:image/jpeg;base64,' + r.image).catch(e => { delete chatImgCache[id]; throw e; });
+  return chatImgCache[id];
+}
+function avatar(photo, name) {
+  const ch = esc((String(name || '?').trim()[0]) || '?');
+  return '<span class="av"' + (photo ? ' data-photo="' + esc(photo) + '"' : '') + '>' + ch + '</span>';
+}
+// بنملى الصور بعد الرسم (من الكاش لو اتحملت قبل كده)
+function fillImages(root) {
+  root.querySelectorAll('[data-photo]').forEach(el => {
+    const id = el.dataset.photo; el.removeAttribute('data-photo');
+    getPhoto(id).then(src => { el.innerHTML = '<img src="' + src + '" alt="">'; }).catch(() => {});
+  });
+  root.querySelectorAll('img[data-cimg]').forEach(el => {
+    const id = el.dataset.cimg; el.removeAttribute('data-cimg');
+    getChatImg(id).then(src => { el.src = src; }).catch(() => { el.alt = '📷 الصورة مش متاحة'; });
+  });
+}
+function chatImgFull(img) { if (!img.src) return; $('viewerFullImg').src = img.src; $('viewerFull').classList.remove('hidden'); }
+function renderWho() {
+  $('who').innerHTML = avatar(myPhoto, me) + '<span>' + esc(me) + (isQA() ? ' (الجودة)' : '') + '</span>';
+  fillImages($('who'));
+}
+// تصغير الصورة قبل الرفع (أقصى ضلع [max] بكسل) ← base64 من غير البادئة
+function shrink(file, max, q) {
+  return new Promise((ok, bad) => {
+    const r = new FileReader();
+    r.onerror = bad;
+    r.onload = () => {
+      const im = new Image();
+      im.onerror = () => bad(new Error('الملف ده مش صورة'));
+      im.onload = () => {
+        const k = Math.min(1, max / Math.max(im.width, im.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        ok(c.toDataURL('image/jpeg', q).split(',')[1]);
+      };
+      im.src = r.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+function pickMyPhoto() { $('photoFile').click(); }
+async function photoPicked(inp) {
+  const f = inp.files[0]; inp.value = '';
+  if (!f) return;
+  try {
+    toast('بنرفع صورتك...');
+    const b64 = await shrink(f, 400, .82);
+    const r = await api('dSetPhoto', { token, image: b64 }, true);
+    myPhoto = r.photo || ''; if (myPhoto) photoCache[myPhoto] = Promise.resolve('data:image/jpeg;base64,' + b64);
+    renderWho(); toast('اتحفظت صورتك ✅');
+  } catch (e) { toast(msg(e)); }
+}
+async function setChatImage(file) {
+  if (!chatOpen || !file) return;
+  try {
+    const b64 = await shrink(file, 1400, .72);
+    chatOpen.image = b64;
+    const sl = chatEl('.imgslot');
+    if (sl) sl.innerHTML = '<div class="imgprev"><img src="data:image/jpeg;base64,' + b64 + '"><span>صورة جاهزة - دوس إرسال</span><span class="sp" style="flex:1"></span><button class="btn ghost" onclick="chatOpen.image=\'\';this.closest(\'.imgslot\').innerHTML=\'\'">✕</button></div>';
+    const t = chatEl('textarea'); if (t) t.focus();
+  } catch (e) { toast(msg(e)); }
+}
+function chatFilePicked(inp) { const f = inp.files[0]; inp.value = ''; setChatImage(f); }
+function chatPaste(e) {
+  const it = [...(e.clipboardData || {}).items || []].find(x => x.type && x.type.indexOf('image/') === 0);
+  if (it) { e.preventDefault(); setChatImage(it.getAsFile()); }
+}
+
+// ---------- الجولة الإرشادية: بتنوّر على كل جزء وتشرح خط سير الفاتورة ----------
+const FLOW_HTML = '<div class="flowmap">' +
+  '<div>1️⃣ الفرع بيصوّر الفاتورة ويبعتها ← بتظهر هنا <b>جديدة</b> ومعاها عداد الوقت</div>' +
+  '<div>2️⃣ الدعم يدوس <b>استلام</b> ← بقت <b>يتم الادخال</b> باسمه</div>' +
+  '<div>3️⃣ يدخّلها على السيستم، يكتب <b>رقم السيستم والرصيد</b> ويرفع صورة الإثبات ← <b>تم الإدخال</b></div>' +
+  '<div>4️⃣ لو فيه قسم جودة: بتروح <b>مستنية الجودة</b> ← الجودة تعتمد أو ترجّعها لنفس الموظف</div>' +
+  '<div>5️⃣ بعد الاعتماد الفرع بيوصله إشعار ويراجع صورة الإثبات</div>' +
+  '<div>❌ الصورة مش واضحة أو ناقصة؟ <b>رفض</b> مع السبب ← بترجع للفرع يعدّلها</div></div>';
+function tourSteps() {
+  const q = isQA();
+  const st = [
+    { t: 'أهلاً ' + me + ' 👋', b: 'دي جولة سريعة خطوة بخطوة تعرفك الداش بورد وخط سير فواتير المشتريات:', html: FLOW_HTML },
+    { el: '#stats .flow', t: 'مراحل الفاتورة 🎯', b: 'كل كارت = مرحلة والرقم = عدد الفواتير فيها.\nدوس على أي كارت علشان يعرضلك فواتيرها بس.' },
+    { el: '#stats .extras', t: 'فلاتر إضافية', b: 'المستعجلة 🔥، المتأخرة، ملاحظات الفروع، والرسايل الجديدة - كلها بدوسة.' },
+    { el: '#listPane', t: 'قايمة الفواتير 🧾', b: 'الأقدم فوق. العداد بيبقى أصفر بعد ' + WARN_MIN + ' دقيقة وأحمر بعد ' + SLA_MIN + ' دقيقة (برة مواعيد الشغل بيقف).\nابحث بالمورد أو الرقم أو اختار محل.' },
+    { el: '#detailPane', t: 'تفاصيل الفاتورة 📄', b: q
+        ? 'هنا بتشوف صور الفاتورة وصورة السيستم وبيانات الدعم.\nراجع بنود الجودة ✓/✗ وبعدين "اعتماد" أو "ترجيع للدعم" مع ملاحظة (الملاحظة داخلية - الفرع ما يشوفهاش).\nقدامك ' + QA_SLA_MIN + ' دقيقة لكل فاتورة.'
+        : 'دوس على فاتورة: هتشوف صورها وأصنافها.\n① "استلام" ← ② دخّلها السيستم ← ③ اكتب رقم السيستم والرصيد في إطار "بيانات السيستم" وارفع صورة الإثبات ← ④ "تم الإدخال".\nلو فيها مشكلة: "رفض" واكتب السبب.' },
+    { el: '#detailPane', t: 'الشات مع الفرع 💬', b: q
+        ? 'رسايلك هنا داخلية دايمًا للدعم بس 🔒.'
+        : 'تحت كل فاتورة فيه شات مع الفرع: ردود سريعة جاهزة، وتقدر تبعت صورة 📷 (أو تلزق صورة)، وعلامة ✓✓ لما الفرع يشوف.\n"ملاحظة داخلية" 🔒 = للدعم بس.' },
+    { el: '#navStores', t: 'المحلات 🏪', b: 'لوحة زي تريلو: عمود لكل محل وكل فاتورة كارت بالأحداث بتاعتها بالترتيب. ومنها تفتح شات الفرع العام.' },
+    { el: '#navPerf', t: 'الأداء 🏆', b: 'سرعة الاستلام والإدخال لكل موظف، تقييم الجودة، ونسبة الفواتير اللي عدّت من أول مرة.' },
+    { el: '#navRep', t: 'تقارير الفروع 📊', b: 'تقرير PDF لأي فرع في أي فترة.' },
+    { el: '#bellBtn', t: 'الإشعارات والصوت 🔔', b: 'فعّلها مرة واحدة: هيرن مع كل فاتورة جديدة أو استعجال، وكل 5 دقايق طول ما فيه فواتير مستنية.' },
+    { el: '#who', t: 'صورتك 🙂', b: 'دوس على اسمك علشان تحط صورتك - بتظهر جنب رسايلك في الشات.' },
+    { el: '#helpBtn', t: 'خلصنا ✅', b: 'تقدر تعيد الجولة دي في أي وقت من زرار ؟' }
+  ];
+  return st;
+}
+let tourI = 0, tourL = [];
+function startTour(force) {
+  if (!force && ls('dashTour1')) return;
+  if (!$('pageInv') || $('app').classList.contains('hidden')) return;
+  page('inv');
+  tourL = tourSteps(); tourI = 0;
+  if (!$('tourMask')) document.body.insertAdjacentHTML('beforeend', '<div id="tourMask"></div><div id="tourHole"></div><div id="tourTip"></div>');
+  tourShow(0);
+  window.addEventListener('resize', tourPos);
+}
+function tourVisible(sel) {
+  const el = sel && document.querySelector(sel);
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return r.width > 0 && r.height > 0 ? el : null;
+}
+function tourShow(i) {
+  // الخطوات اللي جزءها مش ظاهر (زي الموبايل) بنعديها
+  while (i >= 0 && i < tourL.length && tourL[i].el && !tourVisible(tourL[i].el)) i += (i >= tourI ? 1 : -1);
+  if (i < 0) i = 0;
+  if (i >= tourL.length) return endTour();
+  tourI = i;
+  const s = tourL[i], last = i === tourL.length - 1;
+  $('tourTip').innerHTML = '<h4>' + esc(s.t) + '</h4><p>' + esc(s.b) + '</p>' + (s.html || '') +
+    '<div class="tb"><span class="dots">' + (i + 1) + ' / ' + tourL.length + '</span><span class="sp"></span>' +
+    (last ? '' : '<button class="btn ghost" onclick="endTour()">تخطي</button>') +
+    (i > 0 ? '<button class="btn soft" onclick="tourShow(tourI-1)">السابق</button>' : '') +
+    '<button class="btn" onclick="tourShow(tourI+1)">' + (last ? 'تمام 👍' : 'التالي ←') + '</button></div>';
+  const el = tourVisible(s.el);
+  if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  setTimeout(tourPos, el ? 260 : 0);
+  tourPos();
+}
+function tourPos() {
+  const hole = $('tourHole'), tip = $('tourTip');
+  if (!hole || !tourL[tourI]) return;
+  const el = tourVisible(tourL[tourI].el), vw = innerWidth, vh = innerHeight, pad = 6;
+  if (!el) {
+    Object.assign(hole.style, { left: vw / 2 + 'px', top: vh / 2 + 'px', width: '0px', height: '0px', outlineWidth: '0px' });
+    Object.assign(tip.style, { left: Math.max(16, (vw - tip.offsetWidth) / 2) + 'px', top: Math.max(16, (vh - tip.offsetHeight) / 2) + 'px' });
+    return;
+  }
+  const r = el.getBoundingClientRect();
+  const top = Math.max(4, r.top - pad), h = Math.min(vh - 8, r.bottom + pad) - top;
+  Object.assign(hole.style, { left: (r.left - pad) + 'px', top: top + 'px', width: (r.width + pad * 2) + 'px', height: h + 'px', outlineWidth: '3px' });
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let y = top + h + 12;
+  if (y + th > vh - 8) y = top - th - 12;
+  if (y < 8) y = Math.max(8, vh - th - 16); // الجزء كبير: الشرح تحت الشاشة
+  const x = Math.min(vw - tw - 16, Math.max(16, r.left + r.width / 2 - tw / 2));
+  Object.assign(tip.style, { left: x + 'px', top: y + 'px' });
+}
+function endTour() {
+  ls('dashTour1', '1');
+  ['tourMask', 'tourHole', 'tourTip'].forEach(id => { const e = $(id); if (e) e.remove(); });
+  window.removeEventListener('resize', tourPos);
 }
 
 // ---------- لوحة المحلات: عمود لكل محل، وكل فاتورة كارت بالأحداث بتاعتها بالترتيب ----------
