@@ -1246,9 +1246,10 @@ document.addEventListener('paste', e => {
   if (files.length) { e.preventDefault(); addFiles(files); }
 });
 function addFiles(list) {
-  [...list].filter(f => f && f.type.startsWith('image/')).forEach(async f => { shots.push(await shrink(f)); renderShots(); });
+  [...list].filter(f => f && f.type.startsWith('image/')).forEach(async f => { shots.push(await shrinkScreen(f)); renderShots(); });
 }
-function shrink(file) {
+
+function shrinkScreen(file) {
   return new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = () => {
