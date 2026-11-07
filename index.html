@@ -1245,7 +1245,7 @@ document.addEventListener('paste', e => {
   const files = [...(e.clipboardData?.items || [])].filter(x => x.type.startsWith('image/')).map(x => x.getAsFile());
   if (files.length) { e.preventDefault(); addFiles(files); }
 });
-function shrinkScreen(file) {
+function addFiles(list) {
   [...list].filter(f => f && f.type.startsWith('image/')).forEach(async f => { shots.push(await shrink(f)); renderShots(); });
 }
 function shrink(file) {
