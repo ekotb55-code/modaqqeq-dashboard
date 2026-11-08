@@ -629,7 +629,7 @@ function canQA() { return myRole === 'جودة' || myRole === 'مدير'; }
 function qaLate(v) { return v.status === ST_QA && v.doneAt && mins(v.doneAt, now()) > QA_SLA_MIN; }
 // سجل الجودة: سطور "نوع|وقت|اسم|ملاحظة"
 function qaLogList(v) {
-  return String(v.qaLog || '').split('\n').filter(Boolean).map(l => { const p = l.split('|'); return { type: p[0], at: p[1], name: p[2], note: p[3] || '' }; });
+  return String(v.qaLog || '').split('\n').filter(Boolean).map(l => { const p = l.split('|'); return { type: p[0], at: p[1], name: p[2], note: p[3] || '', who: p[4] || '' }; });
 }
 function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
 function now() { return Date.now() + skew; }
@@ -702,6 +702,7 @@ function showApp() {
   $('login').classList.add('hidden');
   $('app').classList.remove('hidden');
   renderWho();
+  attBeat_();
   updateBell();
   loadList().then(() => { const g = new URLSearchParams(location.search).get('go'); if (g) { try { noteGo(JSON.parse(g)); } catch (e) {} history.replaceState(null, '', location.pathname + '?app=1'); } });
   setInterval(() => loadList(true), 20000);
@@ -2220,68 +2221,152 @@ function renderBoard() {
   }).join('');
 }
 
-// ---------- أداء الدعم ----------
-function renderPerf() {
-  const start = new Date(now());
-  if (perfRange === 'today') start.setHours(0, 0, 0, 0);
-  else if (perfRange === 'week') start.setDate(start.getDate() - 7);
-  else if (perfRange === 'month') start.setDate(start.getDate() - 30);
-  else start.setFullYear(2000);
-  const done = all.filter(v => v.status === ST_DONE && v.doneAt && new Date(v.doneAt) >= start);
+// ---------- أداء الدعم + الحضور + الجودة ----------
+let attCache_ = null;
+const ATT_REQ = 480; // 8 ساعات
+
+// نبضة الحضور: كل دقيقة وإنت مسجل دخول (الباكإند بيسجل أول دخول وآخر نشاط والدقايق المتصلة)
+function attBeat_() { if (token) api('dBeat', { token }, true).catch(() => {}); }
+setInterval(attBeat_, 60000);
+setTimeout(attBeat_, 5000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) attBeat_(); });
+
+// يوم الشغل بيبدأ 9 الصبح (اللي قبل 9 بيتحسب على اليوم اللي قبله) - بيطابق الباكإند
+function dayKey9_(t) {
+  const d = new Date(new Date(t).getTime() - 9 * 3600000);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function dayStart9_(key) { const p = key.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2], 9, 0, 0).getTime(); }
+function perfBounds_() {
+  const toKey = dayKey9_(now());
+  if (perfRange === 'all') return { from: new Date(2000, 0, 1).getTime(), fromKey: '2000-01-01', toKey: toKey };
+  const back = { today: 0, week: 6, month: 29 }[perfRange] || 0;
+  const from = dayStart9_(toKey) - back * 864e5;
+  return { from: from, fromKey: dayKey9_(from), toKey: toKey };
+}
+function hh_(m) { return (m / 60).toFixed(1); }
+// خصم المرتجعات بيزيد مع كل مرتجع: 1 ← 4 ، 2 ← 10 ، 3 ← 18 ، 4 ← 28
+function retPenalty_(n) { return n * 4 + n * (n - 1); }
+
+function perfCalc_(b, A, reps) {
   const ppl = {};
-  done.forEach(v => {
-    const p = ppl[v.doneBy] = ppl[v.doneBy] || { name: v.doneBy, n: 0, total: 0, mins: 0, ontime: 0, pick: 0, pickN: 0, lines: 0 };
-    const m = mins(v.createdAt, v.doneAt);
+  const P = n => ppl[n] || (ppl[n] = { name: n, n: 0, total: 0, mins: 0, ontime: 0, pick: 0, pickN: 0, lines: 0, qaN: 0, firstOk: 0, ret: 0, openRet: 0, retList: [], open: 0, cr: 0, crN: 0, att: null });
+  const firstOpen = {};
+  A.forEach(a => {
+    firstOpen[a.name + '|' + a.day] = new Date(a.first).getTime();
+    const p = P(a.name);
+    const s = p.att = p.att || { days: 0, mins: 0, paid: 0, late: 0, lateDays: 0, deduct: 0, pay: 0, hasPay: false, pen: 0, rows: [] };
+    s.days++; s.mins += a.mins; s.paid += a.paidMin; s.late += a.lateMin; s.deduct += a.deductMin; s.rows.push(a);
+    if (a.lateMin > 15) s.lateDays++;
+    if (a.pay != null) { s.pay += a.pay; s.hasPay = true; }
+    s.pen += a.lateMin > 30 ? 8 : a.lateMin > 15 ? 3 : 0;                          // خصم التأخير
+    if (a.day < b.toKey) s.pen += Math.max(0, ATT_REQ - a.mins) / ATT_REQ * 6;     // ساعات ناقصة (أيام خلصت بس)
+  });
+
+  all.forEach(v => {
+    // 1) المرتجعات من سجل الجودة نفسه (حتى لو الفاتورة لسه "يتم الادخال" عند نفس الموظف)
+    qaLogList(v).forEach(e => {
+      if (e.type !== 'رجوع' || !e.at || new Date(e.at).getTime() < b.from) return;
+      const who = e.who || v.doneBy; if (!who) return;
+      const p = P(who); p.ret++; p.retList.push({ v: v, note: e.note, at: e.at });
+    });
+    if (v.qaRejects > 0 && v.status !== ST_DONE && v.doneBy) P(v.doneBy).openRet++;
+    if (v.status === ST_WORK && v.receivedBy) P(v.receivedBy).open++;
+
+    // 2) الفواتير اللي خلصت: الوقت بيتحسب من وقت دخول الموظف (مش من وقت رفع الفرع)
+    if (v.status !== ST_DONE || !v.doneAt || !v.doneBy || new Date(v.doneAt).getTime() < b.from) return;
+    const p = P(v.doneBy);
+    const dk = dayKey9_(v.doneAt);
+    let start = new Date(v.createdAt).getTime();
+    const fo = firstOpen[v.doneBy + '|' + dk]; if (fo) start = Math.max(start, fo);
+    const m = mins(start, v.doneAt);                       // mins بتحسب وقت الشغل بس
     p.n++; p.total += v.total; p.mins += m; p.lines += v.count;
     if (m <= SLA_MIN) p.ontime++;
-    if (v.receivedAt) { p.pick += mins(v.createdAt, v.receivedAt); p.pickN++; }
-    if (v.qaBy) { p.qaN = (p.qaN || 0) + 1; if (!v.qaRejects) p.first = (p.first || 0) + 1; p.qaR = (p.qaR || 0) + v.qaRejects; }
+    if (v.receivedAt) { p.pick += mins(start, v.receivedAt); p.pickN++; }
+    if (v.qaBy) { p.qaN++; if (!v.qaRejects) p.firstOk++; }
   });
-  all.filter(v => v.status === ST_WORK && v.receivedBy).forEach(v => {
-    const p = ppl[v.receivedBy] = ppl[v.receivedBy] || { name: v.receivedBy, n: 0, total: 0, mins: 0, ontime: 0, pick: 0, pickN: 0, lines: 0 };
-    p.open = (p.open || 0) + 1;
-  });
-  // وقت الرد على الشات (بمواعيد العمل)
-  const reps = (chatSum.replies || []).filter(x => new Date(x.at) >= start);
-  reps.forEach(x => {
-    const p = ppl[x.by] = ppl[x.by] || { name: x.by, n: 0, total: 0, mins: 0, ontime: 0, pick: 0, pickN: 0, lines: 0 };
-    p.cr = (p.cr || 0) + mins(x.asked, x.at); p.crN = (p.crN || 0) + 1;
-  });
-  const list = Object.values(ppl).map(p => {
+  reps.forEach(x => { const p = P(x.by); p.cr += mins(x.asked, x.at); p.crN++; });
+
+  const maxN = Math.max(1, ...Object.values(ppl).map(x => x.n));
+  return Object.values(ppl).map(p => {
     p.avg = p.n ? p.mins / p.n : 0; p.rate = p.n ? p.ontime / p.n : 0;
-    const cnt = Math.min(1, p.n / Math.max(...Object.values(ppl).map(x => x.n || 0), 1));
-    p.fp = p.qaN ? p.first / p.qaN : null; // نسبة اللي عدّت من الجودة من أول مرة
-    p.score = !p.n ? 0 : p.fp === null ? Math.round(p.rate * 60 + cnt * 40) : Math.round(p.rate * 40 + cnt * 30 + p.fp * 30);
+    const handled = p.qaN + p.openRet;
+    p.fp = handled ? p.firstOk / handled : null;
+    p.retRate = (p.n + p.openRet) ? p.ret / (p.n + p.openRet) : (p.ret ? 1 : 0);
+    const cnt = p.n / maxN;
+    p.base = !p.n ? 0 : p.fp === null ? Math.round(p.rate * 60 + cnt * 40) : Math.round(p.rate * 40 + cnt * 30 + p.fp * 30);
+    const perInv = {}; p.retList.forEach(x => { perInv[x.v.id] = (perInv[x.v.id] || 0) + 1; });
+    p.multi = Object.values(perInv).filter(c => c > 1).length;                    // فاتورة رجعت أكتر من مرة
+    p.penRet = retPenalty_(p.ret) + p.multi * 3;
+    p.penAtt = p.att ? Math.min(25, Math.round(p.att.pen)) : 0;
+    p.score = Math.max(0, p.base - p.penRet - p.penAtt);
+    p.flag = p.ret >= 3 || (p.ret >= 2 && p.retRate >= 0.2);                      // تنبيه أحمر حتى لو الدرجة كويسة
     return p;
-  }).sort((a, b) => b.score - a.score || b.n - a.n);
+  }).sort((x, y) => y.score - x.score || y.n - x.n);
+}
+
+function renderPerf() {
+  drawPerf_();
+  const b = perfBounds_(), key = perfRange;
+  api('dAttendance', { token, from: b.fromKey, to: b.toKey })
+    .then(j => { attCache_ = { key: key, rows: j.rows }; if (key === perfRange) drawPerf_(); })
+    .catch(e => { attCache_ = { key: key, rows: [], err: msg(e) }; if (key === perfRange) drawPerf_(); });
+}
+
+function drawPerf_() {
+  const b = perfBounds_(), start = new Date(b.from);
+  const A = (attCache_ && attCache_.key === perfRange) ? attCache_.rows : [];
+  const done = all.filter(v => v.status === ST_DONE && v.doneAt && new Date(v.doneAt) >= start);
+  const reps = (chatSum.replies || []).filter(x => new Date(x.at) >= start);
+  const list = perfCalc_(b, A, reps);
   const colors = r => r >= .9 ? 'var(--green)' : r >= .7 ? 'var(--yellow)' : 'var(--red)';
   const medals = ['🥇', '🥈', '🥉'];
+  let medalK = 0;
   let h = '<div class="perf-head"><h2>🏆 أداء الدعم في إدخال الفواتير</h2><select onchange="perfRange=this.value;renderPerf()">' +
     [['today', 'النهارده'], ['week', 'آخر 7 أيام'], ['month', 'آخر 30 يوم'], ['all', 'الكل']].map(([k, t]) => '<option value="' + k + '"' + (perfRange === k ? ' selected' : '') + '>' + t + '</option>').join('') +
     '</select></div>';
   const tot = done.length, avgAll = tot ? done.reduce((s, v) => s + mins(v.createdAt, v.doneAt), 0) / tot : 0;
   const onAll = tot ? done.filter(v => mins(v.createdAt, v.doneAt) <= SLA_MIN).length / tot : 0;
+  const totRet = list.reduce((s, p) => s + p.ret, 0);
   h += '<div class="stats"><div class="stat s3"><small>فواتير دخلت</small><b>' + tot + '</b></div>' +
     '<div class="stat s2"><small>متوسط الوقت</small><b>' + durTxt(avgAll) + '</b></div>' +
     '<div class="stat s1"><small>في الميعاد (≤ ' + SLA_MIN + ' د)</small><b>' + Math.round(onAll * 100) + '%</b></div>' +
     '<div class="stat s4"><small>متأخرة دلوقتي</small><b>' + all.filter(v => pending(v) && mins(v.createdAt, now()) > SLA_MIN).length + '</b></div>' +
+    '<div class="stat s7"><small>↩️ رجوع من الجودة</small><b>' + totRet + '</b></div>' +
     '<div class="stat s10"><small>💬 متوسط الرد على الشات</small><b>' + (reps.length ? durTxt(reps.reduce((a, x) => a + mins(x.asked, x.at), 0) / reps.length) : '-') + '</b></div></div>';
-  h += list.length ? '<div class="people">' + list.map((p, k) =>
-    '<div class="person"><div class="ph"><div class="av">' + esc((p.name || '?').trim().charAt(0)) + '</div><div class="nm">' + esc(p.name) + '</div><div class="medal">' + (p.n ? (medals[k] || '') : '') + '</div></div>' +
-    '<div class="kpis">' +
-    '<div class="kpi"><small>فواتير</small><b>' + p.n + '</b></div>' +
-    '<div class="kpi"><small>أصناف</small><b>' + p.lines + '</b></div>' +
-    '<div class="kpi"><small>متوسط الوقت</small><b>' + (p.n ? durTxt(p.avg) : '-') + '</b></div>' +
-    '<div class="kpi"><small>متوسط الاستلام</small><b>' + (p.pickN ? durTxt(p.pick / p.pickN) : '-') + '</b></div>' +
-    '<div class="kpi"><small>في الميعاد</small><b style="color:' + colors(p.rate) + '">' + Math.round(p.rate * 100) + '%</b></div>' +
-    '<div class="kpi"><small>شغّال عليها دلوقتي</small><b>' + (p.open || 0) + '</b></div>' +
-    '<div class="kpi"><small>💬 متوسط الرد على الشات</small><b>' + (p.crN ? durTxt(p.cr / p.crN) + ' (' + p.crN + ')' : '-') + '</b></div>' +
-    '<div class="kpi"><small>🔍 عدّت الجودة من أول مرة</small><b style="color:' + (p.fp === null ? 'inherit' : colors(p.fp)) + '">' + (p.fp === null ? '-' : Math.round(p.fp * 100) + '%') + '</b></div>' +
-    '<div class="kpi"><small>↩️ رجوع من الجودة</small><b>' + (p.qaR || 0) + '</b></div>' +
-    '</div><div class="bar"><i style="width:' + p.score + '%;background:' + colors(p.rate) + '"></i></div>' +
-    '<small style="color:var(--muted)">الدرجة ' + p.score + '/100 ' + (p.fp === null ? '(الالتزام بالوقت 60 + عدد الفواتير 40)' : '(الوقت 40 + عدد الفواتير 30 + الجودة من أول مرة 30)') + '</small></div>'
-  ).join('') + '</div>' : '<div class="pane empty">مفيش فواتير دخلت في الفترة دي</div>';
-  // ---------- تقييم قسم الجودة ----------
+
+  h += list.length ? '<div class="people">' + list.map(p => {
+    const medal = (p.n && !p.flag && medalK < 3) ? medals[medalK++] : '';
+    const a = p.att;
+    return '<div class="person"><div class="ph"><div class="av">' + esc((p.name || '?').trim().charAt(0)) + '</div><div class="nm">' + esc(p.name) + '</div><div class="medal">' + medal + '</div></div>' +
+      '<div class="kpis">' +
+      '<div class="kpi"><small>فواتير</small><b>' + p.n + '</b></div>' +
+      '<div class="kpi"><small>أصناف</small><b>' + p.lines + '</b></div>' +
+      '<div class="kpi"><small>متوسط الوقت (من دخوله)</small><b>' + (p.n ? durTxt(p.avg) : '-') + '</b></div>' +
+      '<div class="kpi"><small>متوسط الاستلام</small><b>' + (p.pickN ? durTxt(p.pick / p.pickN) : '-') + '</b></div>' +
+      '<div class="kpi"><small>في الميعاد</small><b style="color:' + colors(p.rate) + '">' + Math.round(p.rate * 100) + '%</b></div>' +
+      '<div class="kpi"><small>شغّال عليها دلوقتي</small><b>' + p.open + '</b></div>' +
+      '<div class="kpi"><small>💬 متوسط الرد على الشات</small><b>' + (p.crN ? durTxt(p.cr / p.crN) + ' (' + p.crN + ')' : '-') + '</b></div>' +
+      '<div class="kpi"><small>🔍 عدّت الجودة من أول مرة</small><b style="color:' + (p.fp === null ? 'inherit' : colors(p.fp)) + '">' + (p.fp === null ? '-' : Math.round(p.fp * 100) + '%') + '</b></div>' +
+      '<div class="kpi"><small>↩️ رجوع من الجودة</small><b style="' + (p.ret ? 'color:var(--red);font-size:22px' : '') + '">' + p.ret + '</b></div>' +
+      '<div class="kpi"><small>⏱ ساعات الاتصال</small><b>' + (a ? hh_(a.mins) + ' س' : '-') + '</b></div>' +
+      '</div><div class="bar"><i style="width:' + p.score + '%;background:' + colors(p.score / 100) + '"></i></div>' +
+      '<small style="color:var(--muted)">الدرجة ' + p.score + '/100 (الأساس ' + p.base + ')' +
+      (p.penRet ? ' <b style="color:var(--red)">- ' + p.penRet + ' مرتجعات</b>' : '') +
+      (p.penAtt ? ' <b style="color:var(--red)">- ' + p.penAtt + ' حضور وتأخير</b>' : '') + '</small>' +
+      (p.flag ? '<div class="urgebox" style="margin-bottom:0"><b>⚠ ' + p.ret + ' فواتير مرتجعة من الجودة</b>' + (p.multi ? ' (منها ' + p.multi + ' رجعت أكتر من مرة)' : '') + ' - مراجعة مطلوبة حتى لو الدرجة كويسة</div>' : '') +
+      (a && a.lateDays ? '<div class="warnbox" style="margin-bottom:0">⏰ اتأخر ' + a.lateDays + ' يوم (إجمالي ' + durTxt(a.late) + ')</div>' : '') +
+      '</div>';
+  }).join('') + '</div>' : '<div class="pane empty">مفيش فواتير دخلت في الفترة دي</div>';
+
+  // ---------- الفواتير اللي الجودة رجّعتها ----------
+  const rets = [].concat.apply([], list.map(p => p.retList.map(x => ({ p: p, x: x })))).sort((u, w) => w.x.at.localeCompare(u.x.at));
+  if (rets.length) {
+    h += '<div class="pane stores-perf"><h3 style="margin-top:0;color:#C62828">↩️ الفواتير اللي الجودة رجّعتها (' + rets.length + ')</h3><table><thead><tr><th>الموظف</th><th>المحل</th><th>المورد</th><th>سبب الرجوع</th><th>الوقت</th></tr></thead><tbody>' +
+      rets.map(r => '<tr><td><b>' + esc(r.p.name) + '</b></td><td>' + esc(r.x.v.store) + '</td><td>' + esc(r.x.v.supplier) + '</td><td>' + esc(r.x.note) + '</td><td>' + dt(r.x.at) + '</td></tr>').join('') + '</tbody></table></div>';
+  }
+
+  // ---------- تقييم قسم الجودة (زي ما كان) ----------
   const qa = {};
   all.forEach(v => {
     const log = qaLogList(v);
@@ -2293,7 +2378,7 @@ function renderPerf() {
       if (x.type === 'اعتماد') { q.ok++; if (v.reviewNotes) q.compl++; } else q.ret++;
     });
   });
-  const qal = Object.values(qa).sort((a, b) => (b.ok + b.ret) - (a.ok + a.ret));
+  const qal = Object.values(qa).sort((a, c) => (c.ok + c.ret) - (a.ok + a.ret));
   if (qal.length) {
     h += '<div class="pane stores-perf"><h3 style="margin-top:0;color:#4527A0">🔍 تقييم قسم الجودة</h3>' +
       '<small style="color:var(--muted)">الشكاوى = فواتير الجودة اعتمدتها والفرع كتب عليها ملاحظة وهو بيراجع صورة الإثبات</small>' +
@@ -2306,14 +2391,32 @@ function renderPerf() {
           '</td><td><b style="color:' + colors(sc / 100) + '">' + sc + '/100</b></td></tr>';
       }).join('') + '</tbody></table><small style="color:var(--muted)">التقييم = خلو الفواتير من شكاوى الفروع 60 + المراجعة في الميعاد 40</small></div>';
   }
-  // الفروع
+
+  // ---------- سجل الحضور والمرتب ----------
+  const withAtt = list.filter(p => p.att);
+  const hasPay = withAtt.some(p => p.att.hasPay);
+  h += '<div class="pane stores-perf"><h3 style="margin-top:0;color:var(--navy)">⏱️ سجل الحضور' + (hasPay ? ' والمرتب' : '') + '</h3>' +
+    '<small style="color:var(--muted)">الحضور بيتسجل أوتوماتيك من وقت فتح الداش بورد. المطلوب 8 ساعات متصلة من 9 ص لـ 1 ص. تأخير لحد 15 د: تنبيه • 15-30 د: خصم ربع ساعة • أكتر من 30 د: خصم ساعة.</small>' +
+    (withAtt.length ? '<table><thead><tr><th>الاسم</th><th>أيام</th>' + (perfRange === 'today' ? '<th>فتح</th><th>آخر نشاط</th>' : '') + '<th>ساعات متصلة</th><th>تأخير</th><th>خصم</th><th>ساعات محسوبة</th>' + (hasPay ? '<th>المرتب</th>' : '') + '</tr></thead><tbody>' +
+      withAtt.map(p => {
+        const a = p.att, r0 = a.rows[0];
+        return '<tr><td><b>' + esc(p.name) + '</b></td><td class="num">' + a.days + '</td>' +
+          (perfRange === 'today' ? '<td>' + tm(r0.first) + '</td><td>' + tm(r0.last) + '</td>' : '') +
+          '<td><b style="color:' + (a.mins >= ATT_REQ * a.days ? 'var(--green)' : 'inherit') + '">' + hh_(a.mins) + ' س</b></td>' +
+          '<td>' + (a.late > 15 ? '<b style="color:var(--red)">' + durTxt(a.late) + '</b>' : a.late ? durTxt(a.late) : '-') + '</td>' +
+          '<td>' + (a.deduct ? '<b style="color:var(--red)">- ' + durTxt(a.deduct) + '</b>' : '-') + '</td>' +
+          '<td>' + hh_(a.paid) + ' س</td>' + (hasPay ? '<td class="num">' + (a.hasPay ? a.pay + ' ج.م' : '-') + '</td>' : '') + '</tr>';
+      }).join('') + '</tbody></table>'
+      : '<div class="empty">' + (attCache_ && attCache_.err ? 'تعذر تحميل الحضور: ' + esc(attCache_.err) : 'مفيش حضور مسجل في الفترة دي') + '</div>') + '</div>';
+
+  // ---------- الفروع (زي ما كان) ----------
   const byStore = {};
   all.filter(v => new Date(v.createdAt) >= start).forEach(v => {
     const s = byStore[v.store] = byStore[v.store] || { n: 0, done: 0, mins: 0, total: 0 };
     s.n++; s.total += v.total;
     if (v.status === ST_DONE) { s.done++; s.mins += mins(v.createdAt, v.doneAt); }
   });
-  const sl = Object.entries(byStore).sort((a, b) => b[1].n - a[1].n);
+  const sl = Object.entries(byStore).sort((a, c) => c[1].n - a[1].n);
   if (sl.length) h += '<div class="pane stores-perf"><h3 style="margin-top:0;color:var(--navy)">🏪 الفروع</h3><table><thead><tr><th>الفرع</th><th>فواتير</th><th>دخلت</th><th>متوسط وقت الإدخال</th><th>قيمة الفواتير</th></tr></thead><tbody>' +
     sl.map(([n, s]) => '<tr><td>' + esc(n) + '</td><td class="num">' + s.n + '</td><td class="num">' + s.done + '</td><td>' + (s.done ? durTxt(s.mins / s.done) : '-') + '</td><td class="num">' + money(s.total) + '</td></tr>').join('') + '</tbody></table></div>';
   $('pagePerf').innerHTML = h;
