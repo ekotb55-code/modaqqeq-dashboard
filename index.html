@@ -1513,7 +1513,7 @@ async function makeReport() {
   const maxAbs = Math.max(1, ...top.map(i => Math.abs(i.pct)));
   const chart = top.length ? '<div class="chart">' + top.map(i => {
     const wpx = Math.max(2, Math.abs(i.pct) / maxAbs * 100);
-    return '<div class="crow"><div class="cn" title="' + esc(i.supTxt) + '">' + esc(i.name) + '<small>' + money(i.base) + ' ← ' + money(i.now) + '</small></div>' +
+    return '<div class="crow"><div class="cn" title="' + esc(i.supTxt) + '">' + esc(i.name) + '<small>من ' + money(i.base) + ' لـ ' + money(i.now) + '</small></div>' +
       '<div class="cbar"><div class="half l">' + (i.pct < 0 ? '<i class="dn" style="width:' + wpx + '%"></i><em class="dn">' + i.pct.toFixed(1) + '%</em>' : '') + '</div>' +
       '<div class="half r">' + (i.pct > 0 ? '<i class="up" style="width:' + wpx + '%"></i><em class="up">+' + i.pct.toFixed(1) + '%</em>' : '') + '</div></div></div>';
   }).join('') + '<div class="cleg"><span><i class="dn"></i> نقص في سعر الشراء</span><span><i class="up"></i> زيادة في سعر الشراء</span></div></div>' : '';
