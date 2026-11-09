@@ -460,6 +460,11 @@
   #dlg .box { background: #fff; border-radius: 18px; padding: 18px; width: min(460px, 100%); max-height: 86vh; overflow-y: auto; }
   #dlg h3 { margin: 0 0 10px; color: var(--navy); }
   #dlg label.ck { display: flex; gap: 8px; align-items: center; padding: 7px 4px; border-bottom: 1px solid #EEF2F7; font-weight: 700; }
+  #dlg .ckr { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid #EEF2F7; }
+  #dlg .ckr label.ck { flex: 1; border: 0; }
+  #dlg .tms { display: flex; gap: 4px; } #dlg .tms input { width: 92px; padding: 4px; font: inherit; font-size: 13px; border: 1px solid #D5DEE9; border-radius: 8px; }
+  .sgrid td.cell.xcell { background: #F7F5FF; }
+  .chip2 .tm { color: #6B4FBB; font-weight: 700; font-size: 11px; }
   #dlg .acts { display: flex; gap: 8px; justify-content: flex-start; margin-top: 12px; }
   @media (max-width: 760px) { .sgrid { border-spacing: 3px; } .sgrid td.cell { min-width: 0; padding: 5px; } .sgrid td.day { width: auto; font-size: 12px; } .chip2 { font-size: 11.5px; padding: 2px 7px; } }
   /* ---------- تقييم الأداء ---------- */
@@ -2431,6 +2436,10 @@ function dayName_(key) { const p = key.split('-').map(Number); return new Date(p
 function dayShort_(key) { const p = key.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2], 12).toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric' }); }
 // بداية/نهاية وردية في يوم شغل (الساعة قبل 9 = اليوم اللي بعده)
 function shiftAt_(key, hm) { const p = key.split('-').map(Number), q = hm.split(':').map(Number); return new Date(p[0], p[1] - 1, p[2] + (q[0] < 9 ? 1 : 0), q[0], q[1]).getTime(); }
+const SHIFT_X = { id: 'X', name: 'وردية خاصة', from: '12:00', to: '20:00' };
+// مواعيد الشخص في الوردية: مواعيده الخاصة لو متكتبة، وإلا مواعيد الوردية
+function rowTimes_(r, defs) { if (r.from && r.to) return { from: r.from, to: r.to }; const df = defs.find(x => x.id === r.shift); return df ? { from: df.from, to: df.to } : null; }
+function rowSpan_(r, defs) { const t = rowTimes_(r, defs); return t ? shiftSpan_(r.day, t) : null; }
 function shiftSpan_(key, def) { const a = shiftAt_(key, def.from); let b = shiftAt_(key, def.to); if (b <= a) b += 864e5; return [a, b]; }
 async function renderShifts(keep) {
   const today = dayKey9_(now());
@@ -2463,23 +2472,26 @@ function drawShifts_() {
     '</div></div>';
   // دلوقتي
   const curDef = d.defs.find(df => { const sp = shiftSpan_(today, df); return now() >= sp[0] && now() < sp[1]; });
-  if (curDef) {
-    const ppl = who(today, curDef.id);
-    h += '<div class="pane" style="padding:12px 14px;margin-bottom:12px"><b>🟢 الوردية دلوقتي: ' + esc(curDef.name) + ' (' + curDef.from + ' - ' + curDef.to + ')</b> &nbsp; ' +
-      (ppl.length ? ppl.map(r => '<span class="chip2' + (r.email === d.me ? ' me' : '') + '">' + (onlineNow_(r.email) ? '<i class="on"></i>' : '⚪') + esc(r.name) + (onlineNow_(r.email) ? '' : ' <small style="color:#B3261E">مش فاتح</small>') + '</span>').join('')
-        : '<b style="color:#B3261E">⚠️ مفيش حد متسجل في الوردية دي</b>') + '</div>';
+  const nowPpl = d.rows.filter(r => r.day === today && (sp => sp && now() >= sp[0] && now() < sp[1])(rowSpan_(r, d.defs)))
+    .filter((r, i, a) => a.findIndex(x => x.email === r.email) === i);
+  if (curDef || nowPpl.length) {
+    h += '<div class="pane" style="padding:12px 14px;margin-bottom:12px"><b>🟢 ' + (curDef ? 'الوردية دلوقتي: ' + esc(curDef.name) + ' (' + curDef.from + ' - ' + curDef.to + ')' : 'شغالين دلوقتي') + '</b> &nbsp; ' +
+      (nowPpl.length ? nowPpl.map(r => { const t = rowTimes_(r, d.defs); return '<span class="chip2' + (r.email === d.me ? ' me' : '') + '">' + (onlineNow_(r.email) ? '<i class="on"></i>' : '⚪') + esc(r.name) +
+        (r.from ? ' <small dir="ltr">' + t.from + '-' + t.to + '</small>' : '') + (onlineNow_(r.email) ? '' : ' <small style="color:#B3261E">مش فاتح</small>') + '</span>'; }).join('')
+        : '<b style="color:#B3261E">⚠️ مفيش حد متسجل دلوقتي</b>') + '</div>';
   }
   h += '<div class="pane" style="overflow-x:auto"><table class="sgrid"><thead><tr><th></th>' +
-    d.defs.map(df => '<th>' + esc(df.name) + '<small dir="ltr">' + df.from + ' - ' + df.to + '</small></th>').join('') + '</tr></thead><tbody>' +
+    d.defs.map(df => '<th>' + esc(df.name) + '<small dir="ltr">' + df.from + ' - ' + df.to + '</small></th>').join('') + '<th>⏱️ وردية خاصة<small>مواعيد على مزاجك</small></th></tr></thead><tbody>' +
     days.map(day => '<tr class="' + (day === today ? 'today' : '') + '"><td class="day">' + dayName_(day) + '<small>' + dayShort_(day) + (day === today ? ' • النهارده' : '') + '</small></td>' +
-      d.defs.map(df => {
-        const ppl = who(day, df.id), past = shiftSpan_(day, df)[1] < now();
-        return '<td class="cell' + (boss ? ' edit' : '') + (ppl.length ? ppl.length === 1 ? ' one' : '' : ' empty') + '"' + (boss ? ' onclick="shiftEdit_(\'' + day + '\',\'' + df.id + '\')"' : '') + '>' +
-          (ppl.length ? ppl.map(r => '<span class="chip2' + (r.email === d.me ? ' me' : '') + '">' + esc(r.name) +
-            (r.email === d.me && !past ? '<button title="اطلب تبديل" onclick="event.stopPropagation();swapAsk_(\'' + day + '\',\'' + df.id + '\')">🔄</button>' : '') + '</span>').join('')
-            : '<small style="color:#B3261E;font-weight:700">مفيش حد</small>') + '</td>';
+      d.defs.concat([SHIFT_X]).map(df => {
+        const ppl = who(day, df.id), X = df.id === SHIFT_X.id;
+        return '<td class="cell' + (boss ? ' edit' : '') + (X ? ' xcell' : ppl.length ? ppl.length === 1 ? ' one' : '' : ' empty') + '"' + (boss ? ' onclick="shiftEdit_(\'' + day + '\',\'' + df.id + '\')"' : '') + '>' +
+          (ppl.length ? ppl.map(r => { const t = rowTimes_(r, d.defs) || {}, past = (rowSpan_(r, d.defs) || [0, 0])[1] < now();
+            return '<span class="chip2' + (r.email === d.me ? ' me' : '') + '">' + esc(r.name) + (r.from ? ' <small dir="ltr" class="tm">' + t.from + '-' + t.to + '</small>' : '') +
+            (r.email === d.me && !past ? '<button title="اطلب تبديل" onclick="event.stopPropagation();swapAsk_(\'' + day + '\',\'' + df.id + '\')">🔄</button>' : '') + '</span>'; }).join('')
+            : X ? (boss ? '<small style="color:var(--muted)">＋</small>' : '') : '<small style="color:#B3261E;font-weight:700">مفيش حد</small>') + '</td>';
       }).join('') + '</tr>').join('') + '</tbody></table>' +
-    '<small style="color:var(--muted)">' + (boss ? 'دوس على أي خانة علشان تختار مين في الوردية. ' : 'دوس 🔄 جنب اسمك علشان تطلب من زميل ياخد مكانك. ') +
+    '<small style="color:var(--muted)">' + (boss ? 'دوس على أي خانة علشان تختار مين في الوردية وتغيّر مواعيد أي حد لو عاوز. "الوردية الخاصة" لأي مواعيد زيادة في يوم معين. ' : 'دوس 🔄 جنب اسمك علشان تطلب من زميل ياخد مكانك. ') +
     '🔴 مفيش حد • 🟡 واحد بس • سماح التأخير ' + d.grace + ' دقايق • وقت التسليم بين الورديات ' + d.handover + ' دقايق</small></div>';
   // طلبات التبديل
   const sw = d.swaps.slice().sort((a, b) => b.at.localeCompare(a.at));
@@ -2487,7 +2499,7 @@ function drawShifts_() {
   const bossToDecide = boss ? sw.filter(x => x.status === 'مستني المدير') : [];
   const b = $('shiftBadge'), n = mineToAnswer.length + bossToDecide.length;
   b.textContent = n; b.classList.toggle('hidden', !n);
-  const defName = id => (d.defs.find(x => x.id === id) || { name: id }).name;
+  const defName = id => (d.defs.concat([SHIFT_X]).find(x => x.id === id) || { name: id }).name;
   const stCls = st => st.indexOf('مستني') === 0 ? 'wait' : st === 'اتوافق' ? 'ok' : 'no';
   h += '<div class="pane swaps"><h3 style="margin-top:0;color:var(--navy)">🔄 طلبات التبديل</h3>' +
     (sw.length ? sw.slice(0, 40).map(x => '<div class="sw"><div><b>' + esc(x.fromName) + '</b> ← <b>' + esc(x.toName) + '</b> • ' + esc(defName(x.shift)) + ' يوم ' + dayName_(x.day) + ' ' + dayShort_(x.day) +
@@ -2498,16 +2510,30 @@ function drawShifts_() {
   $('pageShifts').innerHTML = h; shiftSync_();
 }
 function shiftEdit_(day, sid) {
-  const d = sh.data, cur = d.rows.filter(r => r.day === day && r.shift === sid).map(r => r.email), df = d.defs.find(x => x.id === sid);
+  const d = sh.data, X = sid === SHIFT_X.id, df = X ? SHIFT_X : d.defs.find(x => x.id === sid);
+  const cur = d.rows.filter(r => r.day === day && r.shift === sid);
   dlg('<h3>' + esc(df.name) + ' - ' + dayName_(day) + ' ' + dayShort_(day) + '</h3>' +
-    d.members.map(m => '<label class="ck"><input type="checkbox" value="' + esc(m.email) + '"' + (cur.indexOf(m.email) !== -1 ? ' checked' : '') + '> ' + esc(m.name) + ' <small style="color:var(--muted)">' + esc(m.role) + '</small></label>').join('') +
+    '<p style="margin:0 0 6px;color:var(--muted);font-size:13px">' + (X ? 'علّم على الموظف واكتب مواعيده في اليوم ده.' : 'علّم على اللي في الوردية. لو حد مواعيده مختلفة النهارده غيّر الساعات اللي جنبه.') + '</p>' +
+    d.members.map(m => { const r = cur.find(x => x.email === m.email), t = r && r.from ? r : df;
+      return '<div class="ckr"><label class="ck"><input type="checkbox" value="' + esc(m.email) + '"' + (r ? ' checked' : '') + '> ' + esc(m.name) + ' <small style="color:var(--muted)">' + esc(m.role || '') + '</small></label>' +
+        '<span class="tms" dir="ltr"><input type="time" class="tf" value="' + t.from + '">→<input type="time" class="tt" value="' + t.to + '"></span></div>'; }).join('') +
     '<div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="closeDlg()">إلغاء</button></div>');
+  // لما يغيّر الساعة نعلّم على الشخص تلقائي
+  document.querySelectorAll('#dlg .ckr').forEach(row => row.querySelectorAll('input[type=time]').forEach(i => i.onchange = () => { row.querySelector('input[type=checkbox]').checked = true; }));
   $('dlgOk').onclick = () => {
-    const emails = [...document.querySelectorAll('#dlg input:checked')].map(x => x.value);
+    const emails = [], times = {}, rows = [];
+    for (const row of document.querySelectorAll('#dlg .ckr')) {
+      const c = row.querySelector('input[type=checkbox]'); if (!c.checked) continue;
+      const f = row.querySelector('.tf').value, t = row.querySelector('.tt').value, m = d.members.find(x => x.email === c.value) || {};
+      if (!f || !t || f === t) return toast('اكتب مواعيد ' + (m.name || '') + ' صح');
+      const custom = X || f !== df.from || t !== df.to;
+      emails.push(c.value); if (custom) times[c.value] = { from: f, to: t };
+      rows.push({ day, shift: sid, email: c.value, name: m.name || c.value, from: custom ? f : '', to: custom ? t : '' });
+    }
     // بنعدّل الجدول على الشاشة فورًا، والحفظ بيروح للسيرفر في الخلفية بالترتيب
-    d.rows = d.rows.filter(r => !(r.day === day && r.shift === sid)).concat(emails.map(e => ({ day, shift: sid, email: e, name: (d.members.find(m => m.email === e) || {}).name || e })));
+    d.rows = d.rows.filter(r => !(r.day === day && r.shift === sid)).concat(rows);
     closeDlg(); drawShifts_();
-    shiftSave_(() => api('dShiftSet', { token, day, shift: sid, emails }, true));
+    shiftSave_(() => api('dShiftSet', { token, day, shift: sid, emails, times }, true));
   };
 }
 // طابور الحفظ: كل تعديل بيستنى اللي قبله، والشاشة ما بتستناش
@@ -2533,7 +2559,7 @@ function shiftDefsDlg_() {
   };
 }
 function swapAsk_(day, sid) {
-  const d = sh.data, df = d.defs.find(x => x.id === sid);
+  const d = sh.data, df = d.defs.concat([SHIFT_X]).find(x => x.id === sid);
   dlg('<h3>🔄 تبديل ' + esc(df.name) + ' يوم ' + dayName_(day) + '</h3><p style="margin-top:0">مين من زمايلك هياخد مكانك؟ الطلب بيروح له يوافق، وبعدين المدير يعتمد.</p>' +
     '<select id="swTo" style="width:100%">' + d.members.filter(m => m.email !== d.me).map(m => '<option value="' + esc(m.email) + '">' + esc(m.name) + '</option>').join('') + '</select>' +
     '<textarea id="swNote" placeholder="السبب (اختياري)" style="width:100%;margin-top:8px;min-height:60px"></textarea>' +
@@ -2596,8 +2622,7 @@ function perfCalc_(b, A, reps, SC) {
     const byDayShift = {};
     SC.rows.forEach(r => {
       if (r.day < b.fromKey || r.day > b.toKey) return;
-      const df = SC.defs.find(x => x.id === r.shift); if (!df) return;
-      const sp = shiftSpan_(r.day, df);
+      const sp = rowSpan_(r, SC.defs); if (!sp) return;
       (sched[r.name + '|' + r.day] = sched[r.name + '|' + r.day] || []).push(sp);
       (byDayShift[r.day] = byDayShift[r.day] || []).push({ name: r.name, sp: sp });
     });
