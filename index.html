@@ -465,6 +465,52 @@
   #dlg .tms { display: flex; gap: 4px; } #dlg .tms input { width: 92px; padding: 4px; font: inherit; font-size: 13px; border: 1px solid #D5DEE9; border-radius: 8px; }
   .sgrid td.cell.xcell { background: #F7F5FF; }
   .chip2 .tm { color: #6B4FBB; font-weight: 700; font-size: 11px; }
+  /* تايم لاين الورديات */
+  .tldays { display: flex; gap: 6px; overflow-x: auto; padding: 10px; }
+  .tldays button { background: #fff; box-shadow: var(--shadow); color: var(--navy); white-space: nowrap; padding: 6px 12px; flex: none; }
+  .tldays button small { display: block; color: var(--muted); font-weight: 600; font-size: 11px; }
+  .tldays button.on { background: var(--navy); color: #fff; } .tldays button.on small { color: #cfe0f3; }
+  .tldays button i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-inline-start: 5px; vertical-align: middle; }
+  .tlpool { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; } .tlpool small { color: var(--muted); font-weight: 700; }
+  .chip3 { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1.5px dashed var(--line); border-radius: 999px; padding: 3px 10px 3px 4px; font-size: 13px; color: var(--text); box-shadow: none; }
+  .chip3:hover { border-color: var(--blue); }
+  .tav { width: 26px; height: 26px; border-radius: 50%; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex: none; }
+  .chip3 .tav { width: 22px; height: 22px; font-size: 11px; }
+  .tlcov { display: flex; margin: 4px 0 2px; margin-inline-start: 140px; height: 14px; border-radius: 7px; overflow: hidden; }
+  .tlcov div { flex: 1; }
+  .tlaxis { position: relative; height: 22px; margin-inline-start: 140px; color: var(--muted); font-size: 11.5px; font-weight: 700; }
+  .tlaxis b { position: absolute; transform: translateX(50%); top: 0; }
+  .tl { position: relative; min-height: 60px; padding-bottom: 18px; }
+  .tlgrid { position: absolute; top: 0; bottom: 18px; inset-inline-start: 140px; inset-inline-end: 0; pointer-events: none; }
+  .tlgrid > i { position: absolute; top: 0; bottom: 0; border-inline-start: 1px solid #EEF2F7; }
+  .tlgrid .band { position: absolute; top: 0; bottom: 0; } .tlgrid .band span { position: absolute; bottom: -18px; right: 6px; font-size: 11px; font-weight: 800; color: var(--muted); }
+  .tlgrid .hand { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, #F2A90055 0 4px, transparent 4px 8px); }
+  .tlgrid .now { position: absolute; top: 0; bottom: 0; border-inline-start: 2px solid var(--red); z-index: 2; }
+  .tlgrid .now b { position: absolute; bottom: -18px; transform: translateX(50%); background: var(--red); color: #fff; font-size: 10px; padding: 0 6px; border-radius: 6px; white-space: nowrap; }
+  .tlrow { display: flex; align-items: center; height: 46px; border-bottom: 1px dashed #EEF2F7; }
+  .tlrow .who { width: 140px; flex: none; font-weight: 800; color: var(--navy); display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .tlrow .track { position: relative; flex: 1; height: 100%; }
+  .tbar { position: absolute; top: 8px; height: 30px; border-radius: 10px; color: #fff; font-size: 12.5px; display: flex; align-items: center; gap: 4px; padding: 0 6px; box-shadow: 0 2px 8px rgba(0,0,0,.14); white-space: nowrap; overflow: hidden; z-index: 3; }
+  .tbar.drag { cursor: grab; touch-action: none; user-select: none; } .tbar.drag:active { cursor: grabbing; }
+  .tbar .h { width: 14px; height: 30px; cursor: ew-resize; flex: none; position: relative; margin: 0 -6px; }
+  .tbar .h:after { content: ''; position: absolute; top: 7px; left: 4px; width: 6px; height: 16px; border-radius: 3px; background: rgba(255,255,255,.7); pointer-events: none; }
+  .tbar .tx { flex: 1; overflow: hidden; text-overflow: ellipsis; text-align: center; pointer-events: none; } .tbar .tx em { font-style: normal; font-weight: 600; opacity: .9; }
+  .tbar .swp { background: rgba(255,255,255,.25); border-radius: 8px; padding: 0 6px; font-size: 13px; color: #fff; box-shadow: none; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12.5px; font-weight: 700; margin-top: 6px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: middle; margin-inline-end: 4px; }
+  .tlwk .r { display: flex; align-items: center; height: 28px; cursor: pointer; border-radius: 8px; }
+  .tlwk .r:hover, .tlwk .r.sel { background: var(--sky); }
+  .tlwk .d { width: 140px; flex: none; font-weight: 800; color: var(--navy); font-size: 13px; padding-inline-start: 4px; } .tlwk .d small { color: var(--muted); font-weight: 600; }
+  .tlwk .r.today .d { color: var(--blue); }
+  .tlwk .t { position: relative; flex: 1; height: 14px; background: #F3F6FA; border-radius: 7px; overflow: hidden; }
+  .tlwk .t div { position: absolute; border-radius: 4px; } .tlwk .t small { position: absolute; right: 8px; top: -2px; color: var(--red); font-weight: 800; font-size: 11px; }
+  #dlg label.fl { display: block; font-weight: 700; color: var(--navy); font-size: 13px; margin-bottom: 3px; }
+  @media (max-width: 700px) {
+    .tlrow .who { width: 78px; font-size: 12px; gap: 4px; } .tlrow .who .tav { display: none; }
+    .tlcov, .tlaxis { margin-inline-start: 78px; } .tlgrid { inset-inline-start: 78px; } .tlwk .d { width: 78px; font-size: 12px; }
+    .tbar { font-size: 11px; padding: 0 3px; } .tbar .tx em { display: none; } .tbar .h { width: 12px; }
+    .tlpool small { display: none; }
+  }
   #dlg .acts { display: flex; gap: 8px; justify-content: flex-start; margin-top: 12px; }
   @media (max-width: 760px) { .sgrid { border-spacing: 3px; } .sgrid td.cell { min-width: 0; padding: 5px; } .sgrid td.day { width: auto; font-size: 12px; } .chip2 { font-size: 11.5px; padding: 2px 7px; } }
   /* ---------- تقييم الأداء ---------- */
@@ -2460,45 +2506,105 @@ async function renderShifts(keep) {
   drawShifts_();
 }
 function onlineNow_(email) { const r = sh.att.find(x => x.email === email); return r && (now() - new Date(r.last).getTime()) < 4 * 60000; }
+// ---------- الورديات كتايم لاين: كل يوم خط من 9 الصبح، وكل موظف شريط بلونه ----------
+const TL_COLORS = ['#1479D3', '#6C4BD8', '#E67E00', '#16A085', '#C2185B', '#2E7D32', '#8D6E63', '#0097A7', '#D84315', '#5E35B1', '#AD1457', '#558B2F'];
+function tlColor_(email) { const L = (sh.data.members || []).map(m => m.email).sort(); const i = L.indexOf(email); return TL_COLORS[(i < 0 ? L.length : i) % TL_COLORS.length]; }
+function tlH_(hm) { const q = String(hm).split(':').map(Number); let h = q[0] + (q[1] || 0) / 60; if (h < 9) h += 24; return h; }      // 08:00 = 32 (بكرة الصبح)
+function tlHM_(h) { h = ((h % 24) + 24) % 24; const H = Math.floor(h + 1e-9), M = Math.round((h - H) * 60) % 60; return String(H).padStart(2, '0') + ':' + String(M).padStart(2, '0'); }
+function tlSpanH_(r, defs) { const t = rowTimes_(r, defs); if (!t) return null; const a = tlH_(t.from); let b = tlH_(t.to); if (b <= a) b += 24; return [a, b]; }
+function tlRange_(rows, defs) {
+  let S = 9, E = 25;
+  defs.forEach(df => { const a = tlH_(df.from); let b = tlH_(df.to); if (b <= a) b += 24; E = Math.max(E, b); });
+  rows.forEach(r => { const s = tlSpanH_(r, defs); if (s) { S = Math.min(S, Math.floor(s[0])); E = Math.max(E, Math.ceil(s[1])); } });
+  return [S, Math.min(E, S + 24)];
+}
+// كام واحد شغال في كل نص ساعة من اليوم
+function tlCover_(rows, defs, S, E) {
+  const out = [];
+  for (let h = S; h < E; h += 0.5) {
+    const m = h + 0.25;
+    out.push(new Set(rows.filter(r => { const s = tlSpanH_(r, defs); return s && s[0] <= m && s[1] > m; }).map(r => r.email)).size);
+  }
+  return out;
+}
+function tlDayLevel_(day) {
+  const d = sh.data, rows = d.rows.filter(r => r.day === day);
+  if (!rows.length) return 0;
+  const c = tlCover_(rows, d.defs, 9, 25);
+  return Math.min(2, Math.min(...c));
+}
+const covColor_ = n => n === 0 ? '#FDECEA' : n === 1 ? '#FFE9A8' : '#BFE8CB';
+
 function drawShifts_() {
   const d = sh.data, today = dayKey9_(now()), boss = d.boss;
   const days = [...Array(7)].map((_, k) => dayAdd_(sh.week, k));
-  const who = (day, sid) => d.rows.filter(r => r.day === day && r.shift === sid);
+  if (!sh.day || days.indexOf(sh.day) === -1) sh.day = days.indexOf(today) !== -1 ? today : days[0];
+  const day = sh.day;
   let h = '<div class="shead"><h2>📅 جدول الورديات <small id="shSync" style="font-size:13px;color:var(--muted);font-weight:600"></small></h2><div class="tools">' +
-    '<button class="btn soft" onclick="sh.week=dayAdd_(sh.week,-7);renderShifts()">→ الأسبوع اللي فات</button>' +
-    '<button class="btn soft" onclick="sh.week=null;renderShifts()">النهارده</button>' +
-    '<button class="btn soft" onclick="sh.week=dayAdd_(sh.week,7);renderShifts()">الأسبوع الجاي ←</button>' +
+    '<button class="btn soft" onclick="sh.week=dayAdd_(sh.week,-7);sh.day=null;renderShifts()">→ الأسبوع اللي فات</button>' +
+    '<button class="btn soft" onclick="sh.week=null;sh.day=null;renderShifts()">النهارده</button>' +
+    '<button class="btn soft" onclick="sh.week=dayAdd_(sh.week,7);sh.day=null;renderShifts()">الأسبوع الجاي ←</button>' +
     (boss ? '<button class="btn" onclick="shiftCopy_()">📋 انسخ الأسبوع اللي فات</button><button class="btn soft" onclick="shiftDefsDlg_()">⚙️ الورديات ومواعيدها</button>' : '') +
     '</div></div>';
-  // دلوقتي
+  // شغالين دلوقتي
   const curDef = d.defs.find(df => { const sp = shiftSpan_(today, df); return now() >= sp[0] && now() < sp[1]; });
   const nowPpl = d.rows.filter(r => r.day === today && (sp => sp && now() >= sp[0] && now() < sp[1])(rowSpan_(r, d.defs)))
     .filter((r, i, a) => a.findIndex(x => x.email === r.email) === i);
   if (curDef || nowPpl.length) {
-    h += '<div class="pane" style="padding:12px 14px;margin-bottom:12px"><b>🟢 ' + (curDef ? 'الوردية دلوقتي: ' + esc(curDef.name) + ' (' + curDef.from + ' - ' + curDef.to + ')' : 'شغالين دلوقتي') + '</b> &nbsp; ' +
-      (nowPpl.length ? nowPpl.map(r => { const t = rowTimes_(r, d.defs); return '<span class="chip2' + (r.email === d.me ? ' me' : '') + '">' + (onlineNow_(r.email) ? '<i class="on"></i>' : '⚪') + esc(r.name) +
-        (r.from ? ' <small dir="ltr">' + t.from + '-' + t.to + '</small>' : '') + (onlineNow_(r.email) ? '' : ' <small style="color:#B3261E">مش فاتح</small>') + '</span>'; }).join('')
+    h += '<div class="pane" style="padding:12px 14px"><b>🟢 ' + (curDef ? 'الوردية دلوقتي: ' + esc(curDef.name) + ' (' + curDef.from + ' - ' + curDef.to + ')' : 'شغالين دلوقتي') + '</b> &nbsp; ' +
+      (nowPpl.length ? nowPpl.map(r => '<span class="chip2' + (r.email === d.me ? ' me' : '') + '">' + (onlineNow_(r.email) ? '<i class="on"></i>' : '⚪') + esc(r.name) +
+        (onlineNow_(r.email) ? '' : ' <small style="color:#B3261E">مش فاتح</small>') + '</span>').join('')
         : '<b style="color:#B3261E">⚠️ مفيش حد متسجل دلوقتي</b>') + '</div>';
   }
-  h += '<div class="pane" style="overflow-x:auto"><table class="sgrid"><thead><tr><th></th>' +
-    d.defs.map(df => '<th>' + esc(df.name) + '<small dir="ltr">' + df.from + ' - ' + df.to + '</small></th>').join('') + '<th>⏱️ وردية خاصة<small>مواعيد على مزاجك</small></th></tr></thead><tbody>' +
-    days.map(day => '<tr class="' + (day === today ? 'today' : '') + '"><td class="day">' + dayName_(day) + '<small>' + dayShort_(day) + (day === today ? ' • النهارده' : '') + '</small></td>' +
-      d.defs.concat([SHIFT_X]).map(df => {
-        const ppl = who(day, df.id), X = df.id === SHIFT_X.id;
-        return '<td class="cell' + (boss ? ' edit' : '') + (X ? ' xcell' : ppl.length ? ppl.length === 1 ? ' one' : '' : ' empty') + '"' + (boss ? ' onclick="shiftEdit_(\'' + day + '\',\'' + df.id + '\')"' : '') + '>' +
-          (ppl.length ? ppl.map(r => { const t = rowTimes_(r, d.defs) || {}, past = (rowSpan_(r, d.defs) || [0, 0])[1] < now();
-            return '<span class="chip2' + (r.email === d.me ? ' me' : '') + '">' + esc(r.name) + (r.from ? ' <small dir="ltr" class="tm">' + t.from + '-' + t.to + '</small>' : '') +
-            (r.email === d.me && !past ? '<button title="اطلب تبديل" onclick="event.stopPropagation();swapAsk_(\'' + day + '\',\'' + df.id + '\')">🔄</button>' : '') + '</span>'; }).join('')
-            : X ? (boss ? '<small style="color:var(--muted)">＋</small>' : '') : '<small style="color:#B3261E;font-weight:700">مفيش حد</small>') + '</td>';
-      }).join('') + '</tr>').join('') + '</tbody></table>' +
-    '<small style="color:var(--muted)">' + (boss ? 'دوس على أي خانة علشان تختار مين في الوردية وتغيّر مواعيد أي حد لو عاوز. "الوردية الخاصة" لأي مواعيد زيادة في يوم معين. ' : 'دوس 🔄 جنب اسمك علشان تطلب من زميل ياخد مكانك. ') +
-    '🔴 مفيش حد • 🟡 واحد بس • سماح التأخير ' + d.grace + ' دقايق • وقت التسليم بين الورديات ' + d.handover + ' دقايق</small></div>';
+  // الأيام
+  h += '<div class="pane tldays">' + days.map(k => { const lv = tlDayLevel_(k);
+    return '<button class="' + (k === day ? 'on' : '') + '" onclick="sh.day=\'' + k + '\';drawShifts_()">' + dayName_(k) + '<i style="background:' + ['#E0393E', '#F2A900', '#22A04B'][lv] + '"></i><small>' + dayShort_(k) + (k === today ? ' • النهارده' : '') + '</small></button>'; }).join('') + '</div>';
+  // خط اليوم
+  const rows = d.rows.filter(r => r.day === day);
+  const [S, E] = tlRange_(rows, d.defs), span = E - S, pos = x => ((x - S) / span * 100);
+  const ppl = []; rows.forEach(r => { if (ppl.indexOf(r.email) === -1) ppl.push(r.email); });
+  const nm = e => (d.members.find(m => m.email === e) || rows.find(r => r.email === e) || { name: e }).name;
+  const stp = innerWidth < 700 ? 4 : 2;
+  let axis = ''; for (let x = S; x <= E; x += stp) axis += '<b style="right:' + pos(x) + '%">' + tlHM_(x) + '</b>';
+  let grid = ''; for (let x = S; x <= E; x++) grid += '<i style="right:' + pos(x) + '%"></i>';
+  d.defs.forEach((df, i) => { const a = tlH_(df.from); let b = tlH_(df.to); if (b <= a) b += 24;
+    grid += '<div class="band" style="right:' + pos(a) + '%;width:' + (pos(b) - pos(a)) + '%;background:' + (i % 2 ? 'rgba(108,75,216,.045)' : 'rgba(20,121,211,.045)') + '"><span>' + esc(df.name) + '</span></div>'; });
+  // التسليم بين الورديات
+  d.defs.forEach(df => { const b = tlH_(df.to); if (d.defs.some(x => tlH_(x.from) === b)) grid += '<div class="hand" style="right:' + pos(b) + '%;width:' + (pos(b + d.handover / 60) - pos(b)) + '%"></div>'; });
+  if (day === today) { const nh = 9 + (now() - shiftAt_(day, '09:00')) / 3600000; if (nh >= S && nh <= E) grid += '<div class="now" style="right:' + pos(nh) + '%"><b>دلوقتي ' + tlHM_(nh) + '</b></div>'; }
+  const cov = tlCover_(rows, d.defs, S, E);
+  h += '<div class="pane"><div class="shead" style="margin-bottom:4px"><b style="color:var(--navy);font-size:17px">' + dayName_(day) + ' ' + dayShort_(day) + (day === today ? ' — النهارده' : '') + '</b>' +
+    (boss ? '<div class="tlpool"><small>دوس ＋ علشان تضيف:</small>' + d.members.map(m => '<button class="chip3" onclick="tlAdd_(\'' + esc(m.email) + '\')"><span class="tav" style="background:' + tlColor_(m.email) + '">' + esc((m.name || '?')[0]) + '</span>' + esc(m.name) + ' ＋</button>').join('') + '</div>' : '') + '</div>' +
+    '<small style="color:var(--muted);font-weight:700">التغطية: كام واحد شغال في كل وقت</small>' +
+    '<div class="tlcov">' + cov.map((n, i) => '<div title="' + tlHM_(S + i / 2) + ' : ' + n + '" style="background:' + covColor_(n) + '"></div>').join('') + '</div>' +
+    '<div class="tlaxis">' + axis + '</div>' +
+    '<div class="tl" id="tlBox"><div class="tlgrid">' + grid + '</div>' +
+    (ppl.length ? ppl.map(e => '<div class="tlrow"><div class="who"><span class="tav" style="background:' + tlColor_(e) + '">' + esc((nm(e) || '?')[0]) + '</span><span>' + esc(nm(e)) + '</span></div><div class="track">' +
+      rows.filter(r => r.email === e).map(r => { const s = tlSpanH_(r, d.defs); if (!s) return ''; const ix = d.rows.indexOf(r);
+        const kind = r.shift === SHIFT_X.id ? 'وردية خاصة' : ((d.defs.find(x => x.id === r.shift) || {}).name || '') + (r.from ? ' (مواعيد خاصة)' : '');
+        const mine = r.email === d.me, past = (rowSpan_(r, d.defs) || [0, 0])[1] < now();
+        return '<div class="tbar' + (boss ? ' drag' : '') + '" data-ix="' + ix + '" style="right:' + pos(s[0]) + '%;width:' + (pos(s[1]) - pos(s[0])) + '%;background:' + tlColor_(e) + '" title="' + esc(nm(e) + ' • ' + tlHM_(s[0]) + ' ← ' + tlHM_(s[1]) + ' • ' + kind) + '">' +
+          (boss ? '<i class="h" data-m="a"></i>' : '') + '<span class="tx"><b>' + tlHM_(s[0]) + ' ← ' + tlHM_(s[1]) + '</b><em> • ' + esc(kind) + '</em></span>' +
+          (mine && !past && !boss ? '<button class="swp" onclick="event.stopPropagation();swapAsk_(\'' + r.day + '\',\'' + r.shift + '\')">🔄</button>' : '') +
+          (boss ? '<i class="h" data-m="b"></i>' : '') + '</div>'; }).join('') + '</div></div>').join('')
+      : '<div class="empty" style="position:relative">مفيش حد في اليوم ده' + (boss ? ' — دوس ＋ جنب أي اسم فوق' : '') + '</div>') +
+    '</div><div class="legend"><span><i style="background:#FDECEA"></i>مفيش حد</span><span><i style="background:#FFE9A8"></i>واحد بس</span><span><i style="background:#BFE8CB"></i>اتنين أو أكتر</span>' +
+    (boss ? '<span>اسحب طرف الشريط علشان تغيّر المدة • اسحب الشريط كله علشان تنقله • دوس عليه علشان تكتب المواعيد أو تمسحه</span>' : '<span>دوس على شريطك علشان تطلب تبديل</span>') +
+    '<span>سماح التأخير ' + d.grace + ' دقايق • التسليم ' + d.handover + ' دقايق</span></div></div>';
+  // نظرة على الأسبوع
+  h += '<div class="pane tlwk"><b style="color:var(--navy);font-size:17px">نظرة على الأسبوع</b><div style="height:8px"></div>' + days.map(k => {
+    const rs = d.rows.filter(r => r.day === k), em = []; rs.forEach(r => { if (em.indexOf(r.email) === -1) em.push(r.email); });
+    const lane = 14 / Math.max(1, em.length);
+    return '<div class="r' + (k === today ? ' today' : '') + (k === day ? ' sel' : '') + '" onclick="sh.day=\'' + k + '\';drawShifts_()"><div class="d">' + dayName_(k) + ' <small>' + dayShort_(k) + '</small></div><div class="t">' +
+      (rs.length ? rs.map(r => { const s = tlSpanH_(r, d.defs); if (!s) return ''; const a = Math.max(9, s[0]), b = Math.min(33, s[1]);
+        return '<div title="' + esc(r.name) + '" style="right:' + ((a - 9) / 16 * 100) + '%;width:' + ((Math.min(b, 25) - a) / 16 * 100) + '%;top:' + (em.indexOf(r.email) * lane) + 'px;height:' + Math.max(3, lane - 1) + 'px;background:' + tlColor_(r.email) + '"></div>'; }).join('')
+        : '<small>مفيش حد</small>') + '</div></div>'; }).join('') + '</div>';
   // طلبات التبديل
   const sw = d.swaps.slice().sort((a, b) => b.at.localeCompare(a.at));
   const mineToAnswer = sw.filter(x => x.status === 'مستني الزميل' && x.to === d.me);
   const bossToDecide = boss ? sw.filter(x => x.status === 'مستني المدير') : [];
-  const b = $('shiftBadge'), n = mineToAnswer.length + bossToDecide.length;
-  b.textContent = n; b.classList.toggle('hidden', !n);
+  const bg = $('shiftBadge'), n = mineToAnswer.length + bossToDecide.length;
+  bg.textContent = n; bg.classList.toggle('hidden', !n);
   const defName = id => (d.defs.concat([SHIFT_X]).find(x => x.id === id) || { name: id }).name;
   const stCls = st => st.indexOf('مستني') === 0 ? 'wait' : st === 'اتوافق' ? 'ok' : 'no';
   h += '<div class="pane swaps"><h3 style="margin-top:0;color:var(--navy)">🔄 طلبات التبديل</h3>' +
@@ -2506,35 +2612,88 @@ function drawShifts_() {
       (x.note ? '<br><small style="color:var(--muted)">' + esc(x.note) + '</small>' : '') + '</div><div style="display:flex;gap:6px;align-items:center"><span class="st ' + stCls(x.status) + '">' + esc(x.status) + '</span>' +
       (x.status === 'مستني الزميل' && x.to === d.me ? '<button class="btn" onclick="swapReply_(\'' + x.id + '\',true)">✓ موافق</button><button class="btn soft" onclick="swapReply_(\'' + x.id + '\',false)">✗ لأ</button>' : '') +
       (x.status === 'مستني المدير' && boss ? '<button class="btn" onclick="swapDecide_(\'' + x.id + '\',true)">✓ اعتماد</button><button class="btn soft" onclick="swapDecide_(\'' + x.id + '\',false)">✗ رفض</button>' : '') +
-      '</div></div>').join('') : '<div class="empty">مفيش طلبات</div>') + '</div>';
+      '</div></div>').join('') : '<small style="color:var(--muted)">مفيش طلبات تبديل</small>') + '</div>';
   $('pageShifts').innerHTML = h; shiftSync_();
+  if (boss) tlBindDrag_(S, E);
 }
-function shiftEdit_(day, sid) {
-  const d = sh.data, X = sid === SHIFT_X.id, df = X ? SHIFT_X : d.defs.find(x => x.id === sid);
-  const cur = d.rows.filter(r => r.day === day && r.shift === sid);
-  dlg('<h3>' + esc(df.name) + ' - ' + dayName_(day) + ' ' + dayShort_(day) + '</h3>' +
-    '<p style="margin:0 0 6px;color:var(--muted);font-size:13px">' + (X ? 'علّم على الموظف واكتب مواعيده في اليوم ده.' : 'علّم على اللي في الوردية. لو حد مواعيده مختلفة النهارده غيّر الساعات اللي جنبه.') + '</p>' +
-    d.members.map(m => { const r = cur.find(x => x.email === m.email), t = r && r.from ? r : df;
-      return '<div class="ckr"><label class="ck"><input type="checkbox" value="' + esc(m.email) + '"' + (r ? ' checked' : '') + '> ' + esc(m.name) + ' <small style="color:var(--muted)">' + esc(m.role || '') + '</small></label>' +
-        '<span class="tms" dir="ltr"><input type="time" class="tf" value="' + t.from + '">→<input type="time" class="tt" value="' + t.to + '"></span></div>'; }).join('') +
-    '<div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="closeDlg()">إلغاء</button></div>');
-  // لما يغيّر الساعة نعلّم على الشخص تلقائي
-  document.querySelectorAll('#dlg .ckr').forEach(row => row.querySelectorAll('input[type=time]').forEach(i => i.onchange = () => { row.querySelector('input[type=checkbox]').checked = true; }));
+
+// ---------- السحب: نقل الشريط أو تكبيره وتصغيره (كل ربع ساعة) ----------
+function tlBindDrag_(S, E) {
+  const box = $('tlBox'); if (!box) return;
+  box.querySelectorAll('.tbar.drag').forEach(bar => {
+    bar.onpointerdown = ev => {
+      if (ev.button > 0) return;
+      const r = sh.data.rows[+bar.dataset.ix]; if (!r) return;
+      const mode = ev.target.dataset && ev.target.dataset.m || 'move';
+      const w = bar.parentNode.getBoundingClientRect().width, span = E - S, s0 = tlSpanH_(r, sh.data.defs);
+      const x0 = ev.clientX; let a = s0[0], b = s0[1], moved = false;
+      bar.setPointerCapture(ev.pointerId);
+      bar.onpointermove = e => {
+        const dh = Math.round((-(e.clientX - x0) / w * span) * 4) / 4;      // الوقت ماشي من اليمين للشمال
+        if (Math.abs(e.clientX - x0) > 4) moved = true;
+        if (!moved) return;
+        if (mode === 'move') { const L = s0[1] - s0[0]; a = Math.min(Math.max(S, s0[0] + dh), E - L); b = a + L; }
+        else if (mode === 'a') a = Math.max(S, Math.min(s0[0] + dh, b - 0.5));
+        else b = Math.min(E, Math.max(s0[1] + dh, a + 0.5));
+        bar.style.right = ((a - S) / span * 100) + '%'; bar.style.width = ((b - a) / span * 100) + '%';
+        bar.querySelector('.tx b').textContent = tlHM_(a) + ' ← ' + tlHM_(b);
+      };
+      bar.onpointerup = () => {
+        bar.onpointermove = bar.onpointerup = null;
+        if (!moved) return tlEdit_(+bar.dataset.ix);
+        if (a === s0[0] && b === s0[1]) return;
+        tlSetTimes_(r, tlHM_(a), tlHM_(b));
+      };
+    };
+  });
+}
+// تغيير مواعيد شريط: لو رجع لمواعيد ورديته الأصلية بيتشال "الخاص"
+function tlSetTimes_(r, f, t, shift) {
+  const d = sh.data, old = r.shift;
+  r.shift = shift || r.shift;
+  const df = d.defs.find(x => x.id === r.shift);
+  if (df && df.from === f && df.to === t) { r.from = ''; r.to = ''; } else { r.from = f; r.to = t; }
+  // نفس الشخص ما يتكررش في نفس الوردية في نفس اليوم
+  d.rows = d.rows.filter(x => x === r || !(x.day === r.day && x.shift === r.shift && x.email === r.email));
+  drawShifts_();
+  tlPush_(r.day, r.shift); if (old !== r.shift) tlPush_(r.day, old);
+}
+// بيبعت للسيرفر كل اللي في وردية معينة في اليوم ده (السيرفر بيستبدلهم)
+function tlPush_(day, sid) {
+  const L = sh.data.rows.filter(x => x.day === day && x.shift === sid), emails = L.map(x => x.email), times = {};
+  L.forEach(x => { if (x.from) times[x.email] = { from: x.from, to: x.to }; });
+  shiftSave_(() => api('dShiftSet', { token, day, shift: sid, emails, times }, true));
+}
+function tlShiftOpts_(sel) { return sh.data.defs.concat([SHIFT_X]).map(df => '<option value="' + df.id + '"' + (df.id === sel ? ' selected' : '') + '>' + esc(df.name) + (df.id === SHIFT_X.id ? '' : ' (' + df.from + ' - ' + df.to + ')') + '</option>').join(''); }
+function tlDlg_(title, r, isNew) {
+  const d = sh.data, t = rowTimes_(r, d.defs) || SHIFT_X;
+  dlg('<h3>' + title + '</h3>' +
+    '<label class="fl">الوردية</label><select id="tlS">' + tlShiftOpts_(r.shift) + '</select>' +
+    '<div style="display:flex;gap:8px;margin-top:8px" dir="ltr"><div style="flex:1"><label class="fl" dir="rtl">من</label><input type="time" id="tlF" value="' + t.from + '"></div><div style="flex:1"><label class="fl" dir="rtl">لـ</label><input type="time" id="tlT" value="' + t.to + '"></div></div>' +
+    '<div class="acts"><button class="btn" id="dlgOk">' + (isNew ? 'ضيف' : 'حفظ') + '</button>' + (isNew ? '' : '<button class="btn soft" id="tlDel" style="color:#B3261E">🗑️ شيله من اليوم ده</button>') + '<button class="btn soft" onclick="closeDlg()">إلغاء</button></div>');
+  $('tlS').onchange = () => { const df = d.defs.find(x => x.id === $('tlS').value); if (df) { $('tlF').value = df.from; $('tlT').value = df.to; } };
+  return d;
+}
+function tlAdd_(email) {
+  const d = sh.data, day = sh.day, m = d.members.find(x => x.email === email) || { name: email };
+  // الافتراضي: أول وردية مفيهاش الشخص ده وعليها أقل عدد
+  const free = d.defs.filter(df => !d.rows.some(r => r.day === day && r.shift === df.id && r.email === email));
+  const pick = free.sort((x, y) => d.rows.filter(r => r.day === day && r.shift === x.id).length - d.rows.filter(r => r.day === day && r.shift === y.id).length)[0];
+  const r = { day, shift: pick ? pick.id : SHIFT_X.id, email, name: m.name, from: '', to: '' };
+  tlDlg_('＋ ' + esc(m.name) + ' — ' + dayName_(day) + ' ' + dayShort_(day), r, true);
   $('dlgOk').onclick = () => {
-    const emails = [], times = {}, rows = [];
-    for (const row of document.querySelectorAll('#dlg .ckr')) {
-      const c = row.querySelector('input[type=checkbox]'); if (!c.checked) continue;
-      const f = row.querySelector('.tf').value, t = row.querySelector('.tt').value, m = d.members.find(x => x.email === c.value) || {};
-      if (!f || !t || f === t) return toast('اكتب مواعيد ' + (m.name || '') + ' صح');
-      const custom = X || f !== df.from || t !== df.to;
-      emails.push(c.value); if (custom) times[c.value] = { from: f, to: t };
-      rows.push({ day, shift: sid, email: c.value, name: m.name || c.value, from: custom ? f : '', to: custom ? t : '' });
-    }
-    // بنعدّل الجدول على الشاشة فورًا، والحفظ بيروح للسيرفر في الخلفية بالترتيب
-    d.rows = d.rows.filter(r => !(r.day === day && r.shift === sid)).concat(rows);
-    closeDlg(); drawShifts_();
-    shiftSave_(() => api('dShiftSet', { token, day, shift: sid, emails, times }, true));
+    const f = $('tlF').value, t = $('tlT').value; if (!f || !t || f === t) return toast('اكتب المواعيد صح');
+    const sid = $('tlS').value; closeDlg(); d.rows.push(r); tlSetTimes_(r, f, t, sid);
   };
+}
+function tlEdit_(ix) {
+  const d = sh.data, r = d.rows[ix]; if (!r) return;
+  tlDlg_(esc(r.name) + ' — ' + dayName_(r.day) + ' ' + dayShort_(r.day), r, false);
+  $('dlgOk').onclick = () => {
+    const f = $('tlF').value, t = $('tlT').value; if (!f || !t || f === t) return toast('اكتب المواعيد صح');
+    const sid = $('tlS').value; closeDlg(); tlSetTimes_(r, f, t, sid);
+  };
+  $('tlDel').onclick = () => { closeDlg(); d.rows = d.rows.filter(x => x !== r); drawShifts_(); tlPush_(r.day, r.shift); };
 }
 // طابور الحفظ: كل تعديل بيستنى اللي قبله، والشاشة ما بتستناش
 function shiftSave_(fn) {
