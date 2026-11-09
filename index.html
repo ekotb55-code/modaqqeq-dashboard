@@ -465,6 +465,30 @@
   #dlg .tms { display: flex; gap: 4px; } #dlg .tms input { width: 92px; padding: 4px; font: inherit; font-size: 13px; border: 1px solid #D5DEE9; border-radius: 8px; }
   .sgrid td.cell.xcell { background: #F7F5FF; }
   .chip2 .tm { color: #6B4FBB; font-weight: 700; font-size: 11px; }
+  /* تذاكر الدعم */
+  .s12 { background: linear-gradient(135deg, #546E7A, #263238); } .s13 { background: linear-gradient(135deg, #8D6E63, #5D4037); }
+  .tkp { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 11.5px; font-weight: 800; vertical-align: middle; }
+  .tkp-u { background: #B3261E; color: #fff; } .tkp-n { background: #E8F2FC; color: var(--blue-2); } .tkp-s { background: #EFEBE9; color: #5D4037; } .tkp-vip { background: #FFF3C4; color: #8A6100; }
+  .card.tkcard { border-inline-start-color: #546E7A; background: linear-gradient(90deg, #fff, #F7F9FB); }
+  .card.tkcard.st-work { border-inline-start-color: var(--blue); } .card.tkcard.st-done { border-inline-start-color: var(--green); }
+  .card.tk-urgent { border-inline-start: 6px solid #B3261E; box-shadow: 0 0 0 2px #F5B7B1, var(--shadow); animation: tkglow 1.2s infinite; }
+  @keyframes tkglow { 50% { box-shadow: 0 0 0 4px #F1948A, var(--shadow); } }
+  .timer.blink { animation: urgepulse 1s infinite; }
+  .ctag { background: #00838F; color: #fff; border-radius: 999px; padding: 1px 8px; font-size: 11.5px; font-weight: 800; }
+  .stars { color: #F2A900; letter-spacing: 1px; } .stars i { color: #D5DEE9; font-style: normal; }
+  .tkalarm { position: sticky; top: 0; z-index: 40; background: linear-gradient(90deg, #B3261E, #E0393E); color: #fff; padding: 10px 16px; font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; animation: urgepulse 1.2s infinite; }
+  .tkalarm .btn { background: #fff; color: #B3261E; padding: 6px 14px; } .tkalarm .btn.soft { background: rgba(255,255,255,.2); color: #fff; }
+  .tkacts { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+  .tkpics { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; } .tkpics img { width: 110px; height: 110px; object-fit: cover; border-radius: 12px; cursor: zoom-in; background: #EEF2F7; }
+  .tkguide { background: #F3F7FC; border-radius: 12px; padding: 8px 12px; margin: 8px 0; } .tkguide summary { font-weight: 800; color: var(--navy); cursor: pointer; } .tkguide div { margin-top: 6px; line-height: 1.8; }
+  .tktl { border-inline-start: 3px solid #E3EAF3; margin-inline-start: 14px; padding-inline-start: 8px; }
+  .tktl .ev { display: flex; gap: 8px; margin: 8px 0; } .tktl .ic { width: 28px; height: 28px; border-radius: 50%; background: #fff; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; flex: none; margin-inline-start: -23px; }
+  .tktl .bd { background: #fff; border-radius: 12px; padding: 7px 11px; box-shadow: var(--shadow); flex: 1; } .tktl .ev.br .bd { background: #FFF8E6; } .tktl .ev.int .bd { background: #F1F1F1; border: 1px dashed #BDBDBD; }
+  .tktl .hd small { color: var(--muted); } .tktl img { max-width: 180px; border-radius: 10px; margin-top: 6px; cursor: zoom-in; display: block; }
+  .tkcomp { background: #fff; border-radius: 14px; box-shadow: var(--shadow); padding: 10px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .tkcomp textarea { width: 100%; font: inherit; padding: 8px; border-radius: 10px; border: 1.5px solid var(--line); resize: vertical; }
+  .tkty { padding: 8px; border-bottom: 1px solid #EEF2F7; cursor: pointer; border-radius: 8px; } .tkty:hover { background: var(--sky); } .tkty small { color: var(--muted); }
+  .filters .btn { white-space: nowrap; flex: none; }
   /* تايم لاين الورديات */
   .tldays { display: flex; gap: 6px; overflow-x: auto; padding: 10px; }
   .tldays button { background: #fff; box-shadow: var(--shadow); color: var(--navy); white-space: nowrap; padding: 6px 12px; flex: none; }
@@ -632,6 +656,7 @@
     </div>
     <div class="accent"></div>
   </header>
+  <div id="tkAlarm" class="tkalarm hidden"></div>
 
   <div class="main" id="pageInv">
     <div class="stats" id="stats"></div>
@@ -640,7 +665,9 @@
         <div class="tabs" id="tabs"></div>
         <div class="filters">
           <select id="fStore" onchange="renderList()"><option value="">كل المحلات</option></select>
-          <input id="fText" placeholder="🔍 بحث بالمورد أو الرقم" oninput="renderList()">
+          <input id="fText" placeholder="🔍 بحث بالمورد أو الرقم أو المشكلة" oninput="renderList()">
+          <button class="btn soft hidden" id="tkNewBtn" onclick="tkNewDlg()" title="افتح تذكرة دعم لفرع (مثلًا كلّمك في التليفون)">＋ تذكرة</button>
+          <button class="btn soft hidden" id="tkTypesBtn" onclick="tkTypesDlg()" title="أنواع المشاكل وأهمية العملاء">⚙️</button>
         </div>
         <div id="list"></div>
       </div>
@@ -988,6 +1015,8 @@ async function loadList(quiet) {
     const oldStatus = prevStatus;
     prevStatus = {}; r.invoices.forEach(v => { prevStatus[v.id] = v.status; });
     all = r.invoices; stores = r.stores;
+    tks = (r.tickets || []).map(t => Object.assign(t, { kind: 'tk' })); if (r.storePrio) storePrio = r.storePrio;
+    tkAfterLoad(tks);
     chatSum = r.chat || { threads: [], replies: [] };
     if (r.team) teamTick(r.team);
     if (r.me) { const first = !myRole; myRole = r.me.role || 'دعم'; myPhoto = r.me.photo || ''; renderWho(); if (first && isQA()) { tab = ST_QA; } if (first) setTimeout(() => startTour(false), 900); }
@@ -1043,6 +1072,8 @@ async function loadList(quiet) {
       } else toast('✅ ' + v.store + ' راجع فاتورة ' + v.supplier);
     });
     if (cur && !quiet) openInv(cur.invoice.id, true);
+    if (curTk && !quiet) openTk(curTk.ticket.id, true);
+    $('tkTypesBtn').classList.toggle('hidden', myRole !== 'مدير'); $('tkNewBtn').classList.toggle('hidden', isQA());
   } catch (e) { if (!quiet) toast(msg(e)); }
 }
 // الفلاتر = الكروت الملونة اللي فوق (بتعدّ على حسب المحل والبحث المختارين)
@@ -1059,11 +1090,16 @@ const CARD_TABS = [
   { k: 'review', c: 's5', t: '👀 مستنية مراجعة الفرع', f: v => v.status === ST_DONE && !v.reviewedBy && new Date(v.doneAt) >= new Date(now() - 3 * 86400000) },
   { k: 'chat', c: 's10', t: '💬 رسايل مستنية رد', f: v => chatUnread(v.store, v.id) > 0, hideEmpty: true },
   { k: TAB_NOTES, c: 's8', t: '📝 ملاحظات الفروع', f: v => !!v.reviewNotes },
+  { k: 'tk', c: 's12', t: '🛠️ تذاكر الدعم المفتوحة', f: () => false },
+  { k: 'sched', c: 's13', t: '📅 تذاكر مجدولة', f: () => false, hideEmpty: true },
   { k: 'الكل', c: 's9', t: '📋 الكل', f: () => true }
 ];
+// التذاكر بتتفلتر بقواعدها هي (tkInTab)
+CARD_TABS.forEach(x => { const f = x.f; x.f = v => v.kind === 'tk' ? tkInTab(x.k, v) : f(v); });
 function baseList() {
   const st = $('fStore').value, q = $('fText').value.trim();
-  return all.filter(v => (!st || v.store === st) && (!q || (v.supplier + ' ' + v.number + ' ' + v.systemNo + ' ' + v.user + ' ' + v.store).indexOf(q) !== -1));
+  return all.concat(tks).filter(v => (!st || v.store === st) && (!q || (v.kind === 'tk' ? v.title + ' ' + v.desc + ' ' + v.user + ' ' + v.store + ' ' + v.assigneeName
+    : v.supplier + ' ' + v.number + ' ' + v.systemNo + ' ' + v.user + ' ' + v.store).indexOf(q) !== -1));
 }
 function pickTab(k) { tab = k; renderList(); }
 function renderStats() {
@@ -1100,10 +1136,11 @@ function renderList() {
   $('tabs').innerHTML = '<span class="tabnow">بتعرض: <b>' + ct.t + '</b></span>';
   let list = base.filter(ct.f);
   // الأحدث الأول في المنتهية، والأقدم الأول في الشغالة، والمستعجلة فوق خالص
-  if (tab === ST_DONE || tab === 'review') list = list.slice().sort((a, b) => String(b.doneAt).localeCompare(String(a.doneAt)));
+  if (tab === ST_DONE || tab === 'review') list = list.slice().sort((a, b) => String(b.doneAt || b.solvedAt).localeCompare(String(a.doneAt || a.solvedAt)));
   if (tab === ST_QA) list = list.slice().sort((a, b) => String(a.doneAt).localeCompare(String(b.doneAt)));
-  if (tab === ST_NEW || tab === ST_WORK || tab === 'late' || tab === 'urge') list = list.slice().sort((a, b) => (b.urgeCount ? 1 : 0) - (a.urgeCount ? 1 : 0) || a.createdAt.localeCompare(b.createdAt));
-  $('list').innerHTML = list.length ? list.map(v =>
+  if (tab === ST_NEW || tab === ST_WORK || tab === 'late' || tab === 'urge' || tab === 'tk' || tab === 'sched') list = list.slice().sort(qSort);
+  if (tab === 'الكل' || tab === 'chat' || tab === TAB_NOTES) list = list.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  $('list').innerHTML = list.length ? list.map(v => v.kind === 'tk' ? tkCard(v) :
     '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : v.status === ST_QA ? 'st-qa' : '') + (v.urgeCount && pending(v) ? ' urged' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
     '<div class="top"><span class="sup">' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</span>' + timerHtml(v) + '</div>' +
     '<div class="meta">🏪 ' + esc(v.store) + ' • ' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
@@ -1123,8 +1160,260 @@ function revTag(v) {
   return '<span class="rv rv-wait">👀 الفرع لسة ما راجعهاش</span>';
 }
 
+// ---------- تذاكر الدعم الفني: في نفس طابور الفواتير ----------
+const TK_NEW = 'جديدة', TK_WORK = 'شغالين عليها', TK_SOLVED = 'اتحلت', TK_CLOSED = 'اتقفلت';
+const TK_URGENT = 'مستعجل', TK_NORMAL = 'عادي', TK_SCHED = 'مجدول', TK_PICK_MIN = 5;
+let tks = [], tkKnown = null, curTk = null, storePrio = {}, tkAlarmT = 0;
+const tkOpen = v => v.status === TK_NEW || v.status === TK_WORK;
+const tkDue = v => v.priority !== TK_SCHED || !v.scheduledAt || new Date(v.scheduledAt).getTime() <= now();
+const tkUrgentWaiting = v => v.kind === 'tk' && v.priority === TK_URGENT && v.status === TK_NEW;
+function tkLate(v) {
+  if (!tkOpen(v) || !tkDue(v)) return false;
+  if (tkUrgentWaiting(v) && (now() - new Date(v.createdAt).getTime()) / 60000 > TK_PICK_MIN) return true;
+  const start = v.priority === TK_SCHED && v.scheduledAt ? v.scheduledAt : v.createdAt;
+  return mins(start, now()) > v.resolveMin;
+}
+// التذكرة في أنهي كارت من الكروت اللي فوق
+function tkInTab(k, v) {
+  switch (k) {
+    case ST_NEW: return v.status === TK_NEW && tkDue(v);
+    case ST_WORK: return v.status === TK_WORK;
+    case ST_DONE: return v.status === TK_SOLVED || v.status === TK_CLOSED;
+    case 'late': return tkLate(v);
+    case 'urge': return tkOpen(v) && v.priority === TK_URGENT;
+    case 'tk': return tkOpen(v);
+    case 'sched': return tkOpen(v) && !tkDue(v);
+    case 'الكل': return true;
+    default: return false;
+  }
+}
+// ترتيب الطابور: مستعجلة (وقف حال) ← الفواتير ← عادية ← مجدولة، وبعدين أهمية العميل، وبعدين الأقدم
+function qRank(v) { return v.kind === 'tk' ? (v.priority === TK_URGENT ? 0 : v.priority === TK_SCHED ? 3 : 2) : 1; }
+function qTime(v) { return v.kind === 'tk' && v.priority === TK_SCHED && v.scheduledAt ? v.scheduledAt : v.createdAt; }
+function qSort(a, b) {
+  return qRank(a) - qRank(b) || (Number(storePrio[b.store]) || 1) - (Number(storePrio[a.store]) || 1) ||
+    (b.kind !== 'tk' && b.urgeCount ? 1 : 0) - (a.kind !== 'tk' && a.urgeCount ? 1 : 0) || String(qTime(a)).localeCompare(String(qTime(b)));
+}
+const PRIO_TAG = { [TK_URGENT]: '<span class="tkp tkp-u">🚨 مستعجل</span>', [TK_NORMAL]: '<span class="tkp tkp-n">عادي</span>', [TK_SCHED]: '<span class="tkp tkp-s">📅 مجدول</span>' };
+const TK_ST_CLS = { [TK_NEW]: 'b-new', [TK_WORK]: 'b-work', [TK_SOLVED]: 'b-done', [TK_CLOSED]: 'b-done' };
+function tkBadge(v) { return '<span class="badge ' + (TK_ST_CLS[v.status] || 'b-new') + '">' + esc(v.status) + '</span>'; }
+function stars(n) { return n ? '<span class="stars">' + '★'.repeat(n) + '<i>' + '★'.repeat(5 - n) + '</i></span>' : ''; }
+// عداد التذكرة: المستعجلة لحد ما تتستلم (5 دقايق)، وبعدها وقت الحل المكتوب في الكارت
+function tkTimer(v) {
+  if (v.status === TK_SOLVED || v.status === TK_CLOSED) {
+    if (!v.solvedAt) return '';
+    const m = mins(v.createdAt, v.solvedAt);
+    return '<span class="timer t-done-' + (m <= v.resolveMin ? 'green' : 'red') + '">✓ ' + durTxt(m) + '</span>';
+  }
+  if (!tkDue(v)) return '<span class="timer t-off">📅 ' + dt(v.scheduledAt) + '</span>';
+  return '<span class="timer" data-tk="' + esc(v.id) + '"></span>';
+}
+function tkTimerState(v) {
+  if (tkUrgentWaiting(v)) {
+    const left = TK_PICK_MIN * 60000 - (now() - new Date(v.createdAt).getTime());
+    return { cls: left > 0 ? 't-red blink' : 't-red', txt: left > 0 ? '🚨 استلمها خلال ' + clock(left) : '🚨 متأخرة في الاستلام ' + clock(-left) };
+  }
+  const start = v.priority === TK_SCHED && v.scheduledAt ? v.scheduledAt : v.createdAt;
+  const el = workMs(start, now()), left = v.resolveMin * 60000 - el;
+  if (!inWork(now())) return { cls: 't-off', txt: '⏸ ' + (left > 0 ? clock(left) : 'متأخرة ' + clock(-left)) };
+  return { cls: left > v.resolveMin * 60000 / 3 ? 't-green' : left > 0 ? 't-yellow' : 't-red', txt: left > 0 ? '⏱ ' + clock(left) : '⚠ متأخرة ' + clock(-left) };
+}
+setInterval(() => {
+  document.querySelectorAll('.timer[data-tk]').forEach(el => {
+    const v = tks.find(x => x.id === el.dataset.tk); if (!v) return;
+    const t = tkTimerState(v); el.className = 'timer ' + t.cls; el.textContent = t.txt;
+  });
+  tkBanner();
+}, 1000);
+function tkCard(v) {
+  const sel = curTk && curTk.ticket.id === v.id;
+  return '<div class="card tkcard ' + (v.status === TK_WORK ? 'st-work' : v.status === TK_SOLVED || v.status === TK_CLOSED ? 'st-done' : '') + (tkUrgentWaiting(v) ? ' tk-urgent' : '') + (sel ? ' sel' : '') + '" onclick="openTk(\'' + esc(v.id) + '\')">' +
+    '<div class="top"><span class="sup">🛠️ ' + esc(v.title) + ' ' + (PRIO_TAG[v.priority] || '') + ((Number(storePrio[v.store]) || 1) > 1 ? ' <span class="tkp tkp-vip">' + '⭐'.repeat((Number(storePrio[v.store]) || 1) - 1) + ' عميل مهم</span>' : '') +
+    (v.lastSide === 'فرع' && v.comments && tkOpen(v) ? ' <span class="ctag">💬 الفرع رد</span>' : '') + '</span>' + tkTimer(v) + '</div>' +
+    '<div class="meta">🏪 ' + esc(v.store) + ' • ' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
+    (v.desc ? '<div class="meta" style="color:var(--text)">' + esc(v.desc) + '</div>' : '') +
+    '<div class="meta">' + tkBadge(v) + (v.assigneeName ? ' • 👤 ' + esc(v.assigneeName) : '') + (v.photos ? ' • 📷 ' + v.photos : '') +
+    (v.reopens ? ' • <b style="color:#C62828">↩️ اتفتحت تاني ×' + v.reopens + '</b>' : '') + (v.rating ? ' • ' + stars(v.rating) : '') + '</div></div>';
+}
+// بانر الإنذار: طول ما فيه تذكرة مستعجلة محدش استلمها، الصوت شغال كل 4 ثواني
+function tkBanner() {
+  const el = $('tkAlarm'); if (!el) return;
+  const list = isQA() ? [] : tks.filter(tkUrgentWaiting);
+  if (!list.length) { el.classList.add('hidden'); return; }
+  const v = list.slice().sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
+  const w = now() - new Date(v.createdAt).getTime();
+  el.classList.remove('hidden');
+  el.innerHTML = '🚨 <b>تذكرة مستعجلة من ' + esc(v.store) + '</b>: ' + esc(v.title) + (v.desc ? ' - ' + esc(v.desc.slice(0, 60)) : '') +
+    ' • مستنية من ' + clock(w) + (list.length > 1 ? ' • و' + (list.length - 1) + ' كمان' : '') +
+    ' <button class="btn" onclick="tkPick(\'' + esc(v.id) + '\')">✋ استلمها</button> <button class="btn soft" onclick="openTk(\'' + esc(v.id) + '\')">افتحها</button>';
+  if (inWork(now()) && Date.now() - tkAlarmT > 4000) { tkAlarmT = Date.now(); alarm(3); }
+}
+// بعد كل تحميل للقايمة: تنبيه بالتذاكر الجديدة وردود الفروع
+function tkAfterLoad(list) {
+  const prev = tkKnown;
+  tkKnown = {}; list.forEach(v => { tkKnown[v.id] = v.updatedAt + '|' + v.status; });
+  if (!prev || isQA()) return;
+  list.forEach(v => {
+    if (!(v.id in prev)) {
+      if (v.priority === TK_SCHED && !tkDue(v)) return;
+      v.priority === TK_URGENT ? alarm(6) : ding();
+      notifyTk((v.priority === TK_URGENT ? '🚨 تذكرة مستعجلة - ' : '🛠️ تذكرة دعم - ') + v.store, v.title + (v.desc ? ': ' + v.desc : ''), v.id);
+      toast('🛠️ تذكرة جديدة من ' + v.store + ': ' + v.title);
+    } else if (prev[v.id] !== v.updatedAt + '|' + v.status && v.lastSide === 'فرع' && (!v.assigneeName || v.assigneeName === me)) {
+      ding();
+      notifyTk('💬 ' + v.store + ' - ' + v.title, v.status === TK_WORK && v.reopens ? 'الفرع فتح التذكرة تاني' : 'الفرع رد على التذكرة', v.id);
+      if (curTk && curTk.ticket.id === v.id) openTk(v.id, true);
+    }
+  });
+}
+function notifyTk(title, body, id) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try { showNote(title, { body, tag: 'tk-' + id, renotify: true, requireInteraction: true }, { tk: id }); } catch (e) {}
+  }
+}
+
+// ---------- تفاصيل التذكرة ----------
+async function openTk(id, silent) {
+  page('inv');
+  cur = null;
+  $('wrap').classList.add('open'); $('pageInv').classList.add('detail');
+  if (!silent) $('detailPane').innerHTML = '<div class="empty"><span class="spin"></span></div>';
+  try { curTk = await api('dTicket', { token, id }); renderTk(); renderList(); }
+  catch (e) { $('detailPane').innerHTML = '<div class="err">' + esc(msg(e)) + '</div>'; }
+}
+const TK_EV = { create: '🆕', pick: '✋', assign: '📌', comment: '💬', solve: '✅', reopen: '↩️', rate: '⭐', set: '⚙️' };
+function renderTk() {
+  const v = curTk.ticket, T = curTk.type, mine = v.assigneeName === me, open = tkOpen(v), boss = myRole === 'مدير', qa = isQA();
+  let h = '<button class="btn ghost back" onclick="closeInv()">→ رجوع للقايمة</button>';
+  h += '<div class="dhead"><h2>🛠️ ' + esc(v.title) + '</h2>' + (PRIO_TAG[v.priority] || '') + tkBadge(v) + tkTimer(Object.assign({ kind: 'tk' }, v)) + '<span class="sp"></span>' + '</div>';
+  h += '<div class="info">' + i('المحل', v.store + ((Number(v.storePrio) || 1) > 1 ? ' ' + '⭐'.repeat(v.storePrio - 1) : '')) + i('اللي طلب', v.user) + i('وقت الطلب', dt(v.createdAt)) +
+    (v.scheduledAt ? i('الميعاد', dt(v.scheduledAt)) : '') + i('مدة الحل', durTxt(v.resolveMin)) +
+    (v.assigneeName ? i('المسؤول', v.assigneeName + (v.pickedAt ? ' - استلمها ' + dt(v.pickedAt) : '')) : '') +
+    (v.solvedAt ? i('اتحلت', dt(v.solvedAt) + ' (' + durTxt(mins(v.createdAt, v.solvedAt)) + ')') : '') +
+    (v.rating ? i('تقييم الفرع', '★'.repeat(v.rating) + (v.ratingNote ? ' - ' + v.ratingNote : '')) : '') + '</div>';
+  if (v.desc) h += '<div class="pane" style="min-height:0;background:#F7FAFE;margin-bottom:10px"><b>المشكلة:</b><br>' + esc(v.desc).replace(/\n/g, '<br>') + '</div>';
+  if (v.photos.length) h += '<div class="tkpics">' + v.photos.map(f => '<img data-tkimg="' + esc(f) + '" onclick="chatImgFull(this)" alt="">').join('') + '</div>';
+  // الأزرار
+  if (open && !qa) {
+    h += '<div class="tkacts">' +
+      (!v.pickedAt || !mine ? '<button class="btn" onclick="tkPick(\'' + v.id + '\')">✋ ' + (v.pickedAt ? 'خدها مني' : 'استلمها') + '</button>' : '') +
+      (mine || boss ? '<button class="btn" style="background:linear-gradient(135deg,#22A04B,#1E7D3A)" onclick="tkSolveDlg()">✅ اتحلت</button>' : '') +
+      '<button class="btn soft" onclick="tkAssignDlg()">📌 حوّلها لزميل</button>' +
+      '<button class="btn soft" onclick="tkSetDlg()">⚙️ الأولوية والوقت</button></div>';
+  }
+  // الحل السريع ودليل الدعم
+  if (T.guide) h += '<details class="tkguide" open><summary>📘 دليل الدعم للمشكلة دي</summary><div>' + esc(T.guide).replace(/\n/g, '<br>') + '</div></details>';
+  if (T.steps) h += '<details class="tkguide"><summary>🧰 خطوات الحل السريع اللي الفرع شافها</summary><div>' + esc(T.steps).replace(/\n/g, '<br>') + '</div></details>';
+  // السجل والرسايل
+  h += '<h3 style="color:var(--navy);margin:14px 0 6px">🕒 تايم لاين التذكرة</h3><div class="tktl">' + v.log.map(e =>
+    '<div class="ev ' + (e.side === 'فرع' ? 'br' : 'sp') + (e.internal ? ' int' : '') + '"><div class="ic">' + (TK_EV[e.type] || '•') + '</div><div class="bd"><div class="hd"><b>' + esc(e.by || '') + '</b> <small>' +
+    (e.side === 'فرع' ? '🏪 الفرع' : '🎧 الدعم') + (e.internal ? ' • 🔒 داخلية' : '') + ' • ' + dt(e.at) + (e.late ? ' • <b style="color:#C62828">اتأخر ' + e.late + ' د في الاستلام</b>' : '') + '</small></div>' +
+    (e.text ? '<div>' + esc(e.text).replace(/\n/g, '<br>') + '</div>' : '') + (e.image ? '<img data-tkimg="' + esc(e.image) + '" onclick="chatImgFull(this)" alt="">' : '') + '</div></div>').join('') + '</div>';
+  if (v.status !== TK_CLOSED) h += '<div class="tkcomp"><textarea id="tkText" rows="2" placeholder="اكتب رد للفرع..."></textarea>' +
+    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="display:flex;gap:4px;align-items:center;font-weight:700;font-size:13px;width:auto"><input type="checkbox" id="tkInt" style="width:auto"> 🔒 ملاحظة داخلية (الفرع مش هيشوفها)</label>' +
+    '<span class="sp" style="flex:1"></span><button class="btn" onclick="tkComment()">إرسال</button></div></div>';
+  $('detailPane').innerHTML = h;
+  document.querySelectorAll('#detailPane img[data-tkimg]').forEach(im => tkImg(v.id, im.dataset.tkimg).then(src => { im.src = src; }).catch(() => {}));
+}
+const tkImgCache = {};
+async function tkImg(id, file) {
+  if (tkImgCache[file]) return tkImgCache[file];
+  const r = await api('dTicketImage', { token, id, file });
+  return (tkImgCache[file] = 'data:' + (r.mime || 'image/jpeg') + ';base64,' + r.b64);
+}
+function tkLocal(t) { const k = tks.findIndex(x => x.id === t.id); if (k !== -1) Object.assign(tks[k], { status: t.status, assigneeName: t.assigneeName, priority: t.priority, resolveMin: t.resolveMin, pickedAt: t.pickedAt, solvedAt: t.solvedAt, scheduledAt: t.scheduledAt }); }
+async function tkDo(action, data, okMsg) {
+  try {
+    const r = await api(action, Object.assign({ token, id: curTk ? curTk.ticket.id : data.id }, data), true);
+    if (r.ticket) { curTk = r; tkLocal(r.ticket); renderTk(); }
+    renderList(); tkBanner(); if (okMsg) toast(okMsg);
+    return r;
+  } catch (e) { toast(msg(e)); }
+}
+async function tkPick(id) {
+  try { curTk = await api('dTicketPick', { token, id }, true); tkLocal(curTk.ticket); page('inv'); cur = null; $('wrap').classList.add('open'); $('pageInv').classList.add('detail'); renderTk(); renderList(); tkBanner(); toast('✋ استلمت التذكرة - الفرع اتبعتله إن الدعم شغال عليها'); }
+  catch (e) { toast(msg(e)); }
+}
+function tkSolveDlg() {
+  dlg('<h3>✅ المشكلة اتحلت</h3><p style="margin-top:0;color:var(--muted)">اكتب اتحلت إزاي - الفرع هيشوف الكلام ده وهيأكد ويقيّم.</p><textarea id="tkSol" rows="4" style="width:100%;font:inherit;padding:8px;border-radius:10px;border:1.5px solid var(--line)"></textarea>' +
+    '<div class="acts"><button class="btn" id="dlgOk">قفل التذكرة</button><button class="btn soft" onclick="closeDlg()">إلغاء</button></div>');
+  $('dlgOk').onclick = async () => { const n = $('tkSol').value.trim(); if (!n) return toast('اكتب اتحلت إزاي'); closeDlg(); await tkDo('dTicketSolve', { note: n }, '✅ اتقفلت - مستنيين تأكيد الفرع'); };
+}
+function tkAssignDlg() {
+  dlg('<h3>📌 حوّل التذكرة لزميل</h3><select id="tkTo" style="width:100%">' + curTk.members.map(m => '<option value="' + esc(m.email) + '">' + esc(m.name) + '</option>').join('') + '</select>' +
+    '<div class="acts"><button class="btn" id="dlgOk">حوّل</button><button class="btn soft" onclick="closeDlg()">إلغاء</button></div>');
+  $('dlgOk').onclick = async () => { const e = $('tkTo').value; closeDlg(); await tkDo('dTicketAssign', { email: e }, '📌 اتحوّلت'); };
+}
+function tkSetDlg() {
+  const v = curTk.ticket, boss = myRole === 'مدير';
+  const loc = v.scheduledAt ? new Date(new Date(v.scheduledAt).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
+  dlg('<h3>⚙️ الأولوية والوقت</h3><label class="fl">الأولوية</label><select id="tkP">' + [TK_URGENT, TK_NORMAL, TK_SCHED].map(p => '<option' + (p === v.priority ? ' selected' : '') + '>' + p + '</option>').join('') + '</select>' +
+    '<label class="fl" style="margin-top:8px">مدة الحل (بالدقيقة)</label><input type="number" id="tkM" min="5" value="' + v.resolveMin + '">' +
+    '<label class="fl" style="margin-top:8px">الميعاد (للمجدولة)</label><input type="datetime-local" id="tkS" value="' + loc + '">' +
+    (boss ? '<label class="fl" style="margin-top:8px">أهمية العميل (' + esc(v.store) + ')</label><select id="tkV">' + [[1, 'عادي'], [2, '⭐ مهم'], [3, '⭐⭐ مهم جدًا']].map(x => '<option value="' + x[0] + '"' + (x[0] === (Number(v.storePrio) || 1) ? ' selected' : '') + '>' + x[1] + '</option>').join('') + '</select>' : '') +
+    '<div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="closeDlg()">إلغاء</button></div>');
+  $('dlgOk').onclick = async () => {
+    const set = { priority: $('tkP').value, resolveMin: Number($('tkM').value), scheduledAt: $('tkS').value ? new Date($('tkS').value).toISOString() : '' };
+    if (boss) set.storePrio = Number($('tkV').value);
+    closeDlg();
+    const r = await tkDo('dTicketSet', { set }, 'اتحفظ ✅');
+    if (r && boss) storePrio[v.store] = set.storePrio;
+  };
+}
+async function tkComment() {
+  const text = $('tkText').value.trim(); if (!text) return;
+  $('tkText').value = '';
+  await tkDo('dTicketComment', { text, internal: $('tkInt').checked });
+}
+// تذكرة جديدة من الداش بورد (الفرع كلّم في التليفون مثلًا)
+async function tkNewDlg() {
+  let types = [];
+  try { types = (await api('dTkTypes', { token })).types.filter(t => t.active); } catch (e) { return toast(msg(e)); }
+  dlg('<h3>＋ تذكرة جديدة</h3><label class="fl">المحل</label><select id="nS">' + stores.map(s => '<option>' + esc(s) + '</option>').join('') + '</select>' +
+    '<label class="fl" style="margin-top:8px">المشكلة</label><select id="nT">' + types.map(t => '<option value="' + esc(t.id) + '" data-p="' + esc(t.priority) + '">' + esc(t.icon + ' ' + t.title) + '</option>').join('') + '</select>' +
+    '<label class="fl" style="margin-top:8px">الأولوية</label><select id="nP">' + [TK_URGENT, TK_NORMAL, TK_SCHED].map(p => '<option>' + p + '</option>').join('') + '</select>' +
+    '<label class="fl" style="margin-top:8px">اسم اللي كلّم</label><input id="nU" placeholder="اختياري">' +
+    '<label class="fl" style="margin-top:8px">التفاصيل</label><textarea id="nD" rows="3" style="width:100%;font:inherit;padding:8px;border-radius:10px;border:1.5px solid var(--line)"></textarea>' +
+    '<div class="acts"><button class="btn" id="dlgOk">افتح التذكرة</button><button class="btn soft" onclick="closeDlg()">إلغاء</button></div>');
+  const syncP = () => { const o = $('nT').selectedOptions[0]; if (o) $('nP').value = o.dataset.p; };
+  $('nT').onchange = syncP; syncP();
+  $('dlgOk').onclick = async () => {
+    const t = { store: $('nS').value, type: $('nT').value, priority: $('nP').value, user: $('nU').value.trim(), desc: $('nD').value.trim() };
+    closeDlg();
+    try { const r = await api('dTicketNew', { token, ticket: t }, true); toast('اتفتحت ✅'); await loadList(true); openTk(r.id); } catch (e) { toast(msg(e)); }
+  };
+}
+// أنواع المشاكل وأهمية العملاء (المدير)
+async function tkTypesDlg() {
+  let r; try { r = await api('dTkTypes', { token }); } catch (e) { return toast(msg(e)); }
+  const T = r.types;
+  dlg('<h3>⚙️ أنواع المشاكل</h3><p style="margin-top:0;color:var(--muted);font-size:13px">دي اللي الفرع بيختار منها في التطبيق. "خطوات للفرع" بتظهرله قبل ما يطلب الدعم، و"دليل الدعم" بيظهر لكم بس.</p>' +
+    T.map(t => '<div class="tkty" onclick="tkTypeEdit(\'' + esc(t.id) + '\')"><b>' + esc(t.icon + ' ' + t.title) + '</b> ' + (PRIO_TAG[t.priority] || '') + ' <small>' + durTxt(t.resolveMin) + (t.active ? '' : ' • ⛔ موقوفة') + '</small></div>').join('') +
+    '<button class="btn soft" style="margin-top:8px" onclick="tkTypeEdit(\'\')">＋ نوع جديد</button>' +
+    '<h3 style="margin-top:16px">⭐ أهمية العملاء</h3>' + r.stores.map(s => '<div class="ckr" style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #EEF2F7"><b>' + esc(s) + '</b><select style="width:auto" onchange="tkSetPrio(\'' + esc(s) + '\',this.value)">' +
+      [[1, 'عادي'], [2, '⭐ مهم'], [3, '⭐⭐ مهم جدًا']].map(x => '<option value="' + x[0] + '"' + (x[0] === (Number(r.storePrio[s]) || 1) ? ' selected' : '') + '>' + x[1] + '</option>').join('') + '</select></div>').join('') +
+    '<div class="acts"><button class="btn soft" onclick="closeDlg()">قفل</button></div>');
+  window._tkTypes = T;
+}
+async function tkSetPrio(store, p) { try { const r = await api('dStorePrio', { token, store, prio: Number(p) }, true); storePrio = r.storePrio; renderList(); toast('اتحفظ ✅'); } catch (e) { toast(msg(e)); } }
+function tkTypeEdit(id) {
+  const t = (window._tkTypes || []).find(x => x.id === id) || { id: '', title: '', icon: '🛠️', critical: false, priority: TK_NORMAL, resolveMin: 60, steps: '', guide: '', active: true };
+  const ta = (k, v, n) => '<label class="fl" style="margin-top:8px">' + n + '</label><textarea id="' + k + '" rows="4" style="width:100%;font:inherit;padding:8px;border-radius:10px;border:1.5px solid var(--line)">' + esc(v) + '</textarea>';
+  dlg('<h3>' + (id ? 'تعديل' : 'نوع جديد') + '</h3><div style="display:flex;gap:6px"><input id="yI" value="' + esc(t.icon) + '" style="width:60px;text-align:center"><input id="yT" placeholder="اسم المشكلة" value="' + esc(t.title) + '"></div>' +
+    '<label class="fl" style="margin-top:8px">الأولوية</label><select id="yP">' + [TK_URGENT, TK_NORMAL, TK_SCHED].map(p => '<option' + (p === t.priority ? ' selected' : '') + '>' + p + '</option>').join('') + '</select>' +
+    '<label class="fl" style="margin-top:8px">مدة الحل (بالدقيقة)</label><input type="number" id="yM" value="' + t.resolveMin + '">' +
+    ta('yS', t.steps, '🧰 خطوات للفرع (كل خطوة في سطر)') + ta('yG', t.guide, '📘 دليل الدعم (للدعم بس)') +
+    '<label class="ck" style="display:flex;gap:6px;margin-top:8px"><input type="checkbox" id="yA" style="width:auto"' + (t.active ? ' checked' : '') + '> نشط (بيظهر للفرع)</label>' +
+    '<div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="tkTypesDlg()">رجوع</button></div>');
+  $('dlgOk').onclick = async () => {
+    const x = { id: t.id, title: $('yT').value, icon: $('yI').value, priority: $('yP').value, critical: $('yP').value === TK_URGENT, resolveMin: Number($('yM').value), steps: $('yS').value, guide: $('yG').value, active: $('yA').checked, order: t.order };
+    try { await api('dTkTypeSave', { token, type: x }, true); toast('اتحفظ ✅'); tkTypesDlg(); } catch (e) { toast(msg(e)); }
+  };
+}
+
 // ---------- الفاتورة ----------
 async function openInv(id, silent) {
+  curTk = null;
   $('wrap').classList.add('open');
   $('pageInv').classList.add('detail');
   if (!silent) { $('detailPane').innerHTML = '<div class="empty"><span class="spin"></span></div>'; pIdx = 0; }
@@ -1135,7 +1424,7 @@ async function openInv(id, silent) {
     renderList();
   } catch (e) { $('detailPane').innerHTML = '<div class="err">' + esc(msg(e)) + '</div>'; }
 }
-function closeInv() { $('wrap').classList.remove('open'); $('pageInv').classList.remove('detail'); }
+function closeInv() { $('wrap').classList.remove('open'); $('pageInv').classList.remove('detail'); curTk = null; }
 function pics() { const v = cur.invoice; return v.photos.map(id => ({ id, label: 'الفرع' })).concat(v.screens.map(id => ({ id, label: 'السيستم' }))); }
 
 function renderDetail() {
@@ -2081,6 +2370,7 @@ function noteGo(go) {
   if (go.page) return page(go.page);
   if (go.team) { page('team'); if (go.team.indexOf('dm:') === 0 || go.team === 'all') setTimeout(() => openRoom(go.team), 600); return; }
   if (go.inv) { page('inv'); return openInv(go.inv); }
+  if (go.tk) { page('inv'); return openTk(go.tk); }
   if (go.store) return openChatModal(go.store);
   page('inv');
 }
@@ -2860,37 +3150,62 @@ function perfCalc_(b, A, reps, SC) {
     if (v.qaBy) { p.qaN++; if (!v.qaRejects) p.firstOk++; }
   });
   reps.forEach(x => { const p = P(x.by); p.cr += mins(x.asked, x.at); p.crN++; });
+  // ---- تذاكر الدعم: اللي حلّها + تقييم الفرع، والمستعجلة اللي اتأخرت في الاستلام (على اللي كانوا في الوردية)
+  const TK = p => p.tk || (p.tk = { n: 0, ontime: 0, mins: 0, rated: 0, stars: 0, late: 0, lateMin: 0 });
+  const from = b.from;
+  tks.forEach(v => {
+    if (v.solvedAt && new Date(v.solvedAt).getTime() >= from && v.assigneeName) {
+      const t = TK(P(v.assigneeName)), st = v.priority === TK_SCHED && v.scheduledAt ? v.scheduledAt : v.createdAt, m = mins(st, v.solvedAt);
+      t.n++; t.mins += m; if (m <= v.resolveMin) t.ontime++;
+      if (v.rating) { t.rated++; t.stars += v.rating; }
+    }
+    if (v.priority === TK_URGENT && new Date(v.createdAt).getTime() >= from) {
+      const picked = v.pickedAt ? new Date(v.pickedAt).getTime() : (tkOpen(v) ? now() : 0);
+      const late = picked ? (picked - new Date(v.createdAt).getTime()) / 60000 - TK_PICK_MIN : 0;
+      if (late > 0) {
+        const c = new Date(v.createdAt).getTime(), day = dayKey9_(c);
+        const onShift = hasSched ? Object.keys(sched).filter(k => k.split('|')[1] === day && sched[k].some(sp => c >= sp[0] && c < sp[1])).map(k => k.split('|')[0]) : [];
+        (onShift.length ? onShift : v.assigneeName ? [v.assigneeName] : []).forEach(n => { const t = TK(P(n)); t.late++; t.lateMin += late; });
+      }
+    }
+  });
 
-  const maxN = Math.max(1, ...Object.values(ppl).map(x => x.n));
+  const maxN = Math.max(1, ...Object.values(ppl).map(x => x.n + (x.tk ? x.tk.n : 0)));
   return Object.values(ppl).map(p => {
-    p.avg = p.n ? p.mins / p.n : 0; p.rate = p.n ? p.ontime / p.n : 0;
+    const T = p.tk || { n: 0, ontime: 0, rated: 0, stars: 0, late: 0, lateMin: 0 };
+    p.tasks = p.n + T.n;
+    p.avg = p.n ? p.mins / p.n : 0; p.rate = p.tasks ? (p.ontime + T.ontime) / p.tasks : 0;
     const handled = p.qaN + p.openRet;
     p.fp = handled ? p.firstOk / handled : null;
     p.retRate = (p.n + p.openRet) ? p.ret / (p.n + p.openRet) : (p.ret ? 1 : 0);
-    const cnt = p.n / maxN;
+    const cnt = p.tasks / maxN;
     const perInv = {}; p.retList.forEach(x => { perInv[x.v.id] = (perInv[x.v.id] || 0) + 1; });
     p.multi = Object.values(perInv).filter(c => c > 1).length;                    // فاتورة رجعت أكتر من مرة
     // ---- التقييم: الجودة 35 + السرعة 25 + الحضور 25 + حجم الشغل 15
     // الجودة = نسبة الصح من أول مرة (ولو مفيش مراجعة جودة: 1 - نسبة المرتجعات)، وكل فاتورة رجعت أكتر من مرة بتنزّلها 5%
-    const q = Math.max(0, (p.fp !== null ? p.fp : 1 - Math.min(1, p.retRate)) - p.multi * 0.05);
+    let q = Math.max(0, (p.fp !== null ? p.fp : 1 - Math.min(1, p.retRate)) - p.multi * 0.05);
+    // تقييم الفروع للتذاكر (من 5) بيدخل في الجودة
+    if (T.rated) { const r = T.stars / T.rated / 5; q = p.n ? q * 0.7 + r * 0.3 : r; }
     let at = p.att ? Math.max(0, 1 - p.att.pen / 25) : null;                      // الحضور والتأخير والساعات الناقصة
     if (p.sa && p.sa.days) {
       // على الجدول: كل دقيقة تأخير بعد السماح نص نقطة، الغياب 60 نقطة، المغادرة بدري ربع نقطة، والتغطية بتعوّض
       const s = p.sa, pen = s.late * 0.5 + s.absent * 60 + s.early * 0.25 + s.covered * 0.25 - s.cover * 0.5;
       at = Math.max(0, Math.min(1, 1 - pen / (s.days * 60)));
     }
+    // تذكرة مستعجلة ما اتستلمتش في 5 دقايق: كل دقيقة تأخير بنقطة من الحضور والالتزام
+    if (T.lateMin) at = Math.max(0, (at === null ? 1 : at) - T.lateMin / 100);
     const W = at === null ? { q: 35 / 75, s: 25 / 75, a: 0, v: 15 / 75 } : { q: .35, s: .25, a: .25, v: .15 };
     p.parts = { q: Math.round(q * 100), s: Math.round(p.rate * 100), a: at === null ? null : Math.round(at * 100), v: Math.round(cnt * 100) };
-    p.base = !p.n ? 0 : Math.round(100 * (W.q * q + W.s * p.rate + W.a * (at || 0) + W.v * cnt));
+    p.base = !p.tasks ? 0 : Math.round(100 * (W.q * q + W.s * p.rate + W.a * (at || 0) + W.v * cnt));
     // سقف: اللي عنده مرتجعات كتير ما ياخدش تقييم عالي مهما كانت سرعته
     p.cap = p.ret >= 3 ? 69 : p.ret === 2 ? 84 : 100;
     p.penRet = Math.max(0, p.base - p.cap);
     p.penAtt = 0;
     p.score = Math.min(p.base, p.cap);
-    p.grade = !p.n ? '' : p.score >= 85 ? 'ممتاز' : p.score >= 70 ? 'جيد' : 'محتاج تحسين';
+    p.grade = !p.tasks ? '' : p.score >= 85 ? 'ممتاز' : p.score >= 70 ? 'جيد' : 'محتاج تحسين';
     p.flag = p.ret >= 3 || (p.ret >= 2 && p.retRate >= 0.2);                      // تنبيه أحمر حتى لو الدرجة كويسة
     return p;
-  }).sort((x, y) => y.score - x.score || y.n - x.n);
+  }).sort((x, y) => y.score - x.score || y.tasks - x.tasks);
 }
 
 function renderPerf() {
@@ -2943,6 +3258,8 @@ function drawPerf_() {
       '<div class="kpi"><small>🔍 عدّت الجودة من أول مرة</small><b style="color:' + (p.fp === null ? 'inherit' : colors(p.fp)) + '">' + (p.fp === null ? '-' : Math.round(p.fp * 100) + '%') + '</b></div>' +
       '<div class="kpi"><small>↩️ رجوع من الجودة</small><b style="' + (p.ret ? 'color:var(--red);font-size:22px' : '') + '">' + p.ret + '</b></div>' +
       '<div class="kpi"><small>⏱ ساعات الاتصال</small><b>' + (a ? hh_(a.mins) + ' س' : '-') + '</b></div>' +
+      (p.tk ? '<div class="kpi"><small>🛠️ تذاكر اتحلت</small><b>' + p.tk.n + (p.tk.n ? ' <small style="font-size:12px">(' + Math.round(p.tk.ontime / p.tk.n * 100) + '% في الميعاد)</small>' : '') + '</b></div>' +
+        '<div class="kpi"><small>⭐ تقييم الفروع</small><b style="color:#B8860B">' + (p.tk.rated ? (p.tk.stars / p.tk.rated).toFixed(1) + '/5' : '-') + '</b></div>' : '') +
       '</div><div class="bar"><i style="width:' + p.score + '%;background:' + colors(p.score / 100) + '"></i></div>' +
       '<div class="parts"><span>🔍 الجودة <b>' + p.parts.q + '%</b></span><span>⚡ السرعة <b>' + p.parts.s + '%</b></span>' +
       '<span>⏱ الحضور <b>' + (p.parts.a === null ? '-' : p.parts.a + '%') + '</b></span><span>📦 حجم الشغل <b>' + p.parts.v + '%</b></span></div>' +
@@ -2952,6 +3269,7 @@ function drawPerf_() {
       (p.sa ? ((p.sa.lateDays || p.sa.absent || p.sa.early > 10) ? '<div class="warnbox" style="margin-bottom:0">📅 على الجدول: ' + [p.sa.lateDays ? '⏰ اتأخر ' + p.sa.lateDays + ' يوم (' + durTxt(p.sa.late) + ' بعد السماح)' : '', p.sa.absent ? '🚫 غاب ' + p.sa.absent + ' وردية' : '', p.sa.early > 10 ? '🏃 مشي بدري ' + durTxt(p.sa.early) : ''].filter(Boolean).join(' • ') + '</div>' : '') +
         (p.sa.cover > 0 ? '<div class="warnbox" style="margin-bottom:0;background:#E6F4EA;color:#1E7D3A">🤝 غطّى زميله ' + durTxt(p.sa.cover) + '</div>' : '')
         : (a && a.lateDays ? '<div class="warnbox" style="margin-bottom:0">⏰ اتأخر ' + a.lateDays + ' يوم (إجمالي ' + durTxt(a.late) + ')</div>' : '')) +
+      (p.tk && p.tk.late ? '<div class="urgebox" style="margin-bottom:0">🚨 ' + p.tk.late + ' تذكرة مستعجلة اتأخرت في الاستلام (' + durTxt(p.tk.lateMin) + ' بعد الـ 5 دقايق) وهو في الوردية</div>' : '') +
       (p.excused > 1 ? '<small style="color:var(--muted)">⏳ ' + durTxt(p.excused) + ' ما اتحسبتش عليه لأنه كان شغال لوحده على فاتورة تانية</small>' : '') +
       '</div>';
   }).join('') + '</div><p style="color:var(--muted);font-size:13px;margin:6px 4px 14px">📐 التقييم = 🔍 الجودة (الصح من أول مرة) 35% + ⚡ السرعة (في الميعاد) 25% + ⏱ الحضور والالتزام 25% + 📦 حجم الشغل 15% • اللي عنده 2 مرتجعات أقصاه 84 (جيد)، و3 أو أكتر أقصاه 69 (محتاج تحسين) • ممتاز ≥ 85</p>' : '<div class="pane empty">مفيش فواتير دخلت في الفترة دي</div>';
