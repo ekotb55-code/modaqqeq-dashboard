@@ -2436,11 +2436,18 @@ async function renderShifts(keep) {
   const today = dayKey9_(now());
   if (!sh.week) sh.week = weekStart_(today);
   const from = sh.week, to = dayAdd_(sh.week, 6);
-  if (!keep || !sh.data) $('pageShifts').innerHTML = '<div class="empty"><span class="spin"></span></div>';
+  sh.cache = sh.cache || {};
+  const wk = sh.week, hit = sh.cache[wk];
+  // لو الأسبوع ده اتفتح قبل كده بنعرضه فورًا ونحدّث من السيرفر في الخلفية
+  if (hit) { sh.data = hit; sh.att = sh.att || []; drawShifts_(); }
+  else if (!keep || !sh.data) $('pageShifts').innerHTML = '<div class="empty"><span class="spin"></span></div>';
   try {
     const [d, a] = await Promise.all([api('dShifts', { token, from, to }), api('dAttendance', { token, from: today, to: today }).catch(() => ({ rows: [] }))]);
-    sh.data = d; sh.att = a.rows || [];
-  } catch (e) { $('pageShifts').innerHTML = '<div class="pane err">' + esc(msg(e)) + '</div>'; return; }
+    if (sh.pending) return;                    // فيه حفظ لسه رايح للسيرفر: ما نكتبش فوق التعديل
+    sh.cache[wk] = d; sh.att = a.rows || [];
+    if (sh.week !== wk) return;
+    sh.data = d;
+  } catch (e) { if (!hit) $('pageShifts').innerHTML = '<div class="pane err">' + esc(msg(e)) + '</div>'; else toast(msg(e)); return; }
   drawShifts_();
 }
 function onlineNow_(email) { const r = sh.att.find(x => x.email === email); return r && (now() - new Date(r.last).getTime()) < 4 * 60000; }
@@ -2448,7 +2455,7 @@ function drawShifts_() {
   const d = sh.data, today = dayKey9_(now()), boss = d.boss;
   const days = [...Array(7)].map((_, k) => dayAdd_(sh.week, k));
   const who = (day, sid) => d.rows.filter(r => r.day === day && r.shift === sid);
-  let h = '<div class="shead"><h2>📅 جدول الورديات</h2><div class="tools">' +
+  let h = '<div class="shead"><h2>📅 جدول الورديات <small id="shSync" style="font-size:13px;color:var(--muted);font-weight:600"></small></h2><div class="tools">' +
     '<button class="btn soft" onclick="sh.week=dayAdd_(sh.week,-7);renderShifts()">→ الأسبوع اللي فات</button>' +
     '<button class="btn soft" onclick="sh.week=null;renderShifts()">النهارده</button>' +
     '<button class="btn soft" onclick="sh.week=dayAdd_(sh.week,7);renderShifts()">الأسبوع الجاي ←</button>' +
@@ -2488,20 +2495,28 @@ function drawShifts_() {
       (x.status === 'مستني الزميل' && x.to === d.me ? '<button class="btn" onclick="swapReply_(\'' + x.id + '\',true)">✓ موافق</button><button class="btn soft" onclick="swapReply_(\'' + x.id + '\',false)">✗ لأ</button>' : '') +
       (x.status === 'مستني المدير' && boss ? '<button class="btn" onclick="swapDecide_(\'' + x.id + '\',true)">✓ اعتماد</button><button class="btn soft" onclick="swapDecide_(\'' + x.id + '\',false)">✗ رفض</button>' : '') +
       '</div></div>').join('') : '<div class="empty">مفيش طلبات</div>') + '</div>';
-  $('pageShifts').innerHTML = h;
+  $('pageShifts').innerHTML = h; shiftSync_();
 }
 function shiftEdit_(day, sid) {
   const d = sh.data, cur = d.rows.filter(r => r.day === day && r.shift === sid).map(r => r.email), df = d.defs.find(x => x.id === sid);
   dlg('<h3>' + esc(df.name) + ' - ' + dayName_(day) + ' ' + dayShort_(day) + '</h3>' +
     d.members.map(m => '<label class="ck"><input type="checkbox" value="' + esc(m.email) + '"' + (cur.indexOf(m.email) !== -1 ? ' checked' : '') + '> ' + esc(m.name) + ' <small style="color:var(--muted)">' + esc(m.role) + '</small></label>').join('') +
     '<div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="closeDlg()">إلغاء</button></div>');
-  $('dlgOk').onclick = async () => {
+  $('dlgOk').onclick = () => {
     const emails = [...document.querySelectorAll('#dlg input:checked')].map(x => x.value);
-    $('dlgOk').disabled = true;
-    try { await api('dShiftSet', { token, day, shift: sid, emails }, true); closeDlg(); toast('اتحفظ ✅'); renderShifts(true); }
-    catch (e) { toast(msg(e)); $('dlgOk').disabled = false; }
+    // بنعدّل الجدول على الشاشة فورًا، والحفظ بيروح للسيرفر في الخلفية بالترتيب
+    d.rows = d.rows.filter(r => !(r.day === day && r.shift === sid)).concat(emails.map(e => ({ day, shift: sid, email: e, name: (d.members.find(m => m.email === e) || {}).name || e })));
+    closeDlg(); drawShifts_();
+    shiftSave_(() => api('dShiftSet', { token, day, shift: sid, emails }, true));
   };
 }
+// طابور الحفظ: كل تعديل بيستنى اللي قبله، والشاشة ما بتستناش
+function shiftSave_(fn) {
+  sh.pending = (sh.pending || 0) + 1; shiftSync_();
+  sh.q = (sh.q || Promise.resolve()).then(fn).then(() => { sh.pending--; shiftSync_(); if (!sh.pending) toast('اتحفظ ✅'); },
+    e => { sh.pending--; shiftSync_(); toast('ما اتحفظش: ' + msg(e)); sh.cache = {}; renderShifts(true); });
+}
+function shiftSync_() { const el = $('shSync'); if (el) el.textContent = sh.pending ? '⏳ بيحفظ (' + sh.pending + ')...' : ''; }
 async function shiftCopy_() {
   if (!confirm('هتنسخ جدول الأسبوع اللي فات على الأسبوع ده (هيمسح الموجود فيه). موافق؟')) return;
   try { await api('dShiftCopy', { token, fromDay: dayAdd_(sh.week, -7), toDay: sh.week }, true); toast('اتنسخ ✅'); renderShifts(true); } catch (e) { toast(msg(e)); }
