@@ -278,6 +278,7 @@
   .t-done-red { background: #FDE2E2; color: #C62828; }
   @keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(224,57,62,.15); } }
   .pane { background: var(--card); border-radius: 20px; padding: 18px; box-shadow: var(--shadow); min-height: 300px; }
+  #pageShifts .pane { min-height: 0; margin-bottom: 12px; }
   .empty { color: var(--muted); text-align: center; padding: 50px 10px; }
   .dhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .dhead h2 { margin: 0; font-size: 22px; color: var(--navy); }
@@ -434,6 +435,33 @@
     .tacts { display: flex; position: static; box-shadow: none; background: none; justify-content: flex-end; }
   }
 
+
+  /* ---------- الورديات ---------- */
+  .shead { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .shead h2 { margin: 0; color: var(--navy); }
+  .shead .tools { display: flex; gap: 6px; flex-wrap: wrap; }
+  .sgrid { width: 100%; border-collapse: separate; border-spacing: 6px; }
+  .sgrid th { color: var(--navy); font-size: 14px; text-align: center; }
+  .sgrid th small { display: block; color: var(--muted); font-weight: 600; }
+  .sgrid td.day { font-weight: 800; color: var(--navy); white-space: nowrap; width: 110px; }
+  .sgrid td.day small { display: block; color: var(--muted); font-weight: 600; }
+  .sgrid td.cell { background: #fff; border-radius: 12px; box-shadow: var(--shadow); padding: 8px; vertical-align: top; min-width: 140px; }
+  .sgrid td.cell.edit { cursor: pointer; } .sgrid td.cell.edit:hover { outline: 2px solid var(--blue); }
+  .sgrid td.cell.empty { background: #FDECEA; } .sgrid td.cell.one { background: #FFF8E6; }
+  .sgrid tr.today td.day { color: var(--blue-2); }
+  .sgrid tr.today td.cell { box-shadow: 0 0 0 2px var(--blue), var(--shadow); }
+  .chip2 { display: inline-flex; gap: 4px; align-items: center; background: var(--sky); border-radius: 999px; padding: 3px 10px; margin: 2px; font-weight: 700; font-size: 13px; }
+  .chip2.me { background: #DFF5E3; } .chip2 .on { width: 8px; height: 8px; border-radius: 50%; background: #22A04B; }
+  .chip2 button { border: 0; background: none; cursor: pointer; font-size: 12px; padding: 0 2px; color: var(--blue-2); }
+  .swaps .sw { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 8px 0; }
+  .swaps .st { font-size: 12px; font-weight: 800; border-radius: 999px; padding: 2px 9px; background: #EEF2F7; }
+  .swaps .st.wait { background: #FFF3E0; color: #C25E00; } .swaps .st.ok { background: #E6F4EA; color: #1E7D3A; } .swaps .st.no { background: #FDECEA; color: #B3261E; }
+  #dlg { position: fixed; inset: 0; background: rgba(8,25,45,.55); z-index: 55; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  #dlg .box { background: #fff; border-radius: 18px; padding: 18px; width: min(460px, 100%); max-height: 86vh; overflow-y: auto; }
+  #dlg h3 { margin: 0 0 10px; color: var(--navy); }
+  #dlg label.ck { display: flex; gap: 8px; align-items: center; padding: 7px 4px; border-bottom: 1px solid #EEF2F7; font-weight: 700; }
+  #dlg .acts { display: flex; gap: 8px; justify-content: flex-start; margin-top: 12px; }
+  @media (max-width: 760px) { .sgrid { border-spacing: 3px; } .sgrid td.cell { min-width: 0; padding: 5px; } .sgrid td.day { width: auto; font-size: 12px; } .chip2 { font-size: 11.5px; padding: 2px 7px; } }
   /* ---------- تقييم الأداء ---------- */
   .person.flagged { box-shadow: 0 0 0 2px #E57373, var(--shadow); }
   .grade { display: inline-block; color: #fff; font-size: 12px; font-weight: 800; border-radius: 999px; padding: 1px 9px; vertical-align: middle; }
@@ -538,6 +566,7 @@
         <button id="navInv" class="on" onclick="page('inv')"><i>🧾</i><span>الفواتير</span><span class="nbadge hidden" id="invBadge"></span></button>
         <button id="navStores" onclick="page('stores')"><i>🏪</i><span>المحلات</span></button>
         <button id="navTeam" onclick="page('team')"><i>💬</i><span>الفريق</span><span class="nbadge hidden" id="teamBadge"></span></button>
+        <button id="navShifts" onclick="page('shifts')"><i>📅</i><span>الورديات</span><span class="nbadge hidden" id="shiftBadge"></span></button>
         <button id="navPerf" onclick="page('perf')"><i>🏆</i><span>أداء الدعم</span></button>
         <button id="navRep" onclick="page('rep')"><i>📊</i><span>تقارير الفروع</span></button>
       </div>
@@ -569,6 +598,7 @@
   </div>
 
   <div class="main hidden" id="pagePerf"></div>
+  <div class="main hidden" id="pageShifts"></div>
   <div class="board-page hidden" id="pageStores">
     <div class="bbar">
       <b>🏪 المحلات</b>
@@ -716,6 +746,9 @@ function showApp() {
   if ('Notification' in window && Notification.permission === 'granted') setupPush();
 }
 function page(p) {
+  $('pageShifts').classList.toggle('hidden', p !== 'shifts');
+  $('navShifts').classList.toggle('on', p === 'shifts');
+  if (p === 'shifts') renderShifts();
   $('pageTeam').classList.toggle('hidden', p !== 'team');
   $('navTeam').classList.toggle('on', p === 'team');
   if (p === 'team') openTeam(); else teamStop();
@@ -1994,6 +2027,7 @@ function showNote(title, opts, go) {
 }
 function noteGo(go) {
   window.focus();
+  if (go.page) return page(go.page);
   if (go.team) { page('team'); if (go.team.indexOf('dm:') === 0 || go.team === 'all') setTimeout(() => openRoom(go.team), 600); return; }
   if (go.inv) { page('inv'); return openInv(go.inv); }
   if (go.store) return openChatModal(go.store);
@@ -2385,6 +2419,117 @@ function renderBoard() {
   }).join('');
 }
 
+
+// ---------- الورديات: جدول أسبوعي + طلبات التبديل ----------
+let sh = { week: null, data: null, att: [] };
+function dlg(html) { closeDlg(); document.body.insertAdjacentHTML('beforeend', '<div id="dlg" onclick="if(event.target===this)closeDlg()"><div class="box">' + html + '</div></div>'); }
+function closeDlg() { const d = $('dlg'); if (d) d.remove(); }
+// أول الأسبوع = السبت (حسب يوم الشغل اللي بيبدأ 9 الصبح)
+function weekStart_(key) { const p = key.split('-').map(Number), d = new Date(Date.UTC(p[0], p[1] - 1, p[2])); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 1) % 7)); return d.toISOString().slice(0, 10); }
+function dayAdd_(key, n) { const p = key.split('-').map(Number), d = new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)); return d.toISOString().slice(0, 10); }
+function dayName_(key) { const p = key.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2], 12).toLocaleDateString('ar-EG', { weekday: 'long' }); }
+function dayShort_(key) { const p = key.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2], 12).toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric' }); }
+// بداية/نهاية وردية في يوم شغل (الساعة قبل 9 = اليوم اللي بعده)
+function shiftAt_(key, hm) { const p = key.split('-').map(Number), q = hm.split(':').map(Number); return new Date(p[0], p[1] - 1, p[2] + (q[0] < 9 ? 1 : 0), q[0], q[1]).getTime(); }
+function shiftSpan_(key, def) { const a = shiftAt_(key, def.from); let b = shiftAt_(key, def.to); if (b <= a) b += 864e5; return [a, b]; }
+async function renderShifts(keep) {
+  const today = dayKey9_(now());
+  if (!sh.week) sh.week = weekStart_(today);
+  const from = sh.week, to = dayAdd_(sh.week, 6);
+  if (!keep || !sh.data) $('pageShifts').innerHTML = '<div class="empty"><span class="spin"></span></div>';
+  try {
+    const [d, a] = await Promise.all([api('dShifts', { token, from, to }), api('dAttendance', { token, from: today, to: today }).catch(() => ({ rows: [] }))]);
+    sh.data = d; sh.att = a.rows || [];
+  } catch (e) { $('pageShifts').innerHTML = '<div class="pane err">' + esc(msg(e)) + '</div>'; return; }
+  drawShifts_();
+}
+function onlineNow_(email) { const r = sh.att.find(x => x.email === email); return r && (now() - new Date(r.last).getTime()) < 4 * 60000; }
+function drawShifts_() {
+  const d = sh.data, today = dayKey9_(now()), boss = d.boss;
+  const days = [...Array(7)].map((_, k) => dayAdd_(sh.week, k));
+  const who = (day, sid) => d.rows.filter(r => r.day === day && r.shift === sid);
+  let h = '<div class="shead"><h2>📅 جدول الورديات</h2><div class="tools">' +
+    '<button class="btn soft" onclick="sh.week=dayAdd_(sh.week,-7);renderShifts()">→ الأسبوع اللي فات</button>' +
+    '<button class="btn soft" onclick="sh.week=null;renderShifts()">النهارده</button>' +
+    '<button class="btn soft" onclick="sh.week=dayAdd_(sh.week,7);renderShifts()">الأسبوع الجاي ←</button>' +
+    (boss ? '<button class="btn" onclick="shiftCopy_()">📋 انسخ الأسبوع اللي فات</button><button class="btn soft" onclick="shiftDefsDlg_()">⚙️ الورديات ومواعيدها</button>' : '') +
+    '</div></div>';
+  // دلوقتي
+  const curDef = d.defs.find(df => { const sp = shiftSpan_(today, df); return now() >= sp[0] && now() < sp[1]; });
+  if (curDef) {
+    const ppl = who(today, curDef.id);
+    h += '<div class="pane" style="padding:12px 14px;margin-bottom:12px"><b>🟢 الوردية دلوقتي: ' + esc(curDef.name) + ' (' + curDef.from + ' - ' + curDef.to + ')</b> &nbsp; ' +
+      (ppl.length ? ppl.map(r => '<span class="chip2' + (r.email === d.me ? ' me' : '') + '">' + (onlineNow_(r.email) ? '<i class="on"></i>' : '⚪') + esc(r.name) + (onlineNow_(r.email) ? '' : ' <small style="color:#B3261E">مش فاتح</small>') + '</span>').join('')
+        : '<b style="color:#B3261E">⚠️ مفيش حد متسجل في الوردية دي</b>') + '</div>';
+  }
+  h += '<div class="pane" style="overflow-x:auto"><table class="sgrid"><thead><tr><th></th>' +
+    d.defs.map(df => '<th>' + esc(df.name) + '<small dir="ltr">' + df.from + ' - ' + df.to + '</small></th>').join('') + '</tr></thead><tbody>' +
+    days.map(day => '<tr class="' + (day === today ? 'today' : '') + '"><td class="day">' + dayName_(day) + '<small>' + dayShort_(day) + (day === today ? ' • النهارده' : '') + '</small></td>' +
+      d.defs.map(df => {
+        const ppl = who(day, df.id), past = shiftSpan_(day, df)[1] < now();
+        return '<td class="cell' + (boss ? ' edit' : '') + (ppl.length ? ppl.length === 1 ? ' one' : '' : ' empty') + '"' + (boss ? ' onclick="shiftEdit_(\'' + day + '\',\'' + df.id + '\')"' : '') + '>' +
+          (ppl.length ? ppl.map(r => '<span class="chip2' + (r.email === d.me ? ' me' : '') + '">' + esc(r.name) +
+            (r.email === d.me && !past ? '<button title="اطلب تبديل" onclick="event.stopPropagation();swapAsk_(\'' + day + '\',\'' + df.id + '\')">🔄</button>' : '') + '</span>').join('')
+            : '<small style="color:#B3261E;font-weight:700">مفيش حد</small>') + '</td>';
+      }).join('') + '</tr>').join('') + '</tbody></table>' +
+    '<small style="color:var(--muted)">' + (boss ? 'دوس على أي خانة علشان تختار مين في الوردية. ' : 'دوس 🔄 جنب اسمك علشان تطلب من زميل ياخد مكانك. ') +
+    '🔴 مفيش حد • 🟡 واحد بس • سماح التأخير ' + d.grace + ' دقايق • وقت التسليم بين الورديات ' + d.handover + ' دقايق</small></div>';
+  // طلبات التبديل
+  const sw = d.swaps.slice().sort((a, b) => b.at.localeCompare(a.at));
+  const mineToAnswer = sw.filter(x => x.status === 'مستني الزميل' && x.to === d.me);
+  const bossToDecide = boss ? sw.filter(x => x.status === 'مستني المدير') : [];
+  const b = $('shiftBadge'), n = mineToAnswer.length + bossToDecide.length;
+  b.textContent = n; b.classList.toggle('hidden', !n);
+  const defName = id => (d.defs.find(x => x.id === id) || { name: id }).name;
+  const stCls = st => st.indexOf('مستني') === 0 ? 'wait' : st === 'اتوافق' ? 'ok' : 'no';
+  h += '<div class="pane swaps"><h3 style="margin-top:0;color:var(--navy)">🔄 طلبات التبديل</h3>' +
+    (sw.length ? sw.slice(0, 40).map(x => '<div class="sw"><div><b>' + esc(x.fromName) + '</b> ← <b>' + esc(x.toName) + '</b> • ' + esc(defName(x.shift)) + ' يوم ' + dayName_(x.day) + ' ' + dayShort_(x.day) +
+      (x.note ? '<br><small style="color:var(--muted)">' + esc(x.note) + '</small>' : '') + '</div><div style="display:flex;gap:6px;align-items:center"><span class="st ' + stCls(x.status) + '">' + esc(x.status) + '</span>' +
+      (x.status === 'مستني الزميل' && x.to === d.me ? '<button class="btn" onclick="swapReply_(\'' + x.id + '\',true)">✓ موافق</button><button class="btn soft" onclick="swapReply_(\'' + x.id + '\',false)">✗ لأ</button>' : '') +
+      (x.status === 'مستني المدير' && boss ? '<button class="btn" onclick="swapDecide_(\'' + x.id + '\',true)">✓ اعتماد</button><button class="btn soft" onclick="swapDecide_(\'' + x.id + '\',false)">✗ رفض</button>' : '') +
+      '</div></div>').join('') : '<div class="empty">مفيش طلبات</div>') + '</div>';
+  $('pageShifts').innerHTML = h;
+}
+function shiftEdit_(day, sid) {
+  const d = sh.data, cur = d.rows.filter(r => r.day === day && r.shift === sid).map(r => r.email), df = d.defs.find(x => x.id === sid);
+  dlg('<h3>' + esc(df.name) + ' - ' + dayName_(day) + ' ' + dayShort_(day) + '</h3>' +
+    d.members.map(m => '<label class="ck"><input type="checkbox" value="' + esc(m.email) + '"' + (cur.indexOf(m.email) !== -1 ? ' checked' : '') + '> ' + esc(m.name) + ' <small style="color:var(--muted)">' + esc(m.role) + '</small></label>').join('') +
+    '<div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="closeDlg()">إلغاء</button></div>');
+  $('dlgOk').onclick = async () => {
+    const emails = [...document.querySelectorAll('#dlg input:checked')].map(x => x.value);
+    $('dlgOk').disabled = true;
+    try { await api('dShiftSet', { token, day, shift: sid, emails }, true); closeDlg(); toast('اتحفظ ✅'); renderShifts(true); }
+    catch (e) { toast(msg(e)); $('dlgOk').disabled = false; }
+  };
+}
+async function shiftCopy_() {
+  if (!confirm('هتنسخ جدول الأسبوع اللي فات على الأسبوع ده (هيمسح الموجود فيه). موافق؟')) return;
+  try { await api('dShiftCopy', { token, fromDay: dayAdd_(sh.week, -7), toDay: sh.week }, true); toast('اتنسخ ✅'); renderShifts(true); } catch (e) { toast(msg(e)); }
+}
+function shiftDefsDlg_() {
+  const row = x => '<div class="sdef" style="display:flex;gap:6px;margin:6px 0"><input type="hidden" value="' + esc(x.id || '') + '"><input placeholder="اسم الوردية" value="' + esc(x.name || '') + '" style="flex:1">' +
+    '<input type="time" value="' + esc(x.from || '09:00') + '"><input type="time" value="' + esc(x.to || '17:00') + '"><button class="btn soft" onclick="this.parentNode.remove()">✕</button></div>';
+  dlg('<h3>⚙️ الورديات ومواعيدها</h3><div id="sdefs">' + sh.data.defs.map(row).join('') + '</div>' +
+    '<button class="btn soft" id="sdefAdd">＋ وردية زيادة</button><div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="closeDlg()">إلغاء</button></div>');
+  $('sdefAdd').onclick = () => $('sdefs').insertAdjacentHTML('beforeend', row({ name: '', from: '12:00', to: '20:00' }));
+  $('dlgOk').onclick = async () => {
+    const defs = [...document.querySelectorAll('#sdefs .sdef')].map(r => { const i = r.querySelectorAll('input'); return { id: i[0].value, name: i[1].value, from: i[2].value, to: i[3].value }; });
+    try { await api('dShiftDefs', { token, defs }, true); closeDlg(); toast('اتحفظ ✅'); renderShifts(true); } catch (e) { toast(msg(e)); }
+  };
+}
+function swapAsk_(day, sid) {
+  const d = sh.data, df = d.defs.find(x => x.id === sid);
+  dlg('<h3>🔄 تبديل ' + esc(df.name) + ' يوم ' + dayName_(day) + '</h3><p style="margin-top:0">مين من زمايلك هياخد مكانك؟ الطلب بيروح له يوافق، وبعدين المدير يعتمد.</p>' +
+    '<select id="swTo" style="width:100%">' + d.members.filter(m => m.email !== d.me).map(m => '<option value="' + esc(m.email) + '">' + esc(m.name) + '</option>').join('') + '</select>' +
+    '<textarea id="swNote" placeholder="السبب (اختياري)" style="width:100%;margin-top:8px;min-height:60px"></textarea>' +
+    '<div class="acts"><button class="btn" id="dlgOk">ابعت الطلب</button><button class="btn soft" onclick="closeDlg()">إلغاء</button></div>');
+  $('dlgOk').onclick = async () => {
+    try { await api('dSwapAsk', { token, day, shift: sid, to: $('swTo').value, note: $('swNote').value }, true); closeDlg(); toast('الطلب اتبعت ✅'); renderShifts(true); } catch (e) { toast(msg(e)); }
+  };
+}
+async function swapReply_(id, accept) { try { await api('dSwapReply', { token, id, accept }, true); toast(accept ? 'وافقت ✅ - مستني المدير' : 'اترفض'); renderShifts(true); } catch (e) { toast(msg(e)); } }
+async function swapDecide_(id, approve) { try { await api('dSwapDecide', { token, id, approve }, true); toast(approve ? 'اتعتمد والجدول اتعدل ✅' : 'اترفض'); renderShifts(true); } catch (e) { toast(msg(e)); } }
+
 // ---------- أداء الدعم + الحضور + الجودة ----------
 let attCache_ = null;
 const ATT_REQ = 480; // 8 ساعات
@@ -2412,7 +2557,7 @@ function hh_(m) { return (m / 60).toFixed(1); }
 // خصم المرتجعات بيزيد مع كل مرتجع: 1 ← 4 ، 2 ← 10 ، 3 ← 18 ، 4 ← 28
 function retPenalty_(n) { return n * 4 + n * (n - 1); }
 
-function perfCalc_(b, A, reps) {
+function perfCalc_(b, A, reps, SC) {
   const ppl = {};
   const P = n => ppl[n] || (ppl[n] = { name: n, n: 0, total: 0, mins: 0, ontime: 0, pick: 0, pickN: 0, lines: 0, qaN: 0, firstOk: 0, ret: 0, openRet: 0, retList: [], open: 0, cr: 0, crN: 0, att: null });
   const firstOpen = {};
@@ -2426,6 +2571,54 @@ function perfCalc_(b, A, reps) {
     s.pen += a.lateMin > 30 ? 8 : a.lateMin > 15 ? 3 : 0;                          // خصم التأخير
     if (a.day < b.toKey) s.pen += Math.max(0, ATT_REQ - a.mins) / ATT_REQ * 6;     // ساعات ناقصة (أيام خلصت بس)
   });
+
+  // ---- الحضور على جدول الورديات (لو فيه جدول): تأخير بعد السماح، غياب، مغادرة بدري، وتغطية الزميل المتأخر
+  const sched = {};   // اسم|يوم ← [بداية، نهاية]
+  const hasSched = !!(SC && SC.rows && SC.rows.length);
+  if (hasSched) {
+    const grace = SC.grace || 5, nowT = now();
+    const attOf = (n, day) => A.find(a => a.name === n && a.day === day);
+    const byDayShift = {};
+    SC.rows.forEach(r => {
+      if (r.day < b.fromKey || r.day > b.toKey) return;
+      const df = SC.defs.find(x => x.id === r.shift); if (!df) return;
+      const sp = shiftSpan_(r.day, df);
+      (sched[r.name + '|' + r.day] = sched[r.name + '|' + r.day] || []).push(sp);
+      (byDayShift[r.day] = byDayShift[r.day] || []).push({ name: r.name, sp: sp });
+    });
+    Object.keys(sched).forEach(k => {
+      const [n, day] = k.split('|'), sps = sched[k].sort((x, y) => x[0] - y[0]);
+      const st = sps[0][0], en = Math.max(...sps.map(x => x[1]));
+      if (st > nowT) return;                                   // الوردية لسه ما بدأتش
+      const p = P(n);
+      const s = p.sa = p.sa || { days: 0, late: 0, lateDays: 0, absent: 0, early: 0, cover: 0, covered: 0 };
+      s.days++;
+      const a = attOf(n, day);
+      if (!a) { if (nowT > st + grace * 60000) s.absent++; return; }
+      const late = Math.max(0, (new Date(a.first).getTime() - st) / 60000);
+      if (late > grace) { s.late += late - grace; s.lateDays++; }
+      if (en < nowT) { const e = (en - new Date(a.last).getTime()) / 60000; if (e > 5) s.early += e; }
+    });
+    // التسليم: لو اللي جاي اتأخر وزميل الوردية اللي قبله فضل مكمّل، الدقايق دي بتتحسب للي غطّى
+    Object.keys(byDayShift).forEach(day => {
+      const L = byDayShift[day];
+      L.forEach(nx => L.forEach(pv => {
+        if (pv.name === nx.name || Math.abs(pv.sp[1] - nx.sp[0]) > 60000) return;   // pv قبل nx على طول
+        const an = attOf(nx.name, day), ap = attOf(pv.name, day);
+        if (!ap) return;
+        const lateN = an ? Math.max(0, (new Date(an.first).getTime() - nx.sp[0]) / 60000) : (nx.sp[1] - nx.sp[0]) / 60000;
+        if (lateN <= (SC.grace || 5)) return;
+        const stayed = Math.max(0, (new Date(ap.last).getTime() - nx.sp[0]) / 60000);
+        const c = Math.min(lateN, stayed);
+        if (c > 0) { P(pv.name).sa = P(pv.name).sa || { days: 0, late: 0, lateDays: 0, absent: 0, early: 0, cover: 0, covered: 0 }; P(pv.name).sa.cover += c;
+          P(nx.name).sa = P(nx.name).sa || { days: 0, late: 0, lateDays: 0, absent: 0, early: 0, cover: 0, covered: 0 }; P(nx.name).sa.covered += c; }
+      }));
+    });
+  }
+  // مين كان فاتح إمتى (علشان "شغال لوحده")
+  const openWin = A.map(a => ({ name: a.name, a: new Date(a.first).getTime(), b: new Date(a.last).getTime() }));
+  const busy = {};
+  all.forEach(v => { if (v.doneBy && v.receivedAt && v.doneAt) (busy[v.doneBy] = busy[v.doneBy] || []).push({ id: v.id, a: new Date(v.receivedAt).getTime(), b: new Date(v.doneAt).getTime() }); });
 
   all.forEach(v => {
     // 1) المرتجعات من سجل الجودة نفسه (حتى لو الفاتورة لسه "يتم الادخال" عند نفس الموظف)
@@ -2442,8 +2635,26 @@ function perfCalc_(b, A, reps) {
     const p = P(v.doneBy);
     const dk = dayKey9_(v.doneAt);
     let start = new Date(v.createdAt).getTime();
-    const fo = firstOpen[v.doneBy + '|' + dk]; if (fo) start = Math.max(start, fo);
-    const m = mins(start, v.doneAt);                       // mins بتحسب وقت الشغل بس
+    const sps = sched[v.doneBy + '|' + dk];
+    if (sps) {
+      // في جدول: الوقت بيتحسب من وصول الفاتورة في ورديته (التأخير في الفتح بيتحسب عليه)
+      const inShift = sps.find(sp => start >= sp[0] && start < sp[1]);
+      if (!inShift) start = Math.max(start, Math.min(...sps.map(sp => sp[0])));
+    } else {
+      const fo = firstOpen[v.doneBy + '|' + dk]; if (fo) start = Math.max(start, fo);
+    }
+    let m = mins(start, v.doneAt);                         // mins بتحسب وقت الشغل بس
+    // شغال لوحده ومشغول بفاتورة تانية: وقت انشغاله ما يتحسبش عليه
+    const wEnd = v.receivedAt ? new Date(v.receivedAt).getTime() : new Date(v.doneAt).getTime();
+    if (wEnd > start) {
+      const alone = !openWin.some(o => o.name !== v.doneBy && o.a < wEnd && o.b > start);
+      if (alone) {
+        const iv = (busy[v.doneBy] || []).filter(x => x.id !== v.id).map(x => [Math.max(x.a, start), Math.min(x.b, wEnd)]).filter(x => x[1] > x[0]).sort((x, y) => x[0] - y[0]);
+        let ov = 0, ce = -Infinity;
+        iv.forEach(([a1, b1]) => { if (b1 <= ce) return; ov += b1 - Math.max(a1, ce); ce = b1; });
+        if (ov > 0) { m = Math.max(0, m - ov / 60000); p.excused = (p.excused || 0) + ov / 60000; }
+      }
+    }
     p.n++; p.total += v.total; p.mins += m; p.lines += v.count;
     if (m <= SLA_MIN) p.ontime++;
     if (v.receivedAt) { p.pick += mins(start, v.receivedAt); p.pickN++; }
@@ -2463,7 +2674,12 @@ function perfCalc_(b, A, reps) {
     // ---- التقييم: الجودة 35 + السرعة 25 + الحضور 25 + حجم الشغل 15
     // الجودة = نسبة الصح من أول مرة (ولو مفيش مراجعة جودة: 1 - نسبة المرتجعات)، وكل فاتورة رجعت أكتر من مرة بتنزّلها 5%
     const q = Math.max(0, (p.fp !== null ? p.fp : 1 - Math.min(1, p.retRate)) - p.multi * 0.05);
-    const at = p.att ? Math.max(0, 1 - p.att.pen / 25) : null;                    // الحضور والتأخير والساعات الناقصة
+    let at = p.att ? Math.max(0, 1 - p.att.pen / 25) : null;                      // الحضور والتأخير والساعات الناقصة
+    if (p.sa && p.sa.days) {
+      // على الجدول: كل دقيقة تأخير بعد السماح نص نقطة، الغياب 60 نقطة، المغادرة بدري ربع نقطة، والتغطية بتعوّض
+      const s = p.sa, pen = s.late * 0.5 + s.absent * 60 + s.early * 0.25 + s.covered * 0.25 - s.cover * 0.5;
+      at = Math.max(0, Math.min(1, 1 - pen / (s.days * 60)));
+    }
     const W = at === null ? { q: 35 / 75, s: 25 / 75, a: 0, v: 15 / 75 } : { q: .35, s: .25, a: .25, v: .15 };
     p.parts = { q: Math.round(q * 100), s: Math.round(p.rate * 100), a: at === null ? null : Math.round(at * 100), v: Math.round(cnt * 100) };
     p.base = !p.n ? 0 : Math.round(100 * (W.q * q + W.s * p.rate + W.a * (at || 0) + W.v * cnt));
@@ -2481,8 +2697,8 @@ function perfCalc_(b, A, reps) {
 function renderPerf() {
   drawPerf_();
   const b = perfBounds_(), key = perfRange;
-  api('dAttendance', { token, from: b.fromKey, to: b.toKey })
-    .then(j => { attCache_ = { key: key, rows: j.rows }; if (key === perfRange) drawPerf_(); })
+  Promise.all([api('dAttendance', { token, from: b.fromKey, to: b.toKey }), api('dShifts', { token, from: b.fromKey, to: b.toKey }).catch(() => null)])
+    .then(([j, sc]) => { attCache_ = { key: key, rows: j.rows, sched: sc }; if (key === perfRange) drawPerf_(); })
     .catch(e => { attCache_ = { key: key, rows: [], err: msg(e) }; if (key === perfRange) drawPerf_(); });
 }
 
@@ -2491,7 +2707,8 @@ function drawPerf_() {
   const A = (attCache_ && attCache_.key === perfRange) ? attCache_.rows : [];
   const done = all.filter(v => v.status === ST_DONE && v.doneAt && new Date(v.doneAt) >= start);
   const reps = (chatSum.replies || []).filter(x => new Date(x.at) >= start);
-  const list = perfCalc_(b, A, reps);
+  const SC = (attCache_ && attCache_.key === perfRange) ? attCache_.sched : null;
+  const list = perfCalc_(b, A, reps, SC);
   const colors = r => r >= .9 ? 'var(--green)' : r >= .7 ? 'var(--yellow)' : 'var(--red)';
   const medals = ['🥇', '🥈', '🥉'];
   let medalK = 0;
@@ -2533,7 +2750,10 @@ function drawPerf_() {
       '<small style="color:var(--muted)">الدرجة ' + p.score + '/100' +
       (p.penRet ? ' <b style="color:var(--red)">(اتقفلت على ' + p.cap + ' بسبب ' + p.ret + ' مرتجعات)</b>' : '') + '</small>' +
       (p.flag ? '<div class="urgebox" style="margin-bottom:0"><b>⚠ ' + p.ret + ' فواتير مرتجعة من الجودة</b>' + (p.multi ? ' (منها ' + p.multi + ' رجعت أكتر من مرة)' : '') + ' - مراجعة مطلوبة حتى لو الدرجة كويسة</div>' : '') +
-      (a && a.lateDays ? '<div class="warnbox" style="margin-bottom:0">⏰ اتأخر ' + a.lateDays + ' يوم (إجمالي ' + durTxt(a.late) + ')</div>' : '') +
+      (p.sa ? ((p.sa.lateDays || p.sa.absent || p.sa.early > 10) ? '<div class="warnbox" style="margin-bottom:0">📅 على الجدول: ' + [p.sa.lateDays ? '⏰ اتأخر ' + p.sa.lateDays + ' يوم (' + durTxt(p.sa.late) + ' بعد السماح)' : '', p.sa.absent ? '🚫 غاب ' + p.sa.absent + ' وردية' : '', p.sa.early > 10 ? '🏃 مشي بدري ' + durTxt(p.sa.early) : ''].filter(Boolean).join(' • ') + '</div>' : '') +
+        (p.sa.cover > 0 ? '<div class="warnbox" style="margin-bottom:0;background:#E6F4EA;color:#1E7D3A">🤝 غطّى زميله ' + durTxt(p.sa.cover) + '</div>' : '')
+        : (a && a.lateDays ? '<div class="warnbox" style="margin-bottom:0">⏰ اتأخر ' + a.lateDays + ' يوم (إجمالي ' + durTxt(a.late) + ')</div>' : '')) +
+      (p.excused > 1 ? '<small style="color:var(--muted)">⏳ ' + durTxt(p.excused) + ' ما اتحسبتش عليه لأنه كان شغال لوحده على فاتورة تانية</small>' : '') +
       '</div>';
   }).join('') + '</div><p style="color:var(--muted);font-size:13px;margin:6px 4px 14px">📐 التقييم = 🔍 الجودة (الصح من أول مرة) 35% + ⚡ السرعة (في الميعاد) 25% + ⏱ الحضور والالتزام 25% + 📦 حجم الشغل 15% • اللي عنده 2 مرتجعات أقصاه 84 (جيد)، و3 أو أكتر أقصاه 69 (محتاج تحسين) • ممتاز ≥ 85</p>' : '<div class="pane empty">مفيش فواتير دخلت في الفترة دي</div>';
 
