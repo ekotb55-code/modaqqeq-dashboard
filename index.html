@@ -1410,9 +1410,13 @@ function renderRepForm() {
     '<div class="report-form"><div><small>الفرع</small><select id="repStore">' + stores.map(s => '<option>' + esc(s) + '</option>').join('') + '</select></div>' +
     '<div><small>من</small><input type="date" id="repFrom" value="' + isoDay(first) + '"></div>' +
     '<div><small>إلى</small><input type="date" id="repTo" value="' + isoDay(today) + '"></div>' +
-    '<button class="btn" style="padding:12px 20px" onclick="makeReport()">📄 اعمل التقرير</button></div></div>';
+    '<button class="btn" style="padding:12px 20px" onclick="makeReport(\'perf\')">📄 تقرير الأداء</button>' +
+    '<button class="btn" style="padding:12px 20px;background:#6C4BD8" onclick="makeReport(\'price\')">📊 تقرير أسعار الشراء</button></div>' +
+    '<p style="color:var(--muted);margin:10px 0 0;font-size:13px">📄 <b>الأداء:</b> الفواتير اللي دخلت ووقت الإدخال والموردين &nbsp;•&nbsp; 📊 <b>أسعار الشراء:</b> الأصناف اللي اتشرت وزيادة ونقص أسعارها وأثرها على التكلفة (لصناع القرار)</p></div>';
 }
-async function makeReport() {
+// kind: 'perf' = تقرير الأداء (الفواتير)، 'price' = تقرير أسعار الشراء (الأصناف)
+async function makeReport(kind) {
+  const isPrice = kind === 'price';
   const st = $('repStore').value, from = new Date($('repFrom').value + 'T00:00:00'), to = new Date($('repTo').value + 'T23:59:59');
   // نفتح النافذة الأول علشان المتصفح ما يمنعهاش
   const w = window.open('', '_blank');
@@ -1424,7 +1428,7 @@ async function makeReport() {
     .sort((a, b) => a.doneAt.localeCompare(b.doneAt));
   // الأصناف: مرة واحدة لكل الفواتير، ولو ما نفعش نجيب كل فاتورة لوحدها
   let L = {};
-  if (done.length) {
+  if (isPrice && done.length) {
     try { L = (await api('dLinesBulk', { token, ids: done.map(v => v.id) }, true)).lines || {}; } catch (e) { L = {}; }
     const miss = done.filter(v => !(L[v.id] && L[v.id].length) && v.count > 0);
     for (let i = 0; i < miss.length; i += 4) {
@@ -1543,7 +1547,11 @@ async function makeReport() {
   };
 
   const maxSup = supRows[0] ? supRows[0][1].t : 1;
-  const html = '<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير ' + esc(st) + '</title>' +
+  const supHtml = (supRows.length ? '<div class="sec"><h2>🏷 الموردين</h2><table class="t2"><thead><tr><th>المورد</th><th>عدد الفواتير</th><th>الإجمالي</th><th style="width:28%">من المشتريات</th>' + (isPrice ? '<th>أصناف زادت</th><th>أصناف قلت</th>' : '') + '</tr></thead><tbody>' +
+      supRows.map(([n, x]) => '<tr><td><b>' + esc(n) + '</b></td><td class="num">' + x.n + '</td><td class="num"><b>' + money(x.t) + '</b></td><td><div class="sbar"><i style="width:' + (x.t / maxSup * 100) + '%"></i><span>' +
+        (total ? (x.t / total * 100).toFixed(1) : 0) + '%</span></div></td>' + (!isPrice ? '' : '<td class="num">' + (x.up ? '<span class="tg up">▲ ' + x.up + '</span>' : '<span class="mut">-</span>') +
+        '</td><td class="num">' + (x.dn ? '<span class="tg dn">▼ ' + x.dn + '</span>' : '<span class="mut">-</span>') + '</td>') + '</tr>').join('') + '</tbody></table></div>' : '');
+  const html = '<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>' + (isPrice ? 'تقرير أسعار الشراء' : 'تقرير الأداء') + ' - ' + esc(st) + '</title>' +
     '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap">' +
     '<style>body{font-family:Cairo,Tahoma,sans-serif;margin:0;color:#17212E;background:#fff}.page{max-width:1040px;margin:0 auto;padding:28px}' +
     '.hd{display:flex;align-items:center;justify-content:space-between;border-bottom:4px solid #1479D3;padding-bottom:14px}.hd img{height:70px}' +
@@ -1572,14 +1580,14 @@ async function makeReport() {
     '.pb{position:fixed;top:14px;left:14px;z-index:5}.pb button{font-family:Cairo;font-size:15px;font-weight:700;background:#1479D3;color:#fff;border:0;border-radius:10px;padding:10px 18px;cursor:pointer}' +
     '@media (max-width:760px){.grid,.kp{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.crow{grid-template-columns:120px 1fr}.page{padding:14px}table{font-size:11.5px}}' +
     '@media print{.pb{display:none}.page{padding:0}.brk{page-break-before:always}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><div class="pb"><button onclick="print()">🖨 طباعة / حفظ PDF</button></div><div class="page">' +
-    '<div class="hd"><div><h1>تقرير فواتير المشتريات</h1><p><b>' + esc(st) + '</b></p><p>من ' + d2(from) + ' إلى ' + d2(to) + '</p></div><img src="' + logo + '"></div>' +
-    '<div class="grid"><div class="k k1"><small>فواتير دخلت</small><b>' + done.length + '</b></div><div class="k k2"><small>إجمالي المشتريات</small><b>' + money(total) + '</b></div>' +
+    '<div class="hd"><div><h1>' + (isPrice ? 'تقرير أسعار الشراء' : 'تقرير أداء فواتير المشتريات') + '</h1><p><b>' + esc(st) + '</b></p><p>من ' + d2(from) + ' إلى ' + d2(to) + '</p></div><img src="' + logo + '"></div>' +
+    (isPrice ? '' : '<div class="grid"><div class="k k1"><small>فواتير دخلت</small><b>' + done.length + '</b></div><div class="k k2"><small>إجمالي المشتريات</small><b>' + money(total) + '</b></div>' +
     '<div class="k k3"><small>متوسط وقت الإدخال</small><b>' + durTxt(avg) + '</b></div><div class="k k4"><small>في الميعاد (≤ ' + SLA_MIN + ' د)</small><b>' + Math.round(ontime * 100) + '%</b></div>' +
     '<div class="k k5"><small>تعديلات أسعار البيع</small><b>' + pch + '</b></div></div>' +
-    (waiting ? '<p style="color:#E67E00;font-weight:700">⏳ فيه ' + waiting + ' فاتورة للفرع لسه ما دخلتش السيستم</p>' : '') +
-    // ---------- ملخص لصناع القرار
-    (hasLines ? '<div class="sec"><h2>📊 ملخص أسعار الشراء</h2><div class="kp">' +
-      '<div><small>أصناف اتشرت</small><b>' + list.length + '</b><em>في ' + done.length + ' فاتورة</em></div>' +
+    (waiting ? '<p style="color:#E67E00;font-weight:700">⏳ فيه ' + waiting + ' فاتورة للفرع لسه ما دخلتش السيستم</p>' : '')) +
+    // ---------- تقرير أسعار الشراء (لصناع القرار)
+    (!isPrice ? '' : hasLines ? '<div class="sec"><h2>📊 ملخص أسعار الشراء</h2><div class="kp">' +
+      '<div><small>أصناف اتشرت</small><b>' + list.length + '</b><em>في ' + done.length + ' فاتورة بـ ' + money(total) + ' ج.م</em></div>' +
       '<div><small>سعرها زاد ▲</small><b class="up">' + ups.length + '</b><em>' + (list.length ? Math.round(ups.length / list.length * 100) : 0) + '% من الأصناف</em></div>' +
       '<div><small>سعرها قل ▼</small><b class="dn">' + dns.length + '</b><em>' + (list.length ? Math.round(dns.length / list.length * 100) : 0) + '% من الأصناف</em></div>' +
       '<div><small>ثابتة / جديدة</small><b>' + flat + ' <span class="mut">/</span> ' + fresh + '</b><em>ثابتة / 🆕 أول مرة</em></div>' +
@@ -1591,17 +1599,15 @@ async function makeReport() {
       (ups.length ? '<div class="sec"><h2>🔺 الأصناف اللي سعرها زاد (' + ups.length + ')</h2>' + chTable(ups, 'up') + '</div>' : '') +
       (dns.length ? '<div class="sec"><h2>🔻 الأصناف اللي سعرها قل (' + dns.length + ')</h2>' + chTable(dns, 'dn') + '</div>' : '') +
       '<div class="sec brk"><h2>🛒 كل الأصناف المشتراة (' + list.length + ')</h2><p class="mut" style="margin:-4px 0 4px">مترتبة من الأكتر صرف للأقل - التغيير = آخر سعر مقارنة بالسعر اللي كان قبل الفترة</p>' + itemsAll + '</div>'
-      : (done.length ? '<p class="mut">⚠️ مقدرتش أحمّل أصناف الفواتير - التقرير فيه الفواتير بس</p>' : '')) +
-    (supRows.length ? '<div class="sec"><h2>🏷 الموردين</h2><table class="t2"><thead><tr><th>المورد</th><th>عدد الفواتير</th><th>الإجمالي</th><th style="width:28%">من المشتريات</th><th>أصناف زادت</th><th>أصناف قلت</th></tr></thead><tbody>' +
-      supRows.map(([n, x]) => '<tr><td><b>' + esc(n) + '</b></td><td class="num">' + x.n + '</td><td class="num"><b>' + money(x.t) + '</b></td><td><div class="sbar"><i style="width:' + (x.t / maxSup * 100) + '%"></i><span>' +
-        (total ? (x.t / total * 100).toFixed(1) : 0) + '%</span></div></td><td class="num">' + (x.up ? '<span class="tg up">▲ ' + x.up + '</span>' : '<span class="mut">-</span>') +
-        '</td><td class="num">' + (x.dn ? '<span class="tg dn">▼ ' + x.dn + '</span>' : '<span class="mut">-</span>') + '</td></tr>').join('') + '</tbody></table></div>' : '') +
-    // ---------- تفاصيل الفواتير
-    '<div class="sec brk"><h2>🧾 تفاصيل الفواتير</h2><table><thead><tr><th>#</th><th>تاريخ الإدخال</th><th>المورد</th><th>رقم فاتورة المورد</th><th>رقم السيستم</th><th>أصناف</th><th>الإجمالي</th><th>رصيد المورد</th><th>أدخلها</th><th>المدة</th></tr></thead><tbody>' +
-    (done.length ? done.map((v, k) => '<tr class="inv"><td>' + (k + 1) + '</td><td>' + dt(v.doneAt) + '</td><td>' + esc(v.supplier) + '</td><td>' + esc(v.number || '-') + '</td><td>' + esc(v.systemNo) +
+      : (done.length ? '<p class="mut">⚠️ مقدرتش أحمّل أصناف الفواتير - جرّب تاني كمان شوية</p>' : '<p class="mut" style="text-align:center;padding:20px">مفيش فواتير دخلت في الفترة دي</p>')) +
+    (isPrice ? supHtml : '') +
+    // ---------- تقرير الأداء: الفواتير
+    (isPrice ? '' : '<div class="sec"><h2>🧾 الفواتير</h2><table class="t2"><thead><tr><th>#</th><th>تاريخ الإدخال</th><th>المورد</th><th>رقم فاتورة المورد</th><th>رقم السيستم</th><th>أصناف</th><th>الإجمالي</th><th>رصيد المورد</th><th>أدخلها</th><th>المدة</th></tr></thead><tbody>' +
+    (done.length ? done.map((v, k) => '<tr' + (isPrice ? ' class="inv"' : '') + '><td>' + (k + 1) + '</td><td>' + dt(v.doneAt) + '</td><td>' + esc(v.supplier) + '</td><td>' + esc(v.number || '-') + '</td><td>' + esc(v.systemNo) +
       '</td><td class="num">' + v.count + '</td><td class="num">' + money(v.total) + '</td><td class="num">' + esc(v.balance) + '</td><td>' + esc(v.doneBy) + '</td><td>' + durTxt(mins(v.createdAt, v.doneAt)) + '</td></tr>' + itemsHtml(v)).join('')
       : '<tr><td colspan="10" style="text-align:center;padding:20px">مفيش فواتير دخلت في الفترة دي</td></tr>') +
-    (done.length ? '<tr><td></td><td colspan="5"><b>الإجمالي</b></td><td class="num"><b>' + money(total) + '</b></td><td colspan="3"></td></tr>' : '') + '</tbody></table></div>' +
+    (done.length ? '<tr><td></td><td colspan="5"><b>الإجمالي</b></td><td class="num"><b>' + money(total) + '</b></td><td colspan="3"></td></tr>' : '') + '</tbody></table></div>') +
+    (isPrice ? '' : supHtml) +
     '<div class="ft"><span>مدقق - Mudaqeq</span><span>اتعمل ' + dt(new Date(now()).toISOString()) + ' بواسطة ' + esc(me) + '</span></div></div></body></html>';
   w.document.open(); w.document.write(html); w.document.close();
 }
