@@ -1417,76 +1417,191 @@ async function makeReport() {
   // نفتح النافذة الأول علشان المتصفح ما يمنعهاش
   const w = window.open('', '_blank');
   if (!w) return toast('المتصفح منع فتح التقرير - اسمح بالنوافذ المنبثقة للموقع ده');
-  w.document.write('<body dir="rtl" style="font-family:Tahoma;padding:40px;text-align:center">⏳ جاري تجهيز التقرير...</body>');
+  const wait = t => { try { w.document.body.innerHTML = '<div style="font-family:Tahoma;padding:40px;text-align:center;direction:rtl">⏳ ' + t + '</div>'; } catch (e) {} };
+  w.document.write('<body dir="rtl"></body>'); wait('جاري تجهيز التقرير...');
 
   const done = all.filter(v => v.store === st && v.status === ST_DONE && v.doneAt && new Date(v.doneAt) >= from && new Date(v.doneAt) <= to)
     .sort((a, b) => a.doneAt.localeCompare(b.doneAt));
+  // الأصناف: مرة واحدة لكل الفواتير، ولو ما نفعش نجيب كل فاتورة لوحدها
   let L = {};
   if (done.length) {
-    try { L = (await api('dLinesBulk', { token, ids: done.map(v => v.id) }, true)).lines || {}; }
-    catch (e) { toast('تعذر تحميل الأصناف: ' + msg(e)); }
+    try { L = (await api('dLinesBulk', { token, ids: done.map(v => v.id) }, true)).lines || {}; } catch (e) { L = {}; }
+    const miss = done.filter(v => !(L[v.id] && L[v.id].length) && v.count > 0);
+    for (let i = 0; i < miss.length; i += 4) {
+      wait('بحمّل أصناف الفواتير... ' + Math.min(i + 4, miss.length) + ' / ' + miss.length);
+      await Promise.all(miss.slice(i, i + 4).map(v => api('dInvoice', { token, id: v.id }).then(r => { L[v.id] = r.lines || []; }).catch(() => {})));
+    }
   }
   const waiting = all.filter(v => v.store === st && v.status !== ST_DONE).length;
   const total = done.reduce((s, v) => s + v.total, 0);
   const avg = done.length ? done.reduce((s, v) => s + mins(v.createdAt, v.doneAt), 0) / done.length : 0;
   const ontime = done.length ? done.filter(v => mins(v.createdAt, v.doneAt) <= SLA_MIN).length / done.length : 0;
   const pch = done.reduce((s, v) => s + (v.priceChanges || 0), 0);
-  const bySup = {};
-  done.forEach(v => { const x = bySup[v.supplier] = bySup[v.supplier] || { n: 0, t: 0 }; x.n++; x.t += v.total; });
-  const supRows = Object.entries(bySup).sort((a, b) => b[1].t - a[1].t);
   const d2 = x => new Date(x).toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric', year: 'numeric' });
   const logo = new URL('logo_wide.png', location.href).href;
 
-  // نسبة تغيير سعر الشراء للقطعة مقارنة بآخر سعر
+  // ---- سطر الصنف بشكل موحّد (السعر = سعر القطعة)
+  const P = l => Number(l.price != null ? l.price : l.piecePrice) || 0;
+  const Q = l => Number(l.pieces != null ? l.pieces : l.qty) || 0;
+  const O = l => (l.oldPrice === null || l.oldPrice === undefined || l.oldPrice === '') ? null : Number(l.oldPrice);
   const chg = l => {
-    if (l.oldPrice === null || l.oldPrice === undefined || !(l.oldPrice > 0) || !(l.price > 0)) return null;
-    if (Math.abs(l.price - l.oldPrice) < 0.01) return 0;
-    return (l.price - l.oldPrice) / l.oldPrice * 100;
+    const o = O(l), p = P(l);
+    if (o === null || !(o > 0) || !(p > 0)) return null;
+    if (Math.abs(p - o) < 0.01) return 0;
+    return (p - o) / o * 100;
   };
+  const pctTxt = p => (p > 0 ? '▲ +' : '▼ ') + Math.abs(p).toFixed(1) + '%';
   const pctHtml = l => {
     const p = chg(l);
-    if (p === null) return l.isNew ? '<span style="color:#E67E00;font-weight:700">🆕 جديد</span>' : '<span style="color:#6B7785">-</span>';
-    if (p === 0) return '<span style="color:#6B7785">ثابت</span>';
-    return '<b style="color:' + (p > 0 ? '#B3261E' : '#1E7D3A') + '" dir="ltr">' + (p > 0 ? '▲ +' : '▼ ') + p.toFixed(1) + '%</b>';
+    if (p === null) return l.isNew ? '<span class="tg new">🆕 جديد</span>' : '<span class="mut">-</span>';
+    if (p === 0) return '<span class="tg eq">ثابت</span>';
+    return '<span class="tg ' + (p > 0 ? 'up' : 'dn') + '" dir="ltr">' + pctTxt(p) + '</span>';
   };
+
+  // ---- تجميع الأصناف على الفترة كلها (الصنف بالباركود، ولو مفيش بالاسم)
+  const items = {};
+  done.forEach(v => (L[v.id] || []).forEach(l => {
+    const key = (l.barcode && String(l.barcode).trim()) || String(l.name || '').trim();
+    if (!key) return;
+    const it = items[key] = items[key] || { name: l.name, barcode: l.barcode || '', sup: {}, qty: 0, spend: 0, impact: 0, first: null, last: null, isNew: false, n: 0 };
+    it.n++; it.qty += Q(l); it.spend += Number(l.total) || 0; it.sup[v.supplier] = 1; it.isNew = it.isNew || !!l.isNew;
+    const o = O(l), p = P(l);
+    if (o > 0 && p > 0) it.impact += (p - o) * Q(l);
+    if (!it.first) it.first = { o: o > 0 ? o : null, p: p, at: v.doneAt };
+    it.last = { p: p, at: v.doneAt, sup: v.supplier };
+  }));
+  const list = Object.values(items).map(it => {
+    const base = it.first.o || null, now2 = it.last.p;
+    it.pct = base > 0 && now2 > 0 ? (Math.abs(now2 - base) < 0.01 ? 0 : (now2 - base) / base * 100) : null;
+    it.base = base; it.now = now2; it.supTxt = Object.keys(it.sup).join('، ');
+    return it;
+  });
+  const ups = list.filter(i => i.pct > 0).sort((a, b) => b.pct - a.pct);
+  const dns = list.filter(i => i.pct < 0).sort((a, b) => a.pct - b.pct);
+  const flat = list.filter(i => i.pct === 0).length;
+  const fresh = list.filter(i => i.pct === null && i.isNew).length;
+  const impactUp = list.reduce((s, i) => s + Math.max(0, i.impact), 0), impactDn = list.reduce((s, i) => s + Math.min(0, i.impact), 0);
+  const impact = impactUp + impactDn;
+  // متوسط التغيير مرجّح بقيمة الشراء
+  const wBase = list.filter(i => i.pct !== null).reduce((s, i) => s + i.spend, 0);
+  const wAvg = wBase ? list.filter(i => i.pct !== null).reduce((s, i) => s + i.pct * i.spend, 0) / wBase : 0;
+  const bySpend = list.slice().sort((a, b) => b.spend - a.spend);
+  const hasLines = list.length > 0;
+
+  // ---- الموردين
+  const bySup = {};
+  done.forEach(v => {
+    const x = bySup[v.supplier] = bySup[v.supplier] || { n: 0, t: 0, up: 0, dn: 0 };
+    x.n++; x.t += v.total;
+    (L[v.id] || []).forEach(l => { const c = chg(l); if (c > 0) x.up++; else if (c < 0) x.dn++; });
+  });
+  const supRows = Object.entries(bySup).sort((a, b) => b[1].t - a[1].t);
+
+  // ---- أهم الملاحظات (بالكلام)
+  const notes = [];
+  if (ups.length) notes.push('📈 <b>' + ups.length + ' صنف</b> سعر شرائه زاد' + (impactUp > 0 ? '، وده زوّد تكلفة المشتريات بـ <b class="up">' + money(impactUp) + ' ج.م</b> في الفترة' : ''));
+  if (ups[0]) notes.push('🔺 أكبر زيادة: <b>' + esc(ups[0].name) + '</b> (' + esc(ups[0].last.sup) + ') <b class="up" dir="ltr">+' + ups[0].pct.toFixed(1) + '%</b> - من ' + money(ups[0].base) + ' لـ ' + money(ups[0].now));
+  if (dns.length) notes.push('📉 <b>' + dns.length + ' صنف</b> سعره قل' + (impactDn < 0 ? '، ووفّر <b class="dn">' + money(-impactDn) + ' ج.م</b>' : ''));
+  if (dns[0]) notes.push('🔻 أكبر نقص: <b>' + esc(dns[0].name) + '</b> (' + esc(dns[0].last.sup) + ') <b class="dn" dir="ltr">' + dns[0].pct.toFixed(1) + '%</b> - من ' + money(dns[0].base) + ' لـ ' + money(dns[0].now));
+  if (supRows[0] && total > 0) notes.push('🏷 أكبر مورد: <b>' + esc(supRows[0][0]) + '</b> بـ ' + Math.round(supRows[0][1].t / total * 100) + '% من المشتريات (' + supRows[0][1].n + ' فاتورة)');
+  if (bySpend[0] && total > 0) notes.push('🛒 أكبر صنف اتصرف عليه: <b>' + esc(bySpend[0].name) + '</b> بـ ' + money(bySpend[0].spend) + ' ج.م');
+  if (fresh) notes.push('🆕 <b>' + fresh + ' صنف جديد</b> اتشرى لأول مرة');
+  if (hasLines && !ups.length && !dns.length) notes.push('✅ مفيش أي تغيير في أسعار الشراء في الفترة دي');
+
+  // ---- رسم: أكبر التغييرات (أحمر زيادة / أخضر نقص)
+  const top = ups.slice(0, 8).concat(dns.slice(0, 8)).sort((a, b) => b.pct - a.pct);
+  const maxAbs = Math.max(1, ...top.map(i => Math.abs(i.pct)));
+  const chart = top.length ? '<div class="chart">' + top.map(i => {
+    const wpx = Math.max(2, Math.abs(i.pct) / maxAbs * 100);
+    return '<div class="crow"><div class="cn" title="' + esc(i.supTxt) + '">' + esc(i.name) + '<small>' + money(i.base) + ' ← ' + money(i.now) + '</small></div>' +
+      '<div class="cbar"><div class="half l">' + (i.pct < 0 ? '<i class="dn" style="width:' + wpx + '%"></i><em class="dn">' + i.pct.toFixed(1) + '%</em>' : '') + '</div>' +
+      '<div class="half r">' + (i.pct > 0 ? '<i class="up" style="width:' + wpx + '%"></i><em class="up">+' + i.pct.toFixed(1) + '%</em>' : '') + '</div></div></div>';
+  }).join('') + '<div class="cleg"><span><i class="dn"></i> نقص في سعر الشراء</span><span><i class="up"></i> زيادة في سعر الشراء</span></div></div>' : '';
+
+  const chTable = (arr, cls) => '<table class="t2"><thead><tr><th>الصنف</th><th>المورد</th><th>السعر القديم</th><th>السعر الجديد</th><th>الفرق</th><th>النسبة</th><th>الكمية</th><th>أثرها على التكلفة</th></tr></thead><tbody>' +
+    arr.map(i => '<tr><td><b>' + esc(i.name) + '</b>' + (i.barcode ? '<br><small class="mut" dir="ltr">' + esc(i.barcode) + '</small>' : '') + '</td><td>' + esc(i.supTxt) + '</td><td class="num">' + money(i.base) +
+      '</td><td class="num"><b>' + money(i.now) + '</b></td><td class="num ' + cls + '">' + (i.now - i.base > 0 ? '+' : '') + money(i.now - i.base) + '</td><td><span class="tg ' + cls + '" dir="ltr">' + pctTxt(i.pct) +
+      '</span></td><td class="num">' + num(i.qty) + '</td><td class="num ' + cls + '">' + (i.impact > 0 ? '+' : '') + money(i.impact) + '</td></tr>').join('') + '</tbody></table>';
+
+  const maxSpend = bySpend[0] ? bySpend[0].spend : 1;
+  const itemsAll = hasLines ? '<table class="t2"><thead><tr><th>#</th><th>الصنف</th><th>المورد</th><th>مرات الشراء</th><th>الكمية</th><th>آخر سعر</th><th>التغيير</th><th>إجمالي الشراء</th><th style="width:22%">من المشتريات</th></tr></thead><tbody>' +
+    bySpend.map((i, k) => '<tr><td class="mut">' + (k + 1) + '</td><td><b>' + esc(i.name) + '</b></td><td>' + esc(i.supTxt) + '</td><td class="num">' + i.n + '</td><td class="num">' + num(i.qty) +
+      '</td><td class="num">' + money(i.now) + '</td><td>' + (i.pct === null ? (i.isNew ? '<span class="tg new">🆕 جديد</span>' : '<span class="mut">-</span>') : i.pct === 0 ? '<span class="tg eq">ثابت</span>' : '<span class="tg ' + (i.pct > 0 ? 'up' : 'dn') + '" dir="ltr">' + pctTxt(i.pct) + '</span>') +
+      '</td><td class="num"><b>' + money(i.spend) + '</b></td><td><div class="sbar"><i style="width:' + (i.spend / maxSpend * 100) + '%"></i><span>' + (total ? (i.spend / total * 100).toFixed(1) : 0) + '%</span></div></td></tr>').join('') +
+    '</tbody></table>' : '';
+
   const itemsHtml = v => {
     const lines = L[v.id] || [];
     if (!lines.length) return '';
-    const ups = lines.filter(l => chg(l) > 0).length, downs = lines.filter(l => chg(l) < 0).length;
+    const u = lines.filter(l => chg(l) > 0).length, d = lines.filter(l => chg(l) < 0).length;
     return '<tr class="it"><td></td><td colspan="9"><div class="itsum">أصناف الفاتورة (' + lines.length + ')' +
-      (ups ? ' • <span style="color:#B3261E">▲ ' + ups + ' زيادة</span>' : '') + (downs ? ' • <span style="color:#1E7D3A">▼ ' + downs + ' نقص</span>' : '') + '</div>' +
+      (u ? ' • <span class="up">▲ ' + u + ' زيادة</span>' : '') + (d ? ' • <span class="dn">▼ ' + d + ' نقص</span>' : '') + '</div>' +
       '<table class="sub"><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>السعر القديم</th><th>نسبة التغيير</th><th>الإجمالي</th></tr></thead><tbody>' +
-      lines.map(l => '<tr><td>' + esc(l.name) + '</td><td class="num">' + num(l.pieces) + '</td><td class="num">' + money(l.price) + '</td><td class="num">' +
-        (l.oldPrice ? money(l.oldPrice) : '-') + '</td><td class="num">' + pctHtml(l) + '</td><td class="num">' + money(l.total) + '</td></tr>').join('') +
+      lines.map(l => '<tr><td>' + esc(l.name) + '</td><td class="num">' + num(Q(l)) + '</td><td class="num">' + money(P(l)) + '</td><td class="num">' +
+        (O(l) > 0 ? money(O(l)) : '-') + '</td><td class="num">' + pctHtml(l) + '</td><td class="num">' + money(l.total) + '</td></tr>').join('') +
       '</tbody></table></td></tr>';
   };
 
+  const maxSup = supRows[0] ? supRows[0][1].t : 1;
   const html = '<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير ' + esc(st) + '</title>' +
     '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap">' +
-    '<style>body{font-family:Cairo,Tahoma,sans-serif;margin:0;color:#17212E;background:#fff}.page{max-width:1000px;margin:0 auto;padding:28px}' +
+    '<style>body{font-family:Cairo,Tahoma,sans-serif;margin:0;color:#17212E;background:#fff}.page{max-width:1040px;margin:0 auto;padding:28px}' +
     '.hd{display:flex;align-items:center;justify-content:space-between;border-bottom:4px solid #1479D3;padding-bottom:14px}.hd img{height:70px}' +
     '.hd h1{margin:0;font-size:24px;color:#0B3D6E}.hd p{margin:2px 0;color:#6B7785}.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:18px 0}' +
     '.k{border-radius:14px;padding:12px;color:#fff}.k small{opacity:.9}.k b{display:block;font-size:22px}.k1{background:#1479D3}.k2{background:#22A04B}.k3{background:#E67E00}.k4{background:#6C4BD8}.k5{background:#0B3D6E}' +
+    '.sec{margin-top:26px;page-break-inside:auto}.sec>h2{display:flex;align-items:center;gap:8px;color:#0B3D6E;margin:0 0 10px;font-size:19px;border-inline-start:5px solid #1479D3;padding-inline-start:10px}' +
+    '.kp{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}.kp div{border:1.5px solid #DFE7F1;border-radius:14px;padding:10px 12px;background:#F8FBFE}' +
+    '.kp small{color:#6B7785;font-weight:600;display:block}.kp b{font-size:21px;display:block;margin-top:2px}.kp em{font-style:normal;font-size:12px;color:#6B7785}' +
+    '.up{color:#B3261E}.dn{color:#1E7D3A}.mut{color:#8A96A3}' +
+    '.notes{background:linear-gradient(135deg,#F2F8FF,#FFF8EC);border:1.5px solid #DCE8F6;border-radius:16px;padding:12px 18px;margin:0}.notes li{margin:5px 0;line-height:1.9;list-style:none}' +
+    '.chart{border:1.5px solid #DFE7F1;border-radius:16px;padding:14px}.crow{display:grid;grid-template-columns:230px 1fr;gap:10px;align-items:center;padding:4px 0;border-bottom:1px dashed #EEF2F7}' +
+    '.cn{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cn small{display:block;color:#8A96A3;font-weight:600;direction:ltr;text-align:right}' +
+    '.cbar{display:grid;grid-template-columns:1fr 1fr;direction:ltr}.half{position:relative;height:22px;display:flex;align-items:center}.half.l{justify-content:flex-end;border-right:2px solid #9AA9B9}.half.r{justify-content:flex-start}' +
+    '.half i{display:block;height:16px;border-radius:4px}.half.l i{border-radius:4px 0 0 4px}.half.r i{border-radius:0 4px 4px 0}i.up{background:linear-gradient(90deg,#F28B82,#D93025)}i.dn{background:linear-gradient(270deg,#81C995,#1E8E3E)}' +
+    '.half em{font-style:normal;font-weight:800;font-size:12px;padding:0 6px;white-space:nowrap}' +
+    '.cleg{display:flex;gap:18px;justify-content:center;margin-top:10px;color:#6B7785;font-size:12px}.cleg i{display:inline-block;width:14px;height:10px;border-radius:3px;vertical-align:middle}' +
+    '.tg{display:inline-block;border-radius:999px;padding:1px 9px;font-weight:800;font-size:12px;white-space:nowrap}.tg.up{background:#FDECEA;color:#B3261E}.tg.dn{background:#E6F4EA;color:#1E7D3A}.tg.eq{background:#EEF2F7;color:#6B7785}.tg.new{background:#FFF3E0;color:#C25E00}' +
+    '.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}' +
+    '.sbar{position:relative;height:18px;background:#EEF2F7;border-radius:6px;overflow:hidden}.sbar i{position:absolute;inset-block:0;right:0;background:linear-gradient(270deg,#5AA9EE,#1479D3);border-radius:6px}.sbar span{position:relative;font-size:11px;font-weight:800;padding:0 6px;color:#0B3D6E}' +
     'table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}th{background:#0B3D6E;color:#fff;padding:8px 6px;text-align:right}td{padding:7px 6px;border-bottom:1px solid #DFE7F1}' +
+    'table.t2 tbody tr:nth-child(even) td{background:#F8FBFE}' +
     'tr.inv td{background:#EEF4FB;font-weight:600;border-top:2px solid #C9D8EA}tr.it>td{background:#fff;padding:4px 6px 12px}' +
     '.itsum{font-weight:700;color:#0B3D6E;margin:4px 0}table.sub{font-size:12px;margin:0}table.sub th{background:#1479D3;padding:5px 6px}table.sub td{padding:4px 6px}' +
-    'tr{page-break-inside:avoid}' +
-    '.num{direction:ltr;text-align:left;font-variant-numeric:tabular-nums}h2{color:#0B3D6E;margin:24px 0 6px;font-size:18px}' +
+    'tr{page-break-inside:avoid}.num{direction:ltr;text-align:left;font-variant-numeric:tabular-nums}h2{color:#0B3D6E;margin:24px 0 6px;font-size:18px}' +
     '.ft{margin-top:26px;border-top:1px solid #DFE7F1;padding-top:10px;color:#6B7785;font-size:12px;display:flex;justify-content:space-between}' +
-    '.pb{position:fixed;top:14px;left:14px}.pb button{font-family:Cairo;font-size:15px;font-weight:700;background:#1479D3;color:#fff;border:0;border-radius:10px;padding:10px 18px;cursor:pointer}' +
-    '@media print{.pb{display:none}.page{padding:0}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><div class="pb"><button onclick="print()">🖨 طباعة / حفظ PDF</button></div><div class="page">' +
+    '.pb{position:fixed;top:14px;left:14px;z-index:5}.pb button{font-family:Cairo;font-size:15px;font-weight:700;background:#1479D3;color:#fff;border:0;border-radius:10px;padding:10px 18px;cursor:pointer}' +
+    '@media (max-width:760px){.grid,.kp{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.crow{grid-template-columns:120px 1fr}.page{padding:14px}table{font-size:11.5px}}' +
+    '@media print{.pb{display:none}.page{padding:0}.brk{page-break-before:always}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><div class="pb"><button onclick="print()">🖨 طباعة / حفظ PDF</button></div><div class="page">' +
     '<div class="hd"><div><h1>تقرير فواتير المشتريات</h1><p><b>' + esc(st) + '</b></p><p>من ' + d2(from) + ' إلى ' + d2(to) + '</p></div><img src="' + logo + '"></div>' +
     '<div class="grid"><div class="k k1"><small>فواتير دخلت</small><b>' + done.length + '</b></div><div class="k k2"><small>إجمالي المشتريات</small><b>' + money(total) + '</b></div>' +
     '<div class="k k3"><small>متوسط وقت الإدخال</small><b>' + durTxt(avg) + '</b></div><div class="k k4"><small>في الميعاد (≤ ' + SLA_MIN + ' د)</small><b>' + Math.round(ontime * 100) + '%</b></div>' +
     '<div class="k k5"><small>تعديلات أسعار البيع</small><b>' + pch + '</b></div></div>' +
     (waiting ? '<p style="color:#E67E00;font-weight:700">⏳ فيه ' + waiting + ' فاتورة للفرع لسه ما دخلتش السيستم</p>' : '') +
-    '<h2>الفواتير</h2><table><thead><tr><th>#</th><th>تاريخ الإدخال</th><th>المورد</th><th>رقم فاتورة المورد</th><th>رقم السيستم</th><th>أصناف</th><th>الإجمالي</th><th>رصيد المورد</th><th>أدخلها</th><th>المدة</th></tr></thead><tbody>' +
+    // ---------- ملخص لصناع القرار
+    (hasLines ? '<div class="sec"><h2>📊 ملخص أسعار الشراء</h2><div class="kp">' +
+      '<div><small>أصناف اتشرت</small><b>' + list.length + '</b><em>في ' + done.length + ' فاتورة</em></div>' +
+      '<div><small>سعرها زاد ▲</small><b class="up">' + ups.length + '</b><em>' + (list.length ? Math.round(ups.length / list.length * 100) : 0) + '% من الأصناف</em></div>' +
+      '<div><small>سعرها قل ▼</small><b class="dn">' + dns.length + '</b><em>' + (list.length ? Math.round(dns.length / list.length * 100) : 0) + '% من الأصناف</em></div>' +
+      '<div><small>ثابتة / جديدة</small><b>' + flat + ' <span class="mut">/</span> ' + fresh + '</b><em>ثابتة / 🆕 أول مرة</em></div>' +
+      '<div><small>متوسط التغيير</small><b class="' + (wAvg > 0 ? 'up' : wAvg < 0 ? 'dn' : '') + '" dir="ltr">' + (wAvg > 0 ? '+' : '') + wAvg.toFixed(1) + '%</b><em>مرجّح بقيمة الشراء</em></div>' +
+      '<div><small>أثرها على التكلفة</small><b class="' + (impact > 0 ? 'up' : impact < 0 ? 'dn' : '') + '" dir="ltr">' + (impact > 0 ? '+' : '') + money(impact) + '</b><em>' + (impact > 0 ? 'زيادة في التكلفة' : impact < 0 ? 'توفير' : 'من غير تغيير') + ' (ج.م)</em></div>' +
+      '</div></div>' +
+      (notes.length ? '<div class="sec"><h2>💡 أهم الملاحظات</h2><ul class="notes">' + notes.map(n => '<li>' + n + '</li>').join('') + '</ul></div>' : '') +
+      (chart ? '<div class="sec"><h2>📈 أكبر تغييرات في سعر الشراء</h2>' + chart + '</div>' : '') +
+      (ups.length ? '<div class="sec"><h2>🔺 الأصناف اللي سعرها زاد (' + ups.length + ')</h2>' + chTable(ups, 'up') + '</div>' : '') +
+      (dns.length ? '<div class="sec"><h2>🔻 الأصناف اللي سعرها قل (' + dns.length + ')</h2>' + chTable(dns, 'dn') + '</div>' : '') +
+      '<div class="sec brk"><h2>🛒 كل الأصناف المشتراة (' + list.length + ')</h2><p class="mut" style="margin:-4px 0 4px">مترتبة من الأكتر صرف للأقل - التغيير = آخر سعر مقارنة بالسعر اللي كان قبل الفترة</p>' + itemsAll + '</div>'
+      : (done.length ? '<p class="mut">⚠️ مقدرتش أحمّل أصناف الفواتير - التقرير فيه الفواتير بس</p>' : '')) +
+    (supRows.length ? '<div class="sec"><h2>🏷 الموردين</h2><table class="t2"><thead><tr><th>المورد</th><th>عدد الفواتير</th><th>الإجمالي</th><th style="width:28%">من المشتريات</th><th>أصناف زادت</th><th>أصناف قلت</th></tr></thead><tbody>' +
+      supRows.map(([n, x]) => '<tr><td><b>' + esc(n) + '</b></td><td class="num">' + x.n + '</td><td class="num"><b>' + money(x.t) + '</b></td><td><div class="sbar"><i style="width:' + (x.t / maxSup * 100) + '%"></i><span>' +
+        (total ? (x.t / total * 100).toFixed(1) : 0) + '%</span></div></td><td class="num">' + (x.up ? '<span class="tg up">▲ ' + x.up + '</span>' : '<span class="mut">-</span>') +
+        '</td><td class="num">' + (x.dn ? '<span class="tg dn">▼ ' + x.dn + '</span>' : '<span class="mut">-</span>') + '</td></tr>').join('') + '</tbody></table></div>' : '') +
+    // ---------- تفاصيل الفواتير
+    '<div class="sec brk"><h2>🧾 تفاصيل الفواتير</h2><table><thead><tr><th>#</th><th>تاريخ الإدخال</th><th>المورد</th><th>رقم فاتورة المورد</th><th>رقم السيستم</th><th>أصناف</th><th>الإجمالي</th><th>رصيد المورد</th><th>أدخلها</th><th>المدة</th></tr></thead><tbody>' +
     (done.length ? done.map((v, k) => '<tr class="inv"><td>' + (k + 1) + '</td><td>' + dt(v.doneAt) + '</td><td>' + esc(v.supplier) + '</td><td>' + esc(v.number || '-') + '</td><td>' + esc(v.systemNo) +
       '</td><td class="num">' + v.count + '</td><td class="num">' + money(v.total) + '</td><td class="num">' + esc(v.balance) + '</td><td>' + esc(v.doneBy) + '</td><td>' + durTxt(mins(v.createdAt, v.doneAt)) + '</td></tr>' + itemsHtml(v)).join('')
       : '<tr><td colspan="10" style="text-align:center;padding:20px">مفيش فواتير دخلت في الفترة دي</td></tr>') +
-    (done.length ? '<tr><td></td><td colspan="5"><b>الإجمالي</b></td><td class="num"><b>' + money(total) + '</b></td><td colspan="3"></td></tr>' : '') + '</tbody></table>' +
-    (supRows.length ? '<h2>ملخص الموردين</h2><table><thead><tr><th>المورد</th><th>عدد الفواتير</th><th>الإجمالي</th></tr></thead><tbody>' +
-      supRows.map(([n, x]) => '<tr><td>' + esc(n) + '</td><td class="num">' + x.n + '</td><td class="num">' + money(x.t) + '</td></tr>').join('') + '</tbody></table>' : '') +
+    (done.length ? '<tr><td></td><td colspan="5"><b>الإجمالي</b></td><td class="num"><b>' + money(total) + '</b></td><td colspan="3"></td></tr>' : '') + '</tbody></table></div>' +
     '<div class="ft"><span>مدقق - Mudaqeq</span><span>اتعمل ' + dt(new Date(now()).toISOString()) + ' بواسطة ' + esc(me) + '</span></div></div></body></html>';
   w.document.open(); w.document.write(html); w.document.close();
 }
