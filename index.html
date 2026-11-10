@@ -156,7 +156,7 @@
   .chk { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #4A5868; cursor: pointer; }
   .chk input { width: auto; }
   .board { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 14px; height: calc(100vh - 150px); align-items: flex-start; }
-  .bcol { flex: 0 0 310px; background: #E9EEF5; border-radius: 16px; display: flex; flex-direction: column; max-height: 100%; }
+  .bcol { flex: 0 0 285px; background: #E9EEF5; border-radius: 16px; display: flex; flex-direction: column; max-height: 100%; }
   .bhead { padding: 12px 14px 8px; border-bottom: 1px solid #D6DFEA; }
   .bhead h3 { margin: 0; font-size: 16px; color: #0B3D6E; display: flex; align-items: center; gap: 6px; }
   .bhead h3 .dot { width: 10px; height: 10px; border-radius: 50%; background: #2BB45A; display: inline-block; }
@@ -177,6 +177,32 @@
   .tl li .tm { color: #6B7785; margin-inline-start: auto; white-space: nowrap; direction: ltr; font-size: 11.5px; }
   .tl li.note { color: #8C1D18; }
   .bempty { text-align: center; color: #8A96A3; padding: 18px 6px; font-size: 13px; }
+  /* لون كل عميل + كروت صغيرة بتكبر لما تقف عليها */
+  .bcol { border-top: 6px solid var(--sc, #1479D3); }
+  .bhead { background: color-mix(in srgb, var(--sc, #1479D3) 9%, transparent); border-radius: 10px 10px 0 0; }
+  .sdot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; margin-inline-end: 4px; box-shadow: 0 0 0 2px #fff; }
+  .bbody { gap: 7px; }
+  .bcard { padding: 7px 10px; }
+  .bcard .bt b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .bcard .bm { margin: 1px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bcard .bx { max-height: 0; overflow: hidden; opacity: 0; transition: max-height .25s ease, opacity .2s; }
+  .bcard:hover .bx, .bcard.open .bx { max-height: 900px; opacity: 1; margin-top: 6px; }
+  .bcard:hover { transform: none; box-shadow: 0 6px 18px rgba(16,40,70,.18); }
+  .bcard.k-tk { border-inline-start-color: #546E7A; } .bcard.k-tk.urg { border-inline-start-color: #C62828; }
+  .bcard.k-task { border-inline-start-color: #6C4BD8; background: #FAF8FF; } .bcard.k-task.done { opacity: .65; border-inline-start-color: #2BB45A; background: #fff; }
+  .bcard.k-task.late { box-shadow: 0 0 0 2px #6C4BD8; }
+  .bcard.k-jr { border-inline-start-color: #00897B; background: #F1FBF9; }
+  .bcard .kind { font-size: 11px; font-weight: 800; color: #6B7785; margin-inline-end: 4px; }
+  .bacts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .bacts .btn { padding: 5px 10px; font-size: 12.5px; }
+  .bdesc { font-size: 12.5px; color: #33404D; white-space: pre-wrap; margin-bottom: 4px; }
+  .s14 { background: linear-gradient(135deg, #7E57C2, #4527A0); }
+  .tkgrp { border: 1px solid #E3E9F1; border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; }
+  .tkgrp .bar { height: 6px; background: #EEF2F7; border-radius: 4px; overflow: hidden; margin: 5px 0; }
+  .tkgrp .bar i { display: block; height: 100%; background: #6C4BD8; }
+  .stpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 10px; max-height: 220px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+  .stpick label { display: flex; gap: 6px; align-items: center; font-weight: 600; }
+  .stpick input { width: auto; }
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
   /* رحلة الفاتورة: 4 كروت كبيرة بأسهم + فلاتر صغيرة تحتها */
   #stats { display: block; }
@@ -667,6 +693,7 @@
           <select id="fStore" onchange="renderList()"><option value="">كل المحلات</option></select>
           <input id="fText" placeholder="🔍 بحث بالمورد أو الرقم أو المشكلة" oninput="renderList()">
           <button class="btn soft hidden" id="tkNewBtn" onclick="tkNewDlg()" title="افتح تذكرة دعم لفرع (مثلًا كلّمك في التليفون)">＋ تذكرة</button>
+          <button class="btn soft hidden" id="taskNewBtn" onclick="taskNewDlg()" title="تاسك لمحل أو لكذا محل (ومكررة لو عاوز)">＋ تاسك</button>
           <button class="btn soft hidden" id="tkTypesBtn" onclick="tkTypesDlg()" title="أنواع المشاكل وأهمية العملاء">⚙️</button>
         </div>
         <div id="list"></div>
@@ -685,6 +712,8 @@
       </div>
       <input id="bText" placeholder="🔍 بحث بالمورد أو الموظف" oninput="renderBoard()">
       <label class="chk"><input type="checkbox" id="bOpen" onchange="renderBoard()"> الشغالة بس</label>
+      <button class="btn soft" onclick="taskNewDlg()">＋ تاسك</button>
+      <button class="btn soft" onclick="tasksDlg()">📋 التاسكات</button>
       <span class="sp"></span><span class="muted" id="bInfo"></span>
     </div>
     <div class="board" id="board"></div>
@@ -1016,6 +1045,8 @@ async function loadList(quiet) {
     prevStatus = {}; r.invoices.forEach(v => { prevStatus[v.id] = v.status; });
     all = r.invoices; stores = r.stores;
     tks = (r.tickets || []).map(t => Object.assign(t, { kind: 'tk' })); if (r.storePrio) storePrio = r.storePrio;
+    tasks = r.tasks || []; jrs = r.jrs || []; if (r.storeColor) storeColor = r.storeColor;
+    tasksAfterLoad();
     tkAfterLoad(tks);
     chatSum = r.chat || { threads: [], replies: [] };
     if (r.team) teamTick(r.team);
@@ -1073,7 +1104,7 @@ async function loadList(quiet) {
     });
     if (cur && !quiet) openInv(cur.invoice.id, true);
     if (curTk && !quiet) openTk(curTk.ticket.id, true);
-    $('tkTypesBtn').classList.toggle('hidden', myRole !== 'مدير'); $('tkNewBtn').classList.toggle('hidden', isQA());
+    $('tkTypesBtn').classList.toggle('hidden', myRole !== 'مدير'); $('tkNewBtn').classList.toggle('hidden', isQA()); $('taskNewBtn').classList.toggle('hidden', isQA());
   } catch (e) { if (!quiet) toast(msg(e)); }
 }
 // الفلاتر = الكروت الملونة اللي فوق (بتعدّ على حسب المحل والبحث المختارين)
@@ -1092,13 +1123,15 @@ const CARD_TABS = [
   { k: TAB_NOTES, c: 's8', t: '📝 ملاحظات الفروع', f: v => !!v.reviewNotes },
   { k: 'tk', c: 's12', t: '🛠️ تذاكر الدعم المفتوحة', f: () => false },
   { k: 'sched', c: 's13', t: '📅 تذاكر مجدولة', f: () => false, hideEmpty: true },
+  { k: 'tasks', c: 's14', t: '📋 تاسكات وطلبات جرد', f: () => false, hideEmpty: true },
   { k: 'الكل', c: 's9', t: '📋 الكل', f: () => true }
 ];
 // التذاكر بتتفلتر بقواعدها هي (tkInTab)
-CARD_TABS.forEach(x => { const f = x.f; x.f = v => v.kind === 'tk' ? tkInTab(x.k, v) : f(v); });
+CARD_TABS.forEach(x => { const f = x.f; x.f = v => v.kind === 'task' || v.kind === 'jr' ? taskInTab(x.k, v) : v.kind === 'tk' ? tkInTab(x.k, v) : f(v); });
 function baseList() {
   const st = $('fStore').value, q = $('fText').value.trim();
-  return all.concat(tks).filter(v => (!st || v.store === st) && (!q || (v.kind === 'tk' ? v.title + ' ' + v.desc + ' ' + v.user + ' ' + v.store + ' ' + v.assigneeName
+  return all.concat(tks, tasks, jrs).filter(v => (!st || v.store === st) && (!q || (v.kind === 'task' || v.kind === 'jr' ? (v.title || 'طلب جرد') + ' ' + v.store + ' ' + (v.details || v.notes || '')
+    : v.kind === 'tk' ? v.title + ' ' + v.desc + ' ' + v.user + ' ' + v.store + ' ' + v.assigneeName
     : v.supplier + ' ' + v.number + ' ' + v.systemNo + ' ' + v.user + ' ' + v.store).indexOf(q) !== -1));
 }
 function pickTab(k) { tab = k; renderList(); }
@@ -1140,10 +1173,11 @@ function renderList() {
   if (tab === ST_QA) list = list.slice().sort((a, b) => String(a.doneAt).localeCompare(String(b.doneAt)));
   if (tab === ST_NEW || tab === ST_WORK || tab === 'late' || tab === 'urge' || tab === 'tk' || tab === 'sched') list = list.slice().sort(qSort);
   if (tab === 'الكل' || tab === 'chat' || tab === TAB_NOTES) list = list.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-  $('list').innerHTML = list.length ? list.map(v => v.kind === 'tk' ? tkCard(v) :
+  if (tab === 'tasks') list = list.slice().sort((a, b) => taskRank(a) - taskRank(b) || String(a.due || a.at).localeCompare(String(b.due || b.at)));
+  $('list').innerHTML = list.length ? list.map(v => v.kind === 'task' ? taskCard(v, false) : v.kind === 'jr' ? jrCard(v, false) : v.kind === 'tk' ? tkCard(v) :
     '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : v.status === ST_QA ? 'st-qa' : '') + (v.urgeCount && pending(v) ? ' urged' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
     '<div class="top"><span class="sup">' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</span>' + timerHtml(v) + '</div>' +
-    '<div class="meta">🏪 ' + esc(v.store) + ' • ' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
+    '<div class="meta">' + sdot(v.store) + esc(v.store) + ' • ' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
     '<div class="meta">' + badge(v.status) + ' ' + v.count + ' صنف • <span class="money">' + money(v.total) + ' ج.م</span>' +
     (v.receivedBy ? ' • 👤 ' + esc(v.receivedBy) : '') + (v.systemNo ? ' • #' + esc(v.systemNo) : '') +
     (v.rejectCount && v.status !== ST_REJ ? ' • ↩️ اتبعتت تاني' : '') +
@@ -1230,7 +1264,7 @@ function tkCard(v) {
   return '<div class="card tkcard ' + (v.status === TK_WORK ? 'st-work' : v.status === TK_SOLVED || v.status === TK_CLOSED ? 'st-done' : '') + (tkUrgentWaiting(v) ? ' tk-urgent' : '') + (sel ? ' sel' : '') + '" onclick="openTk(\'' + esc(v.id) + '\')">' +
     '<div class="top"><span class="sup">🛠️ ' + esc(v.title) + ' ' + (PRIO_TAG[v.priority] || '') + ((Number(storePrio[v.store]) || 1) > 1 ? ' <span class="tkp tkp-vip">' + '⭐'.repeat((Number(storePrio[v.store]) || 1) - 1) + ' عميل مهم</span>' : '') +
     (v.lastSide === 'فرع' && v.comments && tkOpen(v) ? ' <span class="ctag">💬 الفرع رد</span>' : '') + '</span>' + tkTimer(v) + '</div>' +
-    '<div class="meta">🏪 ' + esc(v.store) + ' • ' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
+    '<div class="meta">' + sdot(v.store) + esc(v.store) + ' • ' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
     (v.desc ? '<div class="meta" style="color:var(--text)">' + esc(v.desc) + '</div>' : '') +
     '<div class="meta">' + tkBadge(v) + (v.assigneeName ? ' • 👤 ' + esc(v.assigneeName) : '') + (v.photos ? ' • 📷 ' + v.photos : '') +
     (v.reopens ? ' • <b style="color:#C62828">↩️ اتفتحت تاني ×' + v.reopens + '</b>' : '') + (v.rating ? ' • ' + stars(v.rating) : '') + '</div></div>';
@@ -1400,7 +1434,9 @@ async function tkTypesDlg() {
       return L.length ? '<h4 style="margin:14px 0 4px">' + (CAT_ICON[k] || '') + ' ' + esc(k) + ' <small style="color:var(--muted)">(' + L.length + ')</small></h4>' + L.map(row).join('') : '';
     }).join('') + T.filter(t => cats.indexOf(t.category) === -1).map(row).join('') : T.map(row).join('')) +
     '<button class="btn soft" style="margin-top:8px" onclick="tkTypeEdit(\'\')">＋ نوع جديد</button>' +
-    '<h3 style="margin-top:16px">⭐ أهمية العملاء</h3>' + r.stores.map(s => '<div class="ckr" style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #EEF2F7"><b>' + esc(s) + '</b><select style="width:auto" onchange="tkSetPrio(\'' + esc(s) + '\',this.value)">' +
+    '<h3 style="margin-top:16px">⭐ أهمية العملاء ولونهم</h3>' + r.stores.map(s => '<div class="ckr" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #EEF2F7"><b style="flex:1">' + sdot(s) + esc(s) + '</b>' +
+      '<input type="color" title="لون العميل" value="' + stColor(s) + '" style="width:42px;height:32px;padding:2px" onchange="tkSetColor(\'' + esc(s) + '\',this.value)">' +
+      '<select style="width:auto" onchange="tkSetPrio(\'' + esc(s) + '\',this.value)">' +
       [[1, 'عادي'], [2, '⭐ مهم'], [3, '⭐⭐ مهم جدًا']].map(x => '<option value="' + x[0] + '"' + (x[0] === (Number(r.storePrio[s]) || 1) ? ' selected' : '') + '>' + x[1] + '</option>').join('') + '</select></div>').join('') +
     '<div class="acts"><button class="btn soft" onclick="closeDlg()">قفل</button></div>');
   window._tkTypes = T; window._tkCats = cats;
@@ -2747,36 +2783,260 @@ function renderBoard() {
     (!onlyOpen || pending(v) || v.status === ST_REJ) &&
     (!q || (v.supplier + ' ' + v.user + ' ' + v.number + ' ' + v.systemNo + ' ' + (v.receivedBy || '') + ' ' + (v.doneBy || '')).indexOf(q) !== -1));
   const names = stores.length ? stores.slice() : [...new Set(all.map(v => v.store))];
+  const txt = v => !q || ((v.title || '') + ' ' + (v.desc || v.details || v.notes || '') + ' ' + (v.user || '') + ' ' + (v.assigneeName || '')).indexOf(q) !== -1;
+  const tkL = tks.filter(v => txt(v) && (tkOpen(v) || v.status === TK_SOLVED || new Date(v.updatedAt || v.createdAt).getTime() >= since.getTime()) && (!onlyOpen || tkOpen(v) || v.status === TK_SOLVED));
+  const taskL = tasks.filter(v => txt(v) && (v.status === 'مفتوحة' || (!onlyOpen && new Date(v.doneAt).getTime() >= since.getTime())));
+  const jrL = jrs.filter(v => txt(v) && (!onlyOpen || ['خلص', 'اتلغى'].indexOf(v.status) === -1));
   // المحلات اللي فيها شغل مستني الأول
-  const by = {}; names.forEach(n => by[n] = []);
-  list.forEach(v => (by[v.store] = by[v.store] || []).push(v));
-  const score = n => by[n].filter(pending).length * 1000 + by[n].length;
+  const by = {}; names.forEach(n => by[n] = { inv: [], tk: [], task: [], jr: [] });
+  const put = (k, v) => { (by[v.store] = by[v.store] || { inv: [], tk: [], task: [], jr: [] })[k].push(v); };
+  list.forEach(v => put('inv', v)); tkL.forEach(v => put('tk', v)); taskL.forEach(v => put('task', v)); jrL.forEach(v => put('jr', v));
+  const busy = n => by[n].inv.filter(pending).length + by[n].tk.filter(tkOpen).length + by[n].task.filter(x => x.status === 'مفتوحة').length + by[n].jr.filter(x => jrOpenSup(x)).length;
+  const score = n => busy(n) * 1000 + by[n].inv.length + by[n].tk.length + by[n].task.length;
   const order = Object.keys(by).sort((a, b) => score(b) - score(a) || a.localeCompare(b));
-  $('bInfo').textContent = list.length + ' فاتورة في ' + order.filter(n => by[n].length).length + ' محل';
+  const nTk = tkL.length, nTask = taskL.filter(x => x.status === 'مفتوحة').length;
+  $('bInfo').textContent = list.length + ' فاتورة' + (nTk ? ' • ' + nTk + ' تذكرة' : '') + (nTask ? ' • ' + nTask + ' تاسك مفتوحة' : '') + ' في ' + order.filter(n => busy(n) || by[n].inv.length).length + ' محل';
   $('board').innerHTML = order.map(n => {
-    const vs = by[n].slice().sort((a, b) => (pending(b) ? 1 : 0) - (pending(a) ? 1 : 0) || last(b) - last(a));
+    const B = by[n];
+    const vs = B.inv.slice().sort((a, b) => (pending(b) ? 1 : 0) - (pending(a) ? 1 : 0) || last(b) - last(a));
     const pend = vs.filter(pending), late = pend.filter(v => mins(v.createdAt, now()) > SLA_MIN).length;
     const today = new Date(now()); today.setHours(0, 0, 0, 0);
     const doneToday = all.filter(v => v.store === n && v.status === ST_DONE && new Date(v.doneAt) >= today).length;
     const rej = vs.filter(v => v.status === ST_REJ).length, rev = vs.filter(v => v.status === ST_DONE && !v.reviewedBy).length;
     const urge = pend.filter(v => v.urgeCount).length;
-    return '<div class="bcol"><div class="bhead"><h3><span class="dot' + (late || urge ? ' bad' : pend.length ? ' warn' : '') + '"></span>' + esc(n) + '</h3>' +
+    const openTk = B.tk.filter(tkOpen), openTask = B.task.filter(x => x.status === 'مفتوحة'), lateTask = openTask.filter(taskLate).length;
+    // الترتيب جوه العمود: طلب الجرد ← التاسكات المفتوحة ← التذاكر المفتوحة ← الفواتير المستنية ← الباقي
+    const cards = [].concat(
+      B.jr.map(v => jrCard(v, true)),
+      openTask.sort((a, b) => String(a.due).localeCompare(String(b.due))).map(v => taskCard(v, true)),
+      openTk.sort(qSort).map(v => tkBoardCard(v)),
+      vs.filter(pending).map(invBoardCard),
+      B.tk.filter(v => !tkOpen(v)).map(v => tkBoardCard(v)),
+      vs.filter(v => !pending(v)).map(invBoardCard),
+      B.task.filter(x => x.status !== 'مفتوحة').map(v => taskCard(v, true)));
+    return '<div class="bcol" style="--sc:' + stColor(n) + '"><div class="bhead"><h3><span class="dot' + (late || urge || lateTask ? ' bad' : busy(n) ? ' warn' : '') + '"></span>' + esc(n) + '</h3>' +
       '<div class="bstats">' + (pend.length ? '<span class="o">⏳ ' + pend.length + ' مستنية</span>' : '') + (late ? '<span class="r">⚠️ ' + late + ' متأخرة</span>' : '') +
-      (urge ? '<span class="r">🔥 ' + urge + ' مستعجلة</span>' : '') + '<span class="g">✅ ' + doneToday + ' النهارده</span>' +
+      (urge ? '<span class="r">🔥 ' + urge + ' مستعجلة</span>' : '') + (openTk.length ? '<span>🛠️ ' + openTk.length + ' تذكرة</span>' : '') +
+      (openTask.length ? '<span style="color:#6C4BD8">📋 ' + openTask.length + ' تاسك' + (lateTask ? ' (' + lateTask + ' متأخرة)' : '') + '</span>' : '') +
+      '<span class="g">✅ ' + doneToday + ' النهارده</span>' +
       (rej ? '<span>↩️ ' + rej + ' مرفوضة</span>' : '') + (rev ? '<span>👀 ' + rev + ' مستنية مراجعة</span>' : '') + '</div>' +
       '<button class="bchat" onclick="openChatModal(\'' + esc(n).replace(/'/g, "\\'") + '\')">💬 شات الفرع' + (chatUnread(n, '') ? ' <span class="cbadge new">' + chatUnread(n, '') + '</span>' : '') + '</button></div>' +
-      '<div class="bbody">' + (vs.length ? vs.map(v => {
-        const isLate = pending(v) && mins(v.createdAt, now()) > SLA_MIN;
-        return '<div class="bcard ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : '') + (isLate ? ' late' : '') +
-          (v.status === ST_QA ? ' st-qa' : '') + '" onclick="page(\'inv\');tab=\'الكل\';openInv(\'' + v.id + '\')">' +
-          '<div class="bt"><b>' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥' + (v.urgeCount > 1 ? '×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</b>' + badge(v.status) + '</div>' +
-          '<div class="bm">' + v.count + ' صنف • <b>' + money(v.total) + ' ج.م</b>' + (v.priceUps ? ' • 📈' + v.priceUps : '') + (v.priceDowns ? ' • 📉' + v.priceDowns : '') +
-          (pending(v) ? ' • ' + timerHtml(v) : '') + '</div>' +
-          '<ul class="tl">' + invEvents(v).map(e => '<li class="' + (e.cls || '') + '"><span>' + e.i + '</span><span>' + esc(e.x) + '</span><span class="tm">' + tm(e.t) + '</span></li>').join('') + '</ul></div>';
-      }).join('') : '<div class="bempty">مفيش حركة في الفترة دي</div>') + '</div></div>';
+      '<div class="bbody">' + (cards.length ? cards.join('') : '<div class="bempty">مفيش حركة في الفترة دي</div>') + '</div></div>';
   }).join('');
 }
+// على الموبايل (من غير ماوس): أول ضغطة تكبّر الكارت، والتانية تفتحه
+const noHover = () => window.matchMedia && window.matchMedia('(hover: none)').matches;
+function bTap(el, ev, fn) {
+  if (ev && ev.target.closest('button,input,select,a')) return;
+  if (noHover() && !el.classList.contains('open')) { document.querySelectorAll('.bcard.open').forEach(x => x.classList.remove('open')); el.classList.add('open'); return; }
+  fn();
+}
+function invBoardCard(v) {
+  const isLate = pending(v) && mins(v.createdAt, now()) > SLA_MIN;
+  return '<div class="bcard ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : '') + (isLate ? ' late' : '') +
+    (v.status === ST_QA ? ' st-qa' : '') + '" onclick="bTap(this,event,()=>{page(\'inv\');tab=\'الكل\';openInv(\'' + v.id + '\')})">' +
+    '<div class="bt"><b><span class="kind">🧾</span>' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥' + (v.urgeCount > 1 ? '×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</b>' + badge(v.status) + '</div>' +
+    '<div class="bm">' + v.count + ' صنف • <b>' + money(v.total) + ' ج.م</b>' + (pending(v) ? ' • ' + timerHtml(v) : ' • ' + tm(v.doneAt || v.createdAt)) + '</div>' +
+    '<div class="bx">' + (v.priceUps || v.priceDowns ? '<div class="bm">' + (v.priceUps ? '📈 ' + v.priceUps + ' زيادة سعر ' : '') + (v.priceDowns ? '📉 ' + v.priceDowns + ' نقص سعر' : '') + '</div>' : '') +
+    '<ul class="tl">' + invEvents(v).map(e => '<li class="' + (e.cls || '') + '"><span>' + e.i + '</span><span>' + esc(e.x) + '</span><span class="tm">' + tm(e.t) + '</span></li>').join('') + '</ul></div></div>';
+}
+function tkBoardCard(v) {
+  const ev = [{ t: v.createdAt, i: '🆕', x: 'طلبها ' + v.user }];
+  if (v.pickedAt) ev.push({ t: v.pickedAt, i: '✋', x: 'استلمها ' + (v.assigneeName || 'الدعم') });
+  if (v.solvedAt) ev.push({ t: v.solvedAt, i: '✅', x: 'اتحلت (بعد ' + durTxt(mins(v.createdAt, v.solvedAt)) + ')' });
+  if (v.rating) ev.push({ t: v.solvedAt, i: '⭐', x: 'تقييم الفرع: ' + v.rating + ' من 5' });
+  return '<div class="bcard k-tk' + (v.priority === TK_URGENT && tkOpen(v) ? ' urg' : '') + (tkLate(v) ? ' late' : '') + '" onclick="bTap(this,event,()=>openTk(\'' + esc(v.id) + '\'))">' +
+    '<div class="bt"><b><span class="kind">🛠️</span>' + esc(v.title) + '</b>' + tkBadge(v) + '</div>' +
+    '<div class="bm">' + (PRIO_TAG[v.priority] || '') + ' ' + esc(v.user) + (v.assigneeName ? ' • 👤 ' + esc(v.assigneeName) : '') + (tkOpen(v) ? ' • ' + tkTimer(v) : '') + '</div>' +
+    '<div class="bx">' + (v.desc ? '<div class="bdesc">' + esc(v.desc) + '</div>' : '') +
+    '<ul class="tl">' + ev.map(e => '<li><span>' + e.i + '</span><span>' + esc(e.x) + '</span><span class="tm">' + tm(e.t) + '</span></li>').join('') + '</ul></div></div>';
+}
 
+
+// ---------- ألوان العملاء ----------
+let storeColor = {};
+const ST_PAL = ['#1479D3', '#E67E00', '#16A085', '#C2185B', '#6C4BD8', '#2E7D32', '#D84315', '#0097A7', '#8D6E63', '#5E35B1', '#AD1457', '#558B2F', '#F9A825', '#00897B', '#7B1FA2', '#455A64'];
+function stColor(n) {
+  if (storeColor[n]) return storeColor[n];
+  const L = (stores || []).slice().sort();
+  let i = L.indexOf(n);
+  if (i < 0) { i = 0; for (const c of String(n)) i = (i * 31 + c.codePointAt(0)) >>> 0; }
+  return ST_PAL[i % ST_PAL.length];
+}
+function sdot(n) { return '<i class="sdot" style="background:' + stColor(n) + '"></i>'; }
+async function tkSetColor(store, c) { try { const r = await api('dStoreColor', { token, store, color: c }, true); storeColor = r.storeColor; renderList(); if (!$('pageStores').classList.contains('hidden')) renderBoard(); toast('اتحفظ اللون ✅'); } catch (e) { toast(msg(e)); } }
+
+// ---------- التاسكات ----------
+let tasks = [], jrs = [], taskKnown = null, jrKnown = null;
+const TASK_OPEN = 'مفتوحة';
+const taskDue = v => new Date(v.due || v.createdAt).getTime() <= now();
+const taskLate = v => v.status === TASK_OPEN && taskDue(v) && now() - new Date(v.due || v.createdAt).getTime() > 15 * 60000;
+const jrOpenSup = v => v.status === 'مستني الدعم';
+function taskInTab(k, v) {
+  if (k === 'الكل') return true;
+  if (k !== 'tasks') return false;
+  return v.kind === 'task' ? v.status === TASK_OPEN : ['مستني الدعم', 'مستني الفرع', 'متثبت', 'شغال'].indexOf(v.status) !== -1;
+}
+function taskRank(v) { return v.kind === 'jr' ? (jrOpenSup(v) ? 0 : 3) : taskLate(v) ? 1 : taskDue(v) ? 2 : 4; }
+function taskCard(v, board) {
+  const done = v.status !== TASK_OPEN, late = taskLate(v), future = !done && !taskDue(v);
+  const st = done ? '<span class="badge b-done">' + (v.status === 'اتلغت' ? 'اتلغت' : '✓ اتعملت') + '</span>' : late ? '<span class="badge" style="background:#EDE7F6;color:#4527A0">⏰ متأخرة</span>' : future ? '<span class="badge b-new">📅 ' + tm(v.due) + '</span>' : '<span class="badge" style="background:#EDE7F6;color:#4527A0">مفتوحة</span>';
+  const btn = done ? '' : '<div class="bacts"><button class="btn" onclick="taskDone(\'' + esc(v.id) + '\')">✓ اتعملت</button>' +
+    (myRole === 'مدير' ? '<button class="btn soft" onclick="taskCancel(\'' + esc(v.id) + '\')">إلغاء</button>' : '') + '</div>';
+  const body = (v.details ? '<div class="bdesc">' + esc(v.details) + '</div>' : '') +
+    '<div class="bm">' + (v.type === 'جرد' ? '📋 من طلب الجرد • ' : '') + 'اتعملت ' + tm(v.createdAt) + ' بواسطة ' + esc(v.createdBy) + '</div>' +
+    (done ? '<div class="bm">✅ ' + esc(v.doneBy) + ' • ' + tm(v.doneAt) + (v.data && v.data.progTotal !== undefined ? ' • البرنامج ' + money(v.data.progTotal) + ' = الجرد ' + money(v.data.appTotal) : '') + '</div>' : '');
+  if (!board) {
+    return '<div class="card" style="border-inline-start:5px solid #6C4BD8" onclick="if(!event.target.closest(\'button\'))this.classList.toggle(\'sel\')">' +
+      '<div class="top"><span class="sup">📋 ' + esc(v.title) + '</span>' + st + '</div><div class="meta">' + sdot(v.store) + esc(v.store) + ' • الميعاد ' + dt(v.due) + '</div>' + body + btn + '</div>';
+  }
+  return '<div class="bcard k-task' + (done ? ' done' : '') + (late ? ' late' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
+    '<div class="bt"><b><span class="kind">📋</span>' + esc(v.title) + '</b>' + st + '</div>' +
+    '<div class="bm">' + (done ? esc(v.doneBy) + ' • ' + tm(v.doneAt) : 'الميعاد ' + tm(v.due)) + '</div>' + btn +
+    '<div class="bx">' + body + '</div></div>';
+}
+async function taskDone(id) {
+  const v = tasks.find(x => x.id === id); if (!v) return;
+  if (v.step === 'upload') {
+    dlg('<h3>📤 ' + esc(v.store) + ': مطابقة الإجمالي</h3><p style="color:var(--muted);margin-top:0">اكتب إجمالي الكميات بعد ما رفعتها على البرنامج، وإجمالي تطبيق الجرد. لازم يبقوا زي بعض.</p>' +
+      '<label class="fl">إجمالي البرنامج</label><input id="tP" type="number" step="0.01" inputmode="decimal">' +
+      '<label class="fl" style="margin-top:8px">إجمالي تطبيق الجرد</label><input id="tA" type="number" step="0.01" inputmode="decimal">' +
+      '<div id="tCmp" style="margin-top:8px;font-weight:700"></div>' +
+      '<div class="acts"><button class="btn" id="dlgOk">✓ مطابق - خلصت</button><button class="btn soft" onclick="closeDlg()">رجوع</button></div>');
+    const cmp = () => { const a = Number($('tP').value), b = Number($('tA').value); if ($('tP').value === '' || $('tA').value === '') { $('tCmp').textContent = ''; return; }
+      const d = Math.round((a - b) * 100) / 100; $('tCmp').innerHTML = Math.abs(d) <= 1 ? '<span style="color:#1A8A3E">✅ مطابق</span>' : '<span style="color:#C62828">❌ فيه فرق ' + money(d) + ' ج.م</span>'; };
+    $('tP').oninput = cmp; $('tA').oninput = cmp;
+    $('dlgOk').onclick = async () => {
+      try { const r = await api('dTaskDone', { token, id, data: { progTotal: $('tP').value, appTotal: $('tA').value } }, true); closeDlg(); taskApply(r); toast('✅ اتعملت'); } catch (e) { toast(msg(e)); }
+    };
+    return;
+  }
+  try { const r = await api('dTaskDone', { token, id }, true); taskApply(r); toast('✅ اتعملت' + (v.type === 'جرد' ? ' - الخطوة اللي بعدها هتظهر لوحدها' : '')); } catch (e) { toast(msg(e)); }
+}
+async function taskCancel(id) {
+  const v = tasks.find(x => x.id === id); if (!v) return;
+  const grp = tasks.filter(x => x.group === v.group && x.status === TASK_OPEN).length;
+  dlg('<h3>إلغاء التاسك؟</h3><p>' + esc(v.title) + ' - ' + esc(v.store) + '</p><div class="acts">' +
+    '<button class="btn" onclick="taskCancelGo(\'' + esc(id) + '\',false)">إلغاء للمحل ده بس</button>' +
+    (grp > 1 ? '<button class="btn" onclick="taskCancelGo(\'' + esc(id) + '\',true)">إلغاء لكل المحلات (' + grp + ')</button>' : '') +
+    '<button class="btn soft" onclick="closeDlg()">رجوع</button></div>');
+}
+async function taskCancelGo(id, allG) { try { const r = await api('dTaskCancel', { token, id, all: allG }, true); closeDlg(); taskApply(r); toast('اتلغت'); } catch (e) { toast(msg(e)); } }
+function taskApply(r) {
+  if (r.tasks) tasks = r.tasks; if (r.jrs) jrs = r.jrs;
+  renderList(); if (!$('pageStores').classList.contains('hidden')) renderBoard();
+  if ($('dlg') && $('dlg').dataset.k === 'tasks') tasksDlg();
+}
+// تاسك جديدة: لمحل أو لكذا محل، مرة واحدة أو مكررة
+function taskNewDlg() {
+  const two = n => String(n).padStart(2, '0'), d = new Date(now() + 10 * 60000);
+  const local = d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()) + 'T' + two(d.getHours()) + ':' + two(d.getMinutes());
+  const days = ['الحد', 'الاتنين', 'التلات', 'الأربع', 'الخميس', 'الجمعة', 'السبت'];
+  dlg('<h3>＋ تاسك جديدة</h3><input id="kT" placeholder="عنوان التاسك (مثلاً: تحديث أسعار الزيت)">' +
+    '<label class="fl" style="margin-top:8px">التفاصيل</label><textarea id="kD" rows="3" style="width:100%;font:inherit;padding:8px;border-radius:10px;border:1.5px solid var(--line)"></textarea>' +
+    '<label class="fl" style="margin-top:8px">المحلات</label><div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><label class="chk"><input type="checkbox" id="kAll" onchange="document.querySelectorAll(\'.stpick input\').forEach(x=>x.checked=this.checked)"> كل المحلات</label>' +
+    '<input id="kQ" placeholder="🔍 دوّر على محل" style="flex:1" oninput="document.querySelectorAll(\'.stpick label\').forEach(l=>l.style.display=l.textContent.indexOf(this.value)!==-1?\'\':\'none\')"></div>' +
+    '<div class="stpick">' + stores.map(s => '<label><input type="checkbox" value="' + esc(s) + '">' + sdot(s) + esc(s) + '</label>').join('') + '</div>' +
+    '<label class="fl" style="margin-top:8px">التكرار</label><select id="kR" onchange="$(\'kOnce\').style.display=this.value?\'none\':\'\';$(\'kRep\').style.display=this.value?\'\':\'none\';$(\'kWd\').style.display=this.value===\'أسبوعي\'?\'\':\'none\'">' +
+    '<option value="">مرة واحدة</option><option value="يومي">كل يوم</option><option value="أسبوعي">كل أسبوع</option></select>' +
+    '<div id="kOnce"><label class="fl" style="margin-top:8px">الميعاد</label><input type="datetime-local" id="kDue" value="' + local + '"></div>' +
+    '<div id="kRep" style="display:none"><label class="fl" style="margin-top:8px">الساعة</label><input type="time" id="kTime" value="09:00">' +
+    '<div id="kWd" style="display:none"><label class="fl" style="margin-top:8px">يوم الأسبوع</label><select id="kWday">' + days.map((x, i) => '<option value="' + i + '">' + x + '</option>').join('') + '</select></div></div>' +
+    '<div class="acts"><button class="btn" id="dlgOk">ابعت للمحلات</button><button class="btn soft" onclick="closeDlg()">رجوع</button></div>');
+  $('dlgOk').onclick = async () => {
+    const sel = [...document.querySelectorAll('.stpick input:checked')].map(x => x.value);
+    const t = { title: $('kT').value, details: $('kD').value, stores: sel, all: $('kAll').checked, repeat: $('kR').value,
+      due: $('kDue').value ? new Date($('kDue').value).toISOString() : '', time: $('kTime').value, weekday: Number($('kWday').value) };
+    if (!t.title.trim()) return toast('اكتب عنوان التاسك');
+    if (!t.all && !sel.length) return toast('اختار محل واحد على الأقل');
+    $('dlgOk').disabled = true;
+    try { const r = await api('dTaskNew', { token, task: t }, true); closeDlg(); taskApply(r); toast(t.repeat ? '✅ التاسك المتكررة اتسجلت' : '✅ التاسك اتبعتت لـ ' + (t.all ? 'كل المحلات' : sel.length + ' محل')); }
+    catch (e) { $('dlgOk').disabled = false; toast(msg(e)); }
+  };
+}
+// كل التاسكات: مجمّعة بالعنوان (خلص كام محل من كام) + المتكررة
+async function tasksDlg() {
+  let reps = [];
+  try { const r = await api('dTasks', { token }); tasks = r.tasks; jrs = r.jrs; reps = r.repeats || []; } catch (e) { return toast(msg(e)); }
+  const groups = {};
+  tasks.filter(x => x.status !== 'اتلغت').forEach(x => { (groups[x.group] = groups[x.group] || []).push(x); });
+  const G = Object.values(groups).filter(L => L.some(x => x.status === TASK_OPEN)).sort((a, b) => String(a[0].due).localeCompare(String(b[0].due)));
+  const days = ['الحد', 'الاتنين', 'التلات', 'الأربع', 'الخميس', 'الجمعة', 'السبت'];
+  dlg('<h3>📋 التاسكات المفتوحة</h3>' + (G.length ? G.map(L => {
+    const d = L.filter(x => x.status !== TASK_OPEN).length;
+    return '<div class="tkgrp"><b>' + esc(L[0].title) + '</b> <small style="color:var(--muted)">• ' + dt(L[0].due) + '</small>' +
+      '<div class="bar"><i style="width:' + Math.round(d / L.length * 100) + '%"></i></div><small>خلص ' + d + ' من ' + L.length + ' محل</small>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">' + L.map(x => x.status === TASK_OPEN
+        ? '<button class="btn soft" style="padding:4px 9px;font-size:12.5px" onclick="taskDone(\'' + esc(x.id) + '\')">' + sdot(x.store) + esc(x.store) + ' ✓</button>'
+        : '<span style="font-size:12.5px;color:#1A8A3E;padding:4px 6px">✅ ' + esc(x.store) + '</span>').join('') + '</div></div>';
+  }).join('') : '<p style="color:var(--muted)">مفيش تاسكات مفتوحة 🎉</p>') +
+    '<h3 style="margin-top:14px">🔁 التاسكات المتكررة</h3>' + (reps.filter(x => x.active).length ? reps.filter(x => x.active).map(x =>
+      '<div class="tkgrp"><b>' + esc(x.title) + '</b> <small>• ' + (x.repeat === 'أسبوعي' ? 'كل ' + days[x.weekday] : 'كل يوم') + ' الساعة ' + esc(x.time) + ' • ' + x.stores.length + ' محل</small>' +
+      (myRole === 'مدير' ? ' <button class="btn soft" style="padding:3px 9px;font-size:12px" onclick="repeatStop(\'' + esc(x.id) + '\')">إيقاف</button>' : '') + '</div>').join('') : '<p style="color:var(--muted)">مفيش</p>') +
+    '<div class="acts"><button class="btn" onclick="taskNewDlg()">＋ تاسك جديدة</button><button class="btn soft" onclick="closeDlg()">قفل</button></div>');
+  $('dlg').dataset.k = 'tasks';
+}
+async function repeatStop(id) { try { await api('dRepeatStop', { token, id }, true); toast('اتوقفت'); tasksDlg(); } catch (e) { toast(msg(e)); } }
+
+// ---------- طلبات الجرد ----------
+const JR_ST_CLS = { 'مستني الدعم': 'b-new', 'مستني الفرع': 'b-work', 'متثبت': 'b-done', 'شغال': 'b-work', 'خلص': 'b-done', 'اتلغى': 'b-rej' };
+function jrCard(v, board) {
+  const st = '<span class="badge ' + (JR_ST_CLS[v.status] || 'b-new') + '">' + esc(v.status) + '</span>';
+  const acts = v.status === 'مستني الدعم'
+    ? '<div class="bacts"><button class="btn" onclick="jrDecide(\'' + esc(v.id) + '\',true)">✅ موافق</button><button class="btn soft" onclick="jrOther(\'' + esc(v.id) + '\')">🔁 ميعاد تاني</button>' +
+      (myRole === 'مدير' ? '<button class="btn soft" onclick="jrCancel(\'' + esc(v.id) + '\')">إلغاء</button>' : '') + '</div>'
+    : v.status === 'شغال' || v.status === 'متثبت' ? '<div class="bacts"><button class="btn soft" onclick="jrLive(\'' + esc(v.id) + '\',this)">📡 حالة الجرد دلوقتي</button>' +
+      (myRole === 'مدير' ? '<button class="btn soft" onclick="jrCancel(\'' + esc(v.id) + '\')">إلغاء</button>' : '') + '</div>' : '';
+  const stage = v.status === 'شغال' ? ['', 'التحضير', 'الفرع بيجرد', 'الفرع خلص - رفع الكميات والتقرير'][v.stage] || '' : '';
+  const log = '<ul class="tl">' + (v.log || []).map(e => '<li><span>' + (e.side === 'فرع' ? '🏪' : '🎧') + '</span><span>' + esc(e.text) + (e.by ? ' - ' + esc(e.by) : '') + '</span><span class="tm">' + tm(e.at) + '</span></li>').join('') + '</ul>';
+  if (!board) {
+    return '<div class="card" style="border-inline-start:5px solid #00897B"><div class="top"><span class="sup">📋 طلب جرد</span>' + st + '</div>' +
+      '<div class="meta">' + sdot(v.store) + esc(v.store) + ' • الميعاد <b>' + dt(v.at) + '</b>' + (stage ? ' • ' + stage : '') + '</div>' +
+      (v.notes ? '<div class="meta">' + esc(v.notes) + '</div>' : '') + acts + log + '</div>';
+  }
+  return '<div class="bcard k-jr' + (jrOpenSup(v) ? ' late' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
+    '<div class="bt"><b><span class="kind">📋</span>طلب جرد • ' + dt(v.at) + '</b>' + st + '</div>' +
+    '<div class="bm">' + (stage || ('طلبها ' + esc(v.user))) + '</div>' + acts +
+    '<div class="bx">' + (v.notes ? '<div class="bdesc">' + esc(v.notes) + '</div>' : '') + '<div class="jrlive" data-jr="' + esc(v.id) + '"></div>' + log + '</div></div>';
+}
+async function jrDecide(id, ok, at, note) {
+  try { const r = await api('dJrDecide', { token, id, ok, at, note }, true); closeDlg(); taskApply(r); toast(ok ? '✅ الميعاد اتثبت واتبعت للفرع' : '🔁 الميعاد الجديد اتبعت للفرع يوافق عليه'); } catch (e) { toast(msg(e)); }
+}
+function jrOther(id) {
+  const v = jrs.find(x => x.id === id); if (!v) return;
+  const two = n => String(n).padStart(2, '0'), d = new Date(v.at), mn = new Date(now() + 3 * 864e5);
+  const val = d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()) + 'T' + two(d.getHours()) + ':' + two(d.getMinutes());
+  const min = mn.getFullYear() + '-' + two(mn.getMonth() + 1) + '-' + two(mn.getDate()) + 'T00:00';
+  dlg('<h3>🔁 ميعاد جرد تاني لـ ' + esc(v.store) + '</h3><p style="color:var(--muted);margin-top:0">الفرع طالب: ' + dt(v.at) + '. الميعاد الجديد هيروح للفرع يوافق عليه.</p>' +
+    '<input type="datetime-local" id="jAt" min="' + min + '" value="' + val + '"><input id="jN" placeholder="سبب أو ملاحظة (اختياري)" style="margin-top:8px">' +
+    '<div class="acts"><button class="btn" id="dlgOk">ابعت للفرع</button><button class="btn soft" onclick="closeDlg()">رجوع</button></div>');
+  $('dlgOk').onclick = () => { if (!$('jAt').value) return toast('اختار الميعاد'); jrDecide(id, false, new Date($('jAt').value).toISOString(), $('jN').value); };
+}
+async function jrCancel(id) { if (!confirm('تلغي طلب الجرد ده؟')) return; try { const r = await api('dJrCancel', { token, id }, true); taskApply(r); toast('اتلغى'); } catch (e) { toast(msg(e)); } }
+async function jrLive(id, btn) {
+  const v = jrs.find(x => x.id === id); if (!v) return;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ ...'; }
+  try {
+    const r = await api('dJrLive', { token, store: v.store });
+    const t = '📡 ' + (r.counted !== null && r.counted !== undefined ? 'اتجرد النهارده ' + r.counted + ' صنف • ' : '') + 'خلص ' + r.done + ' من ' + r.zones + ' منطقة' + (r.working ? ' • ' + r.working + ' بيتجردوا' : '') + ' • اتراجع ' + r.reviewed;
+    toast(t);
+    document.querySelectorAll('.jrlive[data-jr="' + id + '"]').forEach(el => { el.innerHTML = '<div class="bm" style="color:#00695C;font-weight:700">' + esc(t) + '</div>'; });
+  } catch (e) { toast(msg(e)); }
+  if (btn) { btn.disabled = false; btn.textContent = '📡 حالة الجرد دلوقتي'; }
+}
+// تنبيه: طلب جرد جديد / تاسك جديدة اتعملت لوحدها (8 الصبح أو الفرع بدأ/خلص)
+function tasksAfterLoad() {
+  const pk = taskKnown, pj = jrKnown;
+  taskKnown = new Set(tasks.map(x => x.id)); jrKnown = {}; jrs.forEach(x => { jrKnown[x.id] = x.status + '|' + x.stage; });
+  if (!pk || isQA()) return;
+  const freshT = tasks.filter(x => !pk.has(x.id) && x.status === TASK_OPEN && x.createdBy === 'البرنامج');
+  const freshJ = jrs.filter(x => pj[x.id] !== x.status + '|' + x.stage && (x.status === 'مستني الدعم' || x.status === 'شغال'));
+  if (freshT.length || freshJ.length) {
+    ding();
+    const j = freshJ[0], t = freshT[0];
+    toast(j ? '📋 ' + j.store + ': ' + (j.status === 'مستني الدعم' ? 'طلب جرد مستني ردك' : 'تاسكات جرد جديدة') : '📋 تاسك جديدة: ' + t.store + ' - ' + t.title);
+  }
+}
 
 // ---------- الورديات: جدول أسبوعي + طلبات التبديل ----------
 let sh = { week: null, data: null, att: [] };
