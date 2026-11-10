@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<!-- مفيش dir="rtl" هنا: بيزق فيديو الكاميرا برا الشاشة على الويب (Flutter بيظبط الاتجاه لوحده) -->
+<html lang="ar">
 <head>
   <base href="/modaqqeq-dashboard/purchases/">
   <meta charset="UTF-8">
@@ -29,7 +30,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 </head>
 <body>
-  <div id="splash"><img src="icons/Icon-192.png" alt=""><b>مشتريات ودعم فني</b><div class="bar"><i></i></div></div>
+  <div id="splash" dir="rtl"><img src="icons/Icon-192.png" alt=""><b>مشتريات ودعم فني</b><div class="bar"><i></i></div></div>
   <script>
     // ---- الجسر بين التطبيق والمتصفح: تخزين الملفات (IndexedDB) + الإشعارات ----
     window.mdq = {
@@ -72,9 +73,64 @@
         return await firebase.messaging().getToken({ vapidKey: this._vapid, serviceWorkerRegistration: reg });
       },
       // الإشعار اللي فتح التطبيق
-      openTarget() { return new URLSearchParams(location.search).get('open') || ''; }
+      openTarget() { return new URLSearchParams(location.search).get('open') || ''; },
+      // تنزيل ملف (تقرير إكسل) باسمه الصح
+      saveFile(name, mime, bytes) {
+        const url = URL.createObjectURL(new Blob([bytes.slice()], { type: mime }));
+        const a = document.createElement('a');
+        a.href = url; a.download = name; a.style.display = 'none';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }
     };
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+    // ---- زرار "ثبّت التطبيق" تحت (بيختفي لو التطبيق متثبت أو الموظف قفله) ----
+    (function () {
+      const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      let evt = null;
+      const KEY = 'mdq-install-hidden';
+      const hiddenRecently = () => { try { return Date.now() - Number(localStorage.getItem(KEY) || 0) < 3 * 86400000; } catch (e) { return false; } };
+      function bar() {
+        if (standalone() || hiddenRecently() || document.getElementById('mdqInstall')) return;
+        if (!evt && !ios) return;
+        const d = document.createElement('div');
+        d.id = 'mdqInstall';
+        d.setAttribute('dir', 'rtl');
+        d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:9999;' +
+          'background:#0B4F94;color:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;align-items:center;gap:10px;' +
+          'padding:10px 12px;font-family:-apple-system,"Segoe UI",Tahoma,sans-serif;font-size:15px';
+        d.innerHTML = '<img src="icons/Icon-192.png" alt="" style="width:40px;height:40px;border-radius:10px;background:#fff">' +
+          '<div style="flex:1;line-height:1.4"><b>ثبّت التطبيق على موبايلك</b><br><span style="font-size:13px;opacity:.85">يفتح من الأيقونة زي أي تطبيق</span></div>' +
+          '<button id="mdqInstallGo" style="border:0;border-radius:12px;background:#fff;color:#0B4F94;font-weight:bold;font-size:15px;padding:10px 14px;font-family:inherit">ثبّت</button>' +
+          '<button id="mdqInstallX" aria-label="قفل" style="border:0;background:transparent;color:#fff;font-size:22px;padding:4px 6px">×</button>';
+        document.body.appendChild(d);
+        document.getElementById('mdqInstallX').onclick = () => { try { localStorage.setItem(KEY, Date.now()); } catch (e) {} d.remove(); };
+        document.getElementById('mdqInstallGo').onclick = async () => {
+          if (evt) {
+            evt.prompt();
+            const r = await evt.userChoice.catch(() => null);
+            if (r && r.outcome === 'accepted') d.remove();
+            evt = null;
+            return;
+          }
+          // آيفون: نشرح الطريقة
+          const h = document.createElement('div');
+          h.setAttribute('dir', 'rtl');
+          h.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(8,25,45,.6);display:flex;align-items:flex-end;justify-content:center';
+          h.innerHTML = '<div style="background:#fff;color:#0B3D6E;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));width:min(520px,100%);line-height:1.9;font-family:-apple-system,Tahoma,sans-serif;font-size:16px">' +
+            '<b style="font-size:18px">ثبّت التطبيق على الآيفون</b><br>1- افتح الصفحة دي من <b>Safari</b><br>2- دوس زرار المشاركة <b>⬆️</b> اللي تحت<br>' +
+            '3- اختار <b>"إضافة إلى الشاشة الرئيسية"</b> وبعدين <b>إضافة</b>' +
+            '<div style="text-align:center;margin-top:12px"><button style="border:0;border-radius:12px;background:#1479D3;color:#fff;font-weight:bold;font-size:16px;padding:10px 28px">تمام</button></div></div>';
+          h.onclick = (e) => { if (e.target === h || e.target.tagName === 'BUTTON') h.remove(); };
+          document.body.appendChild(h);
+        };
+      }
+      window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); evt = e; bar(); });
+      window.addEventListener('appinstalled', () => { const d = document.getElementById('mdqInstall'); if (d) d.remove(); });
+      if (ios) setTimeout(bar, 4000);
+    })();
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
