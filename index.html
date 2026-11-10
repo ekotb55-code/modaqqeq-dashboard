@@ -1386,14 +1386,30 @@ async function tkNewDlg() {
 // أنواع المشاكل وأهمية العملاء (المدير)
 async function tkTypesDlg() {
   let r; try { r = await api('dTkTypes', { token }); } catch (e) { return toast(msg(e)); }
-  const T = r.types;
+  const T = r.types, cats = r.cats || [];
+  const c = r.contact || {};
+  const row = t => '<div class="tkty" onclick="tkTypeEdit(\'' + esc(t.id) + '\')"><b>' + esc(t.icon + ' ' + t.title) + '</b> ' + (PRIO_TAG[t.priority] || '') + ' <small>' + durTxt(t.resolveMin) + (t.active ? '' : ' • ⛔ موقوفة') + '</small></div>';
+  const CAT_ICON = { 'المحل واقف': '🚨', 'مشكلة في الشغل': '🛠️', 'طلبات': '🗓️' };
   dlg('<h3>⚙️ أنواع المشاكل</h3><p style="margin-top:0;color:var(--muted);font-size:13px">دي اللي الفرع بيختار منها في التطبيق. "خطوات للفرع" بتظهرله قبل ما يطلب الدعم، و"دليل الدعم" بيظهر لكم بس.</p>' +
-    T.map(t => '<div class="tkty" onclick="tkTypeEdit(\'' + esc(t.id) + '\')"><b>' + esc(t.icon + ' ' + t.title) + '</b> ' + (PRIO_TAG[t.priority] || '') + ' <small>' + durTxt(t.resolveMin) + (t.active ? '' : ' • ⛔ موقوفة') + '</small></div>').join('') +
+    '<h3 style="margin-top:6px">📞 أرقام التواصل مع الدعم</h3><p style="margin-top:0;color:var(--muted);font-size:13px">بتظهر للفرع زرار "واتساب" وزرار "اتصل بالدعم" في شاشة الدعم. سيبها فاضية لو مش عاوزها تظهر.</p>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap"><input id="scWa" inputmode="tel" placeholder="رقم الواتساب (01xxxxxxxxx)" value="' + esc(c.whatsapp || '') + '" style="flex:1;min-width:170px">' +
+    '<input id="scPh" inputmode="tel" placeholder="رقم الاتصال" value="' + esc(c.phone || '') + '" style="flex:1;min-width:150px">' +
+    '<button class="btn" onclick="tkSaveContact()">حفظ الأرقام</button></div>' +
+    (cats.length ? cats.map(k => {
+      const L = T.filter(t => (t.category || '') === k);
+      return L.length ? '<h4 style="margin:14px 0 4px">' + (CAT_ICON[k] || '') + ' ' + esc(k) + ' <small style="color:var(--muted)">(' + L.length + ')</small></h4>' + L.map(row).join('') : '';
+    }).join('') + T.filter(t => cats.indexOf(t.category) === -1).map(row).join('') : T.map(row).join('')) +
     '<button class="btn soft" style="margin-top:8px" onclick="tkTypeEdit(\'\')">＋ نوع جديد</button>' +
     '<h3 style="margin-top:16px">⭐ أهمية العملاء</h3>' + r.stores.map(s => '<div class="ckr" style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #EEF2F7"><b>' + esc(s) + '</b><select style="width:auto" onchange="tkSetPrio(\'' + esc(s) + '\',this.value)">' +
       [[1, 'عادي'], [2, '⭐ مهم'], [3, '⭐⭐ مهم جدًا']].map(x => '<option value="' + x[0] + '"' + (x[0] === (Number(r.storePrio[s]) || 1) ? ' selected' : '') + '>' + x[1] + '</option>').join('') + '</select></div>').join('') +
     '<div class="acts"><button class="btn soft" onclick="closeDlg()">قفل</button></div>');
-  window._tkTypes = T;
+  window._tkTypes = T; window._tkCats = cats;
+}
+async function tkSaveContact() {
+  try {
+    await api('dSupportContact', { token, contact: { whatsapp: $('scWa').value, phone: $('scPh').value } }, true);
+    toast('اتحفظت الأرقام ✅');
+  } catch (e) { toast(msg(e)); }
 }
 async function tkSetPrio(store, p) { try { const r = await api('dStorePrio', { token, store, prio: Number(p) }, true); storePrio = r.storePrio; renderList(); toast('اتحفظ ✅'); } catch (e) { toast(msg(e)); } }
 function tkTypeEdit(id) {
@@ -1401,12 +1417,13 @@ function tkTypeEdit(id) {
   const ta = (k, v, n) => '<label class="fl" style="margin-top:8px">' + n + '</label><textarea id="' + k + '" rows="4" style="width:100%;font:inherit;padding:8px;border-radius:10px;border:1.5px solid var(--line)">' + esc(v) + '</textarea>';
   dlg('<h3>' + (id ? 'تعديل' : 'نوع جديد') + '</h3><div style="display:flex;gap:6px"><input id="yI" value="' + esc(t.icon) + '" style="width:60px;text-align:center"><input id="yT" placeholder="اسم المشكلة" value="' + esc(t.title) + '"></div>' +
     '<label class="fl" style="margin-top:8px">الأولوية</label><select id="yP">' + [TK_URGENT, TK_NORMAL, TK_SCHED].map(p => '<option' + (p === t.priority ? ' selected' : '') + '>' + p + '</option>').join('') + '</select>' +
+    ((window._tkCats || []).length ? '<label class="fl" style="margin-top:8px">القسم (في شاشة الفرع)</label><select id="yC">' + window._tkCats.map(k => '<option' + (k === (t.category || (t.priority === TK_URGENT ? 'المحل واقف' : 'مشكلة في الشغل')) ? ' selected' : '') + '>' + esc(k) + '</option>').join('') + '</select>' : '') +
     '<label class="fl" style="margin-top:8px">مدة الحل (بالدقيقة)</label><input type="number" id="yM" value="' + t.resolveMin + '">' +
     ta('yS', t.steps, '🧰 خطوات للفرع (كل خطوة في سطر)') + ta('yG', t.guide, '📘 دليل الدعم (للدعم بس)') +
     '<label class="ck" style="display:flex;gap:6px;margin-top:8px"><input type="checkbox" id="yA" style="width:auto"' + (t.active ? ' checked' : '') + '> نشط (بيظهر للفرع)</label>' +
     '<div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="tkTypesDlg()">رجوع</button></div>');
   $('dlgOk').onclick = async () => {
-    const x = { id: t.id, title: $('yT').value, icon: $('yI').value, priority: $('yP').value, critical: $('yP').value === TK_URGENT, resolveMin: Number($('yM').value), steps: $('yS').value, guide: $('yG').value, active: $('yA').checked, order: t.order };
+    const x = { id: t.id, title: $('yT').value, icon: $('yI').value, priority: $('yP').value, critical: $('yP').value === TK_URGENT, resolveMin: Number($('yM').value), steps: $('yS').value, guide: $('yG').value, active: $('yA').checked, order: t.order, category: $('yC') ? $('yC').value : '' };
     try { await api('dTkTypeSave', { token, type: x }, true); toast('اتحفظ ✅'); tkTypesDlg(); } catch (e) { toast(msg(e)); }
   };
 }
