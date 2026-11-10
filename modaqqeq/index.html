@@ -72,7 +72,15 @@
         return await firebase.messaging().getToken({ vapidKey: this._vapid, serviceWorkerRegistration: reg });
       },
       // الإشعار اللي فتح التطبيق
-      openTarget() { return new URLSearchParams(location.search).get('open') || ''; }
+      openTarget() { return new URLSearchParams(location.search).get('open') || ''; },
+      // تنزيل ملف (تقرير إكسل) باسمه الصح
+      saveFile(name, mime, bytes) {
+        const url = URL.createObjectURL(new Blob([bytes.slice()], { type: mime }));
+        const a = document.createElement('a');
+        a.href = url; a.download = name; a.style.display = 'none';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }
     };
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
