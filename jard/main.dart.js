@@ -31932,7 +31932,7 @@ return r==null?null:r.J3()},
 b8c(a){if(typeof a=="number"&&a===B.d.ip(a))return B.f.j(B.d.e9(a))
 return B.c.bP(J.aI(a))},
 bhQ(a){var s=A.qu(a)
-return B.c.n(s,"\u0639\u0631\u0636")||B.c.n(s,"\u0628\u0627\u0644\u0642\u0637\u0639\u0647")},
+return B.c.n(s,"\u0639\u0631\u0631\u0636")||B.c.n(s,"\u0628\u0627\u0644\u0644\u0642\u0637\u0639\u0647")},
 qu(a){var s,r=A.bB("[\u0623\u0625\u0622]",!1)
 r=A.da(a.toLowerCase(),r,"\u0627")
 r=A.da(r,"\u0629","\u0647")

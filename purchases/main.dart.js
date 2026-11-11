@@ -33940,7 +33940,7 @@ return r==null?null:r.ns()},
 bmu(a){if(typeof a=="number"&&a===B.d.t7(a))return B.e.j(B.d.de(a))
 return B.c.c9(J.R(a))},
 bmB(a){var s=A.oC(a)
-return B.c.m(s,"\u0639\u0631\u0636")||B.c.m(s,"\u0628\u0627\u0644\u0642\u0637\u0639\u0647")},
+return B.c.m(s,"\u0639\u0631\u0631\u0636")||B.c.m(s,"\u0628\u0627\u0644\u0644\u0642\u0637\u0639\u0647")},
 oC(a){var s,r=A.bH("[\u0623\u0625\u0622]",!1)
 r=A.cG(a.toLowerCase(),r,"\u0627")
 r=A.cG(r,"\u0629","\u0647")

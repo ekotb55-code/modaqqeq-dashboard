@@ -35352,7 +35352,7 @@ return r==null?null:r.n5()},
 bpq(a){if(typeof a=="number"&&a===B.d.j4(a))return B.e.j(B.d.d0(a))
 return B.c.bi(J.S(a))},
 bjP(a){var s=A.h4(a)
-return B.c.m(s,"\u0639\u0631\u0636")||B.c.m(s,"\u0628\u0627\u0644\u0642\u0637\u0639\u0647")},
+return B.c.m(s,"\u0639\u0631\u0631\u0636")||B.c.m(s,"\u0628\u0627\u0644\u0644\u0642\u0637\u0639\u0647")},
 h4(a){var s,r=A.bn("[\u0623\u0625\u0622]",!0,!1)
 r=A.cc(a.toLowerCase(),r,"\u0627")
 r=A.cc(r,"\u0629","\u0647")
