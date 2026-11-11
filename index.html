@@ -1047,7 +1047,7 @@ async function loadList(quiet) {
     prevStatus = {}; r.invoices.forEach(v => { prevStatus[v.id] = v.status; });
     all = r.invoices; stores = r.stores;
     tks = (r.tickets || []).map(t => Object.assign(t, { kind: 'tk' })); if (r.storePrio) storePrio = r.storePrio;
-    tasks = r.tasks || []; jrs = r.jrs || []; if (r.storeColor) storeColor = r.storeColor;
+    tasks = r.tasks || []; jrs = r.jrs || []; if (r.storeColor) storeColor = r.storeColor; if (r.members) members = r.members;
     tasksAfterLoad();
     tkAfterLoad(tks);
     chatSum = r.chat || { threads: [], replies: [] };
@@ -2927,7 +2927,15 @@ function sdot(n) { return '<i class="sdot" style="background:' + stColor(n) + '"
 async function tkSetColor(store, c) { try { const r = await api('dStoreColor', { token, store, color: c }, true); storeColor = r.storeColor; renderList(); if (!$('pageStores').classList.contains('hidden')) renderBoard(); toast('اتحفظ اللون ✅'); } catch (e) { toast(msg(e)); } }
 
 // ---------- التاسكات ----------
-let tasks = [], jrs = [], taskKnown = null, jrKnown = null;
+let tasks = [], jrs = [], taskKnown = null, jrKnown = null, members = [];
+// التاسك لمين: '' الفريق كله • role:دعم/جودة/مدير مستوى إداري • user:<إيميل> شخص معين
+const TASK_ROLES = { 'دعم': '🎧 الدعم', 'جودة': '🔍 الجودة', 'مدير': '👔 الإدارة' };
+function taskToLabel(to) {
+  if (!to) return '';
+  if (to.indexOf('role:') === 0) return TASK_ROLES[to.slice(5)] || to.slice(5);
+  const m = members.find(x => x.email === to.slice(5));
+  return '👤 ' + (m ? m.name : to.slice(5));
+}
 const TASK_OPEN = 'مفتوحة';
 const taskDue = v => new Date(v.due || v.createdAt).getTime() <= now();
 const taskLate = v => v.status === TASK_OPEN && taskDue(v) && now() - new Date(v.due || v.createdAt).getTime() > 15 * 60000;
@@ -2947,6 +2955,7 @@ function taskCard(v, board) {
   const btn = done ? '' : '<div class="bacts"><button class="btn" onclick="taskDone(\'' + esc(v.id) + '\')">✓ اتعملت</button>' +
     (myRole === 'مدير' ? '<button class="btn soft" onclick="taskCancel(\'' + esc(v.id) + '\')">إلغاء</button>' : '') + '</div>';
   const body = (v.details ? '<div class="bdesc">' + esc(v.details) + '</div>' : '') +
+    (v.to ? '<div class="bm" style="color:#4527A0;font-weight:700">لـ ' + esc(taskToLabel(v.to)) + ' بس</div>' : '') +
     '<div class="bm">' + (v.type === 'جرد' ? '📋 من طلب الجرد • ' : '') + 'اتعملت ' + tm(v.createdAt) + ' بواسطة ' + esc(v.createdBy) + '</div>' +
     (done ? '<div class="bm">✅ ' + esc(v.doneBy) + ' • ' + tm(v.doneAt) + (v.data && v.data.progTotal !== undefined ? ' • البرنامج ' + money(v.data.progTotal) + ' = الجرد ' + money(v.data.appTotal) : '') + '</div>' : '');
   if (!board) {
@@ -2954,7 +2963,7 @@ function taskCard(v, board) {
       '<div class="top"><span class="sup">📋 ' + esc(v.title) + '</span>' + st + '</div><div class="meta">' + sdot(v.store) + esc(v.store) + ' • الميعاد ' + dt(v.due) + '</div>' + body + btn + '</div>';
   }
   return '<div class="bcard k-task' + (done ? ' done' : '') + (late ? ' late' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
-    '<div class="bt"><b><span class="kind">📋</span>' + esc(v.title) + '</b>' + st + '</div>' +
+    '<div class="bt"><b><span class="kind">📋</span>' + esc(v.title) + (v.to ? ' <small style="color:#4527A0">' + esc(taskToLabel(v.to)) + '</small>' : '') + '</b>' + st + '</div>' +
     '<div class="bm">' + (done ? esc(v.doneBy) + ' • ' + tm(v.doneAt) : 'الميعاد ' + tm(v.due)) + '</div>' + btn +
     '<div class="bx">' + body + '</div></div>';
 }
@@ -3000,6 +3009,10 @@ function taskNewDlg() {
     '<label class="fl" style="margin-top:8px">المحلات</label><div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><label class="chk"><input type="checkbox" id="kAll" onchange="document.querySelectorAll(\'.stpick input\').forEach(x=>x.checked=this.checked)"> كل المحلات</label>' +
     '<input id="kQ" placeholder="🔍 دوّر على محل" style="flex:1" oninput="document.querySelectorAll(\'.stpick label\').forEach(l=>l.style.display=l.textContent.indexOf(this.value)!==-1?\'\':\'none\')"></div>' +
     '<div class="stpick">' + stores.map(s => '<label><input type="checkbox" value="' + esc(s) + '">' + sdot(s) + esc(s) + '</label>').join('') + '</div>' +
+    '<label class="fl" style="margin-top:8px">التاسك دي لمين؟</label><select id="kTo" style="width:100%"><option value="">👥 الفريق كله (الدعم)</option>' +
+    '<optgroup label="مستوى إداري">' + Object.keys(TASK_ROLES).map(k => '<option value="role:' + esc(k) + '">' + TASK_ROLES[k] + ' بس</option>').join('') + '</optgroup>' +
+    (members.length ? '<optgroup label="شخص معين">' + members.map(m => '<option value="user:' + esc(m.email) + '">👤 ' + esc(m.name) + (m.role ? ' (' + esc(m.role) + ')' : '') + '</option>').join('') + '</optgroup>' : '') +
+    '</select><small style="color:var(--muted)">التاسك هتظهر لصاحبها بس، والتذكير يوصله هو بس</small>' +
     '<label class="fl" style="margin-top:8px">التكرار</label><select id="kR" onchange="$(\'kOnce\').style.display=this.value?\'none\':\'\';$(\'kRep\').style.display=this.value?\'\':\'none\';$(\'kWd\').style.display=this.value===\'أسبوعي\'?\'\':\'none\'">' +
     '<option value="">مرة واحدة</option><option value="يومي">كل يوم</option><option value="أسبوعي">كل أسبوع</option></select>' +
     '<div id="kOnce"><label class="fl" style="margin-top:8px">الميعاد</label><input type="datetime-local" id="kDue" value="' + local + '"></div>' +
@@ -3008,12 +3021,12 @@ function taskNewDlg() {
     '<div class="acts"><button class="btn" id="dlgOk">ابعت للمحلات</button><button class="btn soft" onclick="closeDlg()">رجوع</button></div>');
   $('dlgOk').onclick = async () => {
     const sel = [...document.querySelectorAll('.stpick input:checked')].map(x => x.value);
-    const t = { title: $('kT').value, details: $('kD').value, stores: sel, all: $('kAll').checked, repeat: $('kR').value,
+    const t = { title: $('kT').value, details: $('kD').value, stores: sel, all: $('kAll').checked, repeat: $('kR').value, to: $('kTo').value,
       due: $('kDue').value ? new Date($('kDue').value).toISOString() : '', time: $('kTime').value, weekday: Number($('kWday').value) };
     if (!t.title.trim()) return toast('اكتب عنوان التاسك');
     if (!t.all && !sel.length) return toast('اختار محل واحد على الأقل');
     $('dlgOk').disabled = true;
-    try { const r = await api('dTaskNew', { token, task: t }, true); closeDlg(); taskApply(r); toast(t.repeat ? '✅ التاسك المتكررة اتسجلت' : '✅ التاسك اتبعتت لـ ' + (t.all ? 'كل المحلات' : sel.length + ' محل')); }
+    try { const r = await api('dTaskNew', { token, task: t }, true); closeDlg(); taskApply(r); toast((t.repeat ? '✅ التاسك المتكررة اتسجلت' : '✅ التاسك اتبعتت لـ ' + (t.all ? 'كل المحلات' : sel.length + ' محل')) + (t.to ? ' • ' + taskToLabel(t.to) + ' بس' : '')); }
     catch (e) { $('dlgOk').disabled = false; toast(msg(e)); }
   };
 }
@@ -3027,7 +3040,7 @@ async function tasksDlg() {
   const days = ['الحد', 'الاتنين', 'التلات', 'الأربع', 'الخميس', 'الجمعة', 'السبت'];
   dlg('<h3>📋 التاسكات المفتوحة</h3>' + (G.length ? G.map(L => {
     const d = L.filter(x => x.status !== TASK_OPEN).length;
-    return '<div class="tkgrp"><b>' + esc(L[0].title) + '</b> <small style="color:var(--muted)">• ' + dt(L[0].due) + '</small>' +
+    return '<div class="tkgrp"><b>' + esc(L[0].title) + '</b> <small style="color:var(--muted)">• ' + dt(L[0].due) + (L[0].to ? ' • ' + esc(taskToLabel(L[0].to)) : '') + '</small>' +
       '<div class="bar"><i style="width:' + Math.round(d / L.length * 100) + '%"></i></div><small>خلص ' + d + ' من ' + L.length + ' محل</small>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">' + L.map(x => x.status === TASK_OPEN
         ? '<button class="btn soft" style="padding:4px 9px;font-size:12.5px" onclick="taskDone(\'' + esc(x.id) + '\')">' + sdot(x.store) + esc(x.store) + ' ✓</button>'
