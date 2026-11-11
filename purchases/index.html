@@ -83,6 +83,20 @@
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 60000);
       },
+      // تحديث التطبيق لآخر نسخة من غير ما يقفله ويفتحه
+      async update() {
+        const o = document.createElement('div');
+        o.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(9,72,140,.92);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font:bold 20px system-ui;gap:14px';
+        o.innerHTML = '<div style="font-size:46px">🔄</div><div>بنجيب أحدث نسخة...</div>';
+        document.body.append(o);
+        try { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch (e) {}
+        try { const r = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch (e) {}
+        await Promise.all(['./', 'index.html', 'flutter_bootstrap.js', 'main.dart.js', 'manifest.json']
+          .map(u => fetch(u, { cache: 'reload' }).catch(() => {})));
+        const u = new URL(location.href);
+        u.searchParams.set('v', Date.now());
+        location.replace(u.toString());
+      },
       // مشاركة ملف (واتساب...) - لو المتصفح مش بيقبل الإكسل بنجرب نسخة CSV
       // بيرجع: shared / cancel / needtap (محتاج دوسة جديدة) / unsupported
       // سبب فشل المشاركة بيظهر على الشاشة (علشان نعرف المتصفح رافض ليه)
@@ -156,6 +170,28 @@
       }
     };
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+    // ---- لو نزلت نسخة جديدة وهو فاتح: شريط "فيه تحديث جديد" تحت ----
+    (function () {
+      let base = null, shown = false;
+      const ver = () => fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => j.version + '+' + j.build_number).catch(() => null);
+      async function check() {
+        const v = await ver();
+        if (!v) return;
+        if (base === null) { base = v; return; }
+        if (v === base || shown) return;
+        shown = true;
+        const b = document.createElement('div');
+        b.dir = 'rtl';
+        b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:16px;z-index:2147483646;background:#0b5cad;color:#fff;border-radius:16px;padding:14px 16px;font:bold 16px system-ui;box-shadow:0 8px 24px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px;cursor:pointer';
+        b.innerHTML = '<span style="font-size:24px">🔄</span><span style="flex:1">فيه تحديث جديد للتطبيق - دوس هنا</span><span style="background:#fff;color:#0b5cad;border-radius:10px;padding:6px 12px">تحديث</span>';
+        b.onclick = () => mdq.update();
+        document.body.append(b);
+      }
+      check();
+      setInterval(check, 5 * 60 * 1000);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+    })();
 
     // ---- زرار "ثبّت التطبيق" تحت (بيختفي لو التطبيق متثبت أو الموظف قفله) ----
     (function () {
