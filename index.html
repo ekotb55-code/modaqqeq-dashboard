@@ -1225,7 +1225,7 @@ function tkInTab(k, v) {
 }
 // ترتيب الطابور: مستعجلة (وقف حال) ← الفواتير ← عادية ← مجدولة، وبعدين أهمية العميل، وبعدين الأقدم
 function qRank(v) { return v.kind === 'tk' ? (v.priority === TK_URGENT ? 0 : v.priority === TK_SCHED ? 3 : 2) : 1; }
-function qTime(v) { return v.kind === 'tk' && v.priority === TK_SCHED && v.scheduledAt ? v.scheduledAt : v.createdAt; }
+function qTime(v) { return v.kind === 'tk' && v.priority === TK_SCHED && v.scheduledAt ? v.scheduledAt : v.kind === 'task' ? (v.due || v.createdAt) : v.kind === 'jr' ? (v.updatedAt || v.createdAt || v.at) : v.createdAt; }
 function qSort(a, b) {
   return qRank(a) - qRank(b) || (Number(storePrio[b.store]) || 1) - (Number(storePrio[a.store]) || 1) ||
     (b.kind !== 'tk' && b.urgeCount ? 1 : 0) - (a.kind !== 'tk' && a.urgeCount ? 1 : 0) || String(qTime(a)).localeCompare(String(qTime(b)));
@@ -2934,6 +2934,9 @@ const taskLate = v => v.status === TASK_OPEN && taskDue(v) && now() - new Date(v
 const jrOpenSup = v => v.status === 'مستني الدعم';
 function taskInTab(k, v) {
   if (k === 'الكل') return true;
+  // التاسكات المفتوحة اللي جه ميعادها بتظهر في "جديدة" مع الفواتير، والمتأخرة في "متأخرة"
+  if (k === ST_NEW) return v.kind === 'task' ? v.status === TASK_OPEN && taskDue(v) : jrOpenSup(v);
+  if (k === 'late') return v.kind === 'task' && taskLate(v);
   if (k !== 'tasks') return false;
   return v.kind === 'task' ? v.status === TASK_OPEN : ['مستني الدعم', 'مستني الفرع', 'متثبت', 'شغال'].indexOf(v.status) !== -1;
 }
