@@ -87,8 +87,10 @@
       // بيرجع: shared / cancel / needtap (محتاج دوسة جديدة) / unsupported
       async shareFile(name, mime, bytes, csvName, csvBytes, text) {
         if (!navigator.share || !navigator.canShare) return 'unsupported';
-        const cands = [new File([bytes.slice()], name, { type: mime })];
+        // CSV الأول: كل المتصفحات بتقبل تشاركه (وبيتفتح على الإكسل) - الإكسل نفسه كروم بيرفضه
+        const cands = [];
         if (csvBytes && csvBytes.length) cands.push(new File([csvBytes.slice()], csvName, { type: 'text/csv' }));
+        cands.push(new File([bytes.slice()], name, { type: mime }));
         for (const f of cands) {
           let ok = false;
           try { ok = navigator.canShare({ files: [f] }); } catch (e) {}
@@ -126,7 +128,12 @@
           go.onclick = () => {
             navigator.share({ files: [f], title: text, text: text })
               .then(() => done('shared'))
-              .catch(e => done(e && e.name === 'AbortError' ? 'cancel' : 'unsupported'));
+              .catch(e => {
+                if (e && e.name === 'AbortError') return done('cancel');
+                mdq.lastShareErr = (e && (e.name + ': ' + e.message)) || 'error';
+                console.log('share failed', mdq.lastShareErr);
+                done('unsupported');
+              });
           };
         });
       }
