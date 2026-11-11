@@ -712,7 +712,7 @@
       <div class="seg" id="bRange">
         <button data-d="1">النهارده</button><button data-d="3" class="on">3 أيام</button><button data-d="7">أسبوع</button><button data-d="30">شهر</button><button data-d="0">الكل</button>
       </div>
-      <input id="bText" placeholder="🔍 بحث بالمورد أو الموظف" oninput="renderBoard()">
+      <input id="bText" placeholder="🔍 بحث بالفرع أو المورد أو المشكلة أو الموظف" oninput="renderBoard()">
       <label class="chk"><input type="checkbox" id="bOpen" onchange="renderBoard()"> الشغالة بس</label>
       <button class="btn soft" onclick="taskNewDlg()">＋ تاسك</button>
       <button class="btn soft" onclick="tasksDlg()">📋 التاسكات</button>
@@ -2830,21 +2830,27 @@ function renderBoard() {
   if (!boardDays) since.setTime(0); // الكل
   const q = $('bText').value.trim(), onlyOpen = $('bOpen').checked;
   const last = v => Math.max(...invEvents(v).map(e => e.ms).filter(x => !isNaN(x)), 0);
+  // البحث: بالفرع (يجيب كل اللي فيه) أو المورد أو المشكلة/التاسك أو الموظف
+  const norm = x => String(x || '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').toLowerCase();
+  const nq = norm(q), hit = x => norm(x).indexOf(nq) !== -1;
+  const storeHit = n => !!q && hit(n);
   const list = all.filter(v => (pending(v) || v.status === ST_REJ || last(v) >= since.getTime()) &&
     (!onlyOpen || pending(v) || v.status === ST_REJ) &&
-    (!q || (v.supplier + ' ' + v.user + ' ' + v.number + ' ' + v.systemNo + ' ' + (v.receivedBy || '') + ' ' + (v.doneBy || '')).indexOf(q) !== -1));
-  const names = stores.length ? stores.slice() : [...new Set(all.map(v => v.store))];
-  const txt = v => !q || ((v.title || '') + ' ' + (v.desc || v.details || v.notes || '') + ' ' + (v.user || '') + ' ' + (v.assigneeName || '')).indexOf(q) !== -1;
+    (!q || storeHit(v.store) || hit(v.supplier + ' ' + v.user + ' ' + v.number + ' ' + v.systemNo + ' ' + (v.receivedBy || '') + ' ' + (v.doneBy || '') + ' ' + (v.notes || ''))));
+  const names0 = stores.length ? stores.slice() : [...new Set(all.map(v => v.store))];
+  const txt = v => !q || storeHit(v.store) || hit((v.title || '') + ' ' + (v.desc || v.details || v.notes || '') + ' ' + (v.user || '') + ' ' + (v.assigneeName || '') + ' ' + (v.type || '') + ' ' + (v.solution || '') + ' ' + (v.status || ''));
   const tkL = tks.filter(v => txt(v) && (tkOpen(v) || v.status === TK_SOLVED || new Date(v.updatedAt || v.createdAt).getTime() >= since.getTime()) && (!onlyOpen || tkOpen(v) || v.status === TK_SOLVED));
   const taskL = tasks.filter(v => txt(v) && (v.status === 'مفتوحة' || (!onlyOpen && new Date(v.doneAt).getTime() >= since.getTime())));
   const jrL = jrs.filter(v => txt(v) && (!onlyOpen || ['خلص', 'اتلغى'].indexOf(v.status) === -1));
   // المحلات اللي فيها شغل مستني الأول
-  const by = {}; names.forEach(n => by[n] = { inv: [], tk: [], task: [], jr: [] });
+  const by = {}; names0.forEach(n => by[n] = { inv: [], tk: [], task: [], jr: [] });
   const put = (k, v) => { (by[v.store] = by[v.store] || { inv: [], tk: [], task: [], jr: [] })[k].push(v); };
   list.forEach(v => put('inv', v)); tkL.forEach(v => put('tk', v)); taskL.forEach(v => put('task', v)); jrL.forEach(v => put('jr', v));
   const busy = n => by[n].inv.filter(pending).length + by[n].tk.filter(tkOpen).length + by[n].task.filter(x => x.status === 'مفتوحة').length + by[n].jr.filter(x => jrOpenSup(x)).length;
   const score = n => busy(n) * 1000 + by[n].inv.length + by[n].tk.length + by[n].task.length;
-  const order = Object.keys(by).sort((a, b) => score(b) - score(a) || a.localeCompare(b));
+  // وانت بتدوّر: المحلات اللي فيها نتيجة بس (أو اسمها نفسه مطابق)
+  const order = Object.keys(by).filter(n => !q || storeHit(n) || by[n].inv.length + by[n].tk.length + by[n].task.length + by[n].jr.length)
+    .sort((a, b) => (q ? (storeHit(b) ? 1 : 0) - (storeHit(a) ? 1 : 0) : 0) || score(b) - score(a) || a.localeCompare(b));
   const nTk = tkL.length, nTask = taskL.filter(x => x.status === 'مفتوحة').length;
   $('bInfo').textContent = list.length + ' فاتورة' + (nTk ? ' • ' + nTk + ' تذكرة' : '') + (nTask ? ' • ' + nTask + ' تاسك مفتوحة' : '') + ' في ' + order.filter(n => busy(n) || by[n].inv.length).length + ' محل';
   $('board').innerHTML = order.map(n => {
