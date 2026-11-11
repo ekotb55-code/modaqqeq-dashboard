@@ -94,9 +94,41 @@
           try { ok = navigator.canShare({ files: [f] }); } catch (e) {}
           if (!ok) continue;
           try { await navigator.share({ files: [f], title: text, text: text }); return 'shared'; }
-          catch (e) { return e && e.name === 'NotAllowedError' ? 'needtap' : 'cancel'; }
+          catch (e) {
+            if (!(e && e.name === 'NotAllowedError')) return 'cancel';
+            // المتصفح عاوز دوسة جديدة: زرار حقيقي في الصفحة يفتح المشاركة على طول من الدوسة
+            return await mdq.shareTap(f, text);
+          }
         }
         return 'unsupported';
+      },
+      shareTap(f, text) {
+        return new Promise(resolve => {
+          const bg = document.createElement('div');
+          bg.dir = 'rtl';
+          bg.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif';
+          const box = document.createElement('div');
+          box.style.cssText = 'background:#fff;border-radius:22px;padding:22px 18px;width:min(86vw,360px);text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.3)';
+          box.innerHTML = '<div style="font-size:44px">✅</div><div style="font-size:20px;font-weight:800;margin:6px 0 4px">الملف جاهز</div>' +
+            '<div style="color:#555;font-size:15px;margin-bottom:16px"></div>';
+          box.children[2].textContent = text || '';
+          const go = document.createElement('button');
+          go.textContent = '📤 ابعته واتساب';
+          go.style.cssText = 'width:100%;height:54px;border:0;border-radius:16px;background:#25D366;color:#fff;font-size:18px;font-weight:800;margin-bottom:8px';
+          const no = document.createElement('button');
+          no.textContent = 'رجوع';
+          no.style.cssText = 'width:100%;height:44px;border:0;border-radius:14px;background:#eef2f6;color:#333;font-size:16px';
+          box.append(go, no);
+          bg.append(box);
+          document.body.append(bg);
+          const done = r => { bg.remove(); resolve(r); };
+          no.onclick = () => done('cancel');
+          go.onclick = () => {
+            navigator.share({ files: [f], title: text, text: text })
+              .then(() => done('shared'))
+              .catch(e => done(e && e.name === 'AbortError' ? 'cancel' : 'unsupported'));
+          };
+        });
       }
     };
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
