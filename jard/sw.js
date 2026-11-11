@@ -1,5 +1,5 @@
 // تطبيق مدقق على الويب (آيفون): إشعارات + يفتح من غير نت بآخر نسخة
-const CACHE = 'mdq-app-v1';
+const CACHE = 'mdq-app-v2';
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
@@ -19,10 +19,10 @@ self.addEventListener('push', e => {
   let p = {};
   try { p = e.data ? e.data.json() : {}; } catch (_) {}
   const d = p.data || {}, n = p.notification || {};
-  const target = d.type === 'chat' ? 'chat:' + (d.invoiceId || '') : (d.invoiceId || '');
+  const target = d.tk ? 'tk:' + d.tk : d.type === 'chat' ? 'chat:' + (d.invoiceId || '') : (d.invoiceId || '');
   e.waitUntil(self.registration.showNotification(n.title || d.title || 'مدقق', {
     body: n.body || d.body || '', icon: 'icons/Icon-192.png', badge: 'icons/Icon-192.png', dir: 'rtl', lang: 'ar',
-    tag: d.invoiceId ? 'inv-' + d.invoiceId : undefined, data: { target }
+    tag: d.invoiceId ? 'inv-' + d.invoiceId : d.tk ? 'tk-' + d.tk : d.jr ? 'jr-' + d.jr : undefined, data: { target }
   }));
 });
 self.addEventListener('notificationclick', e => {
