@@ -82,6 +82,21 @@
         a.href = url; a.download = name; a.style.display = 'none';
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 60000);
+      },
+      // مشاركة ملف (واتساب...) - لو المتصفح مش بيقبل الإكسل بنجرب نسخة CSV
+      // بيرجع: shared / cancel / needtap (محتاج دوسة جديدة) / unsupported
+      async shareFile(name, mime, bytes, csvName, csvBytes, text) {
+        if (!navigator.share || !navigator.canShare) return 'unsupported';
+        const cands = [new File([bytes.slice()], name, { type: mime })];
+        if (csvBytes && csvBytes.length) cands.push(new File([csvBytes.slice()], csvName, { type: 'text/csv' }));
+        for (const f of cands) {
+          let ok = false;
+          try { ok = navigator.canShare({ files: [f] }); } catch (e) {}
+          if (!ok) continue;
+          try { await navigator.share({ files: [f], title: text, text: text }); return 'shared'; }
+          catch (e) { return e && e.name === 'NotAllowedError' ? 'needtap' : 'cancel'; }
+        }
+        return 'unsupported';
       }
     };
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
