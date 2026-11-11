@@ -158,7 +158,9 @@
   .board { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 14px; height: calc(100vh - 150px); align-items: flex-start; }
   .bcol { flex: 0 0 285px; background: #E9EEF5; border-radius: 16px; display: flex; flex-direction: column; max-height: 100%; }
   .bhead { padding: 12px 14px 8px; border-bottom: 1px solid #D6DFEA; }
-  .bhead h3 { margin: 0; font-size: 16px; color: #0B3D6E; display: flex; align-items: center; gap: 6px; }
+  .bhead h3 { margin: 0; font-size: 21px; font-weight: 900; color: #0B3D6E; display: flex; align-items: center; gap: 7px; }
+  .bhead h3 .bname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bcount { flex: none; font-size: 13px; font-weight: 900; color: #fff; background: var(--sc, #1479D3); border-radius: 999px; padding: 2px 10px; min-width: 28px; text-align: center; }
   .bhead h3 .dot { width: 10px; height: 10px; border-radius: 50%; background: #2BB45A; display: inline-block; }
   .bhead h3 .dot.warn { background: #E67E00; } .bhead h3 .dot.bad { background: #C62828; }
   .bstats { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
@@ -708,7 +710,7 @@
     <div class="bbar">
       <b>🏪 المحلات</b>
       <div class="seg" id="bRange">
-        <button data-d="1">النهارده</button><button data-d="3" class="on">3 أيام</button><button data-d="7">أسبوع</button><button data-d="30">شهر</button>
+        <button data-d="1">النهارده</button><button data-d="3" class="on">3 أيام</button><button data-d="7">أسبوع</button><button data-d="30">شهر</button><button data-d="0">الكل</button>
       </div>
       <input id="bText" placeholder="🔍 بحث بالمورد أو الموظف" oninput="renderBoard()">
       <label class="chk"><input type="checkbox" id="bOpen" onchange="renderBoard()"> الشغالة بس</label>
@@ -1845,7 +1847,7 @@ function renderRepForm() {
     '<div><small>إلى</small><input type="date" id="repTo" value="' + isoDay(today) + '"></div>' +
     '<button class="btn" style="padding:12px 20px" onclick="makeReport(\'perf\')">📄 تقرير الأداء</button>' +
     '<button class="btn" style="padding:12px 20px;background:#6C4BD8" onclick="makeReport(\'price\')">📊 تقرير أسعار الشراء</button></div>' +
-    '<p style="color:var(--muted);margin:10px 0 0;font-size:13px">📄 <b>الأداء:</b> الفواتير اللي دخلت ووقت الإدخال والموردين &nbsp;•&nbsp; 📊 <b>أسعار الشراء:</b> الأصناف اللي اتشرت وزيادة ونقص أسعارها وأثرها على التكلفة (لصناع القرار)</p></div>';
+    '<p style="color:var(--muted);margin:10px 0 0;font-size:13px">📄 <b>الأداء:</b> الفواتير اللي دخلت ووقت الإدخال والموردين + التاسكات وتذاكر الدعم وطلبات الجرد &nbsp;•&nbsp; 📊 <b>أسعار الشراء:</b> الأصناف اللي اتشرت وزيادة ونقص أسعارها وأثرها على التكلفة (لصناع القرار)</p></div>';
 }
 // kind: 'perf' = تقرير الأداء (الفواتير)، 'price' = تقرير أسعار الشراء (الأصناف)
 async function makeReport(kind) {
@@ -1870,6 +1872,12 @@ async function makeReport(kind) {
     }
   }
   const waiting = all.filter(v => v.store === st && v.status !== ST_DONE).length;
+  // التاسكات والتذاكر وطلبات الجرد في الفترة (تقرير الأداء)
+  let SR = { tasks: [], tickets: [], jrs: [] }, srErr = '';
+  if (!isPrice) {
+    wait('بحمّل التاسكات والتذاكر...');
+    try { SR = await api('dStoreReport', { token, store: st, from: from.toISOString(), to: to.toISOString() }); } catch (e) { srErr = msg(e); }
+  }
   const total = done.reduce((s, v) => s + v.total, 0);
   const avg = done.length ? done.reduce((s, v) => s + mins(v.createdAt, v.doneAt), 0) / done.length : 0;
   const ontime = done.length ? done.filter(v => mins(v.createdAt, v.doneAt) <= SLA_MIN).length / done.length : 0;
@@ -2041,8 +2049,50 @@ async function makeReport(kind) {
       : '<tr><td colspan="10" style="text-align:center;padding:20px">مفيش فواتير دخلت في الفترة دي</td></tr>') +
     (done.length ? '<tr><td></td><td colspan="5"><b>الإجمالي</b></td><td class="num"><b>' + money(total) + '</b></td><td colspan="3"></td></tr>' : '') + '</tbody></table></div>') +
     (isPrice ? '' : supHtml) +
+    (isPrice ? '' : srHtml(SR, srErr)) +
     '<div class="ft"><span>مدقق - Mudaqeq</span><span>اتعمل ' + dt(new Date(now()).toISOString()) + ' بواسطة ' + esc(me) + '</span></div></div></body></html>';
   w.document.open(); w.document.write(html); w.document.close();
+}
+
+// ---------- تقرير الفرع: التاسكات + تذاكر الدعم + طلبات الجرد ----------
+function srHtml(SR, err) {
+  if (err) return '<div class="sec"><h2>📋 التاسكات والدعم</h2><p class="mut">⚠️ مقدرتش أحمّل التاسكات والتذاكر: ' + esc(err) + '</p></div>';
+  const T = (SR.tasks || []).slice().sort((a, b) => String(a.due || a.createdAt).localeCompare(String(b.due || b.createdAt)));
+  const K = (SR.tickets || []).slice().sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  const J = SR.jrs || [];
+  const tDone = T.filter(x => x.status === 'اتعملت');
+  const onT = tDone.filter(x => !x.due || mins(x.due, x.doneAt) <= 15).length;
+  const tAvg = tDone.length ? tDone.reduce((s, x) => s + Math.max(0, mins(x.due || x.createdAt, x.doneAt)), 0) / tDone.length : 0;
+  const kSolved = K.filter(x => x.solvedAt);
+  const kAvg = kSolved.length ? kSolved.reduce((s, x) => s + mins(x.createdAt, x.solvedAt), 0) / kSolved.length : 0;
+  const rated = K.filter(x => x.rating > 0), rAvg = rated.length ? rated.reduce((s, x) => s + x.rating, 0) / rated.length : 0;
+  let h = '<div class="sec brk"><h2>📋 التاسكات والدعم الفني</h2><div class="kp">' +
+    '<div><small>تاسكات</small><b>' + T.length + '</b><em>اتعمل ' + tDone.length + ' • مفتوح ' + (T.length - tDone.length) + '</em></div>' +
+    '<div><small>تاسكات في ميعادها</small><b>' + (tDone.length ? Math.round(onT / tDone.length * 100) : 0) + '%</b><em>متوسط التنفيذ ' + durTxt(tAvg) + '</em></div>' +
+    '<div><small>تذاكر دعم</small><b>' + K.length + '</b><em>اتحل ' + kSolved.length + '</em></div>' +
+    '<div><small>متوسط حل التذكرة</small><b>' + durTxt(kAvg) + '</b><em>من الطلب للحل</em></div>' +
+    '<div><small>تقييم الفرع للدعم</small><b>' + (rated.length ? rAvg.toFixed(1) + ' ⭐' : '-') + '</b><em>' + rated.length + ' تقييم</em></div>' +
+    '<div><small>طلبات جرد</small><b>' + J.length + '</b><em>' + J.filter(x => x.status === 'خلص').length + ' خلص</em></div></div></div>';
+  if (T.length) {
+    h += '<div class="sec"><h2>✅ التاسكات (' + T.length + ')</h2><table class="t2"><thead><tr><th>#</th><th>التاسك</th><th>النوع</th><th>الميعاد</th><th>الحالة</th><th>عملها</th><th>وقت التنفيذ</th><th>المدة</th></tr></thead><tbody>' +
+      T.map((x, i) => '<tr><td class="mut">' + (i + 1) + '</td><td><b>' + esc(x.title) + '</b>' + (x.details ? '<br><small class="mut">' + esc(x.details) + '</small>' : '') +
+        (x.data && x.data.progTotal !== undefined ? '<br><small>إجمالي البرنامج ' + money(x.data.progTotal) + ' = الجرد ' + money(x.data.appTotal) + '</small>' : '') + '</td>' +
+        '<td>' + (x.type === 'جرد' ? 'جرد' : String(x.createdBy).indexOf('متكررة') !== -1 ? '🔁 متكررة' : 'عادية') + '</td><td>' + dt(x.due || x.createdAt) + '</td>' +
+        '<td>' + (x.status === 'اتعملت' ? '<span class="tg dn">✓ اتعملت</span>' : '<span class="tg new">مفتوحة</span>') + '</td><td>' + esc(x.doneBy || '-') + '</td>' +
+        '<td>' + (x.doneAt ? dt(x.doneAt) : '-') + '</td><td>' + (x.doneAt ? durTxt(Math.max(0, mins(x.due || x.createdAt, x.doneAt))) : '-') + '</td></tr>').join('') + '</tbody></table></div>';
+  }
+  if (K.length) {
+    h += '<div class="sec"><h2>🛠️ تذاكر الدعم (' + K.length + ')</h2><table class="t2"><thead><tr><th>#</th><th>المشكلة</th><th>الأولوية</th><th>طلبها</th><th>الوقت</th><th>استلمها</th><th>الحالة</th><th>وقت الحل</th><th>التقييم</th></tr></thead><tbody>' +
+      K.map((x, i) => '<tr><td class="mut">' + (i + 1) + '</td><td><b>' + esc(x.title) + '</b>' + (x.solution ? '<br><small class="mut">الحل: ' + esc(x.solution) + '</small>' : '') + '</td><td>' + esc(x.priority) + '</td><td>' + esc(x.user) + '</td>' +
+        '<td>' + dt(x.createdAt) + '</td><td>' + esc(x.assigneeName || '-') + '</td><td>' + esc(x.status) + '</td><td>' + (x.solvedAt ? durTxt(mins(x.createdAt, x.solvedAt)) : '-') + '</td>' +
+        '<td>' + (x.rating ? '⭐'.repeat(x.rating) : '-') + '</td></tr>').join('') + '</tbody></table></div>';
+  }
+  if (J.length) {
+    h += '<div class="sec"><h2>📋 طلبات الجرد (' + J.length + ')</h2><table class="t2"><thead><tr><th>الميعاد</th><th>الحالة</th><th>طلبها</th><th>آخر حاجة حصلت</th></tr></thead><tbody>' +
+      J.map(x => { const l = (x.log || []).slice(-1)[0]; return '<tr><td>' + dt(x.at) + '</td><td>' + esc(x.status) + '</td><td>' + esc(x.user) + '</td><td>' + (l ? esc(l.text) + ' <small class="mut">' + dt(l.at) + '</small>' : '-') + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  }
+  if (!T.length && !K.length && !J.length) h += '<p class="mut" style="text-align:center">مفيش تاسكات ولا تذاكر للفرع في الفترة دي</p>';
+  return h;
 }
 
 // ---------- قسم الجودة ----------
@@ -2777,6 +2827,7 @@ function renderBoard() {
     b.onclick = () => { boardDays = Number(b.dataset.d); renderBoard(); };
   });
   const since = new Date(now()); since.setHours(0, 0, 0, 0); since.setDate(since.getDate() - (boardDays - 1));
+  if (!boardDays) since.setTime(0); // الكل
   const q = $('bText').value.trim(), onlyOpen = $('bOpen').checked;
   const last = v => Math.max(...invEvents(v).map(e => e.ms).filter(x => !isNaN(x)), 0);
   const list = all.filter(v => (pending(v) || v.status === ST_REJ || last(v) >= since.getTime()) &&
@@ -2814,7 +2865,10 @@ function renderBoard() {
       B.tk.filter(v => !tkOpen(v)).map(v => tkBoardCard(v)),
       vs.filter(v => !pending(v)).map(invBoardCard),
       B.task.filter(x => x.status !== 'مفتوحة').map(v => taskCard(v, true)));
-    return '<div class="bcol" style="--sc:' + stColor(n) + '"><div class="bhead"><h3><span class="dot' + (late || urge || lateTask ? ' bad' : busy(n) ? ' warn' : '') + '"></span>' + esc(n) + '</h3>' +
+    const tot = B.inv.length + B.tk.length + B.task.length + B.jr.length;
+    const totT = 'التعاملات في الفترة: ' + B.inv.length + ' فاتورة • ' + B.tk.length + ' تذكرة • ' + B.task.length + ' تاسك' + (B.jr.length ? ' • ' + B.jr.length + ' طلب جرد' : '');
+    return '<div class="bcol" style="--sc:' + stColor(n) + '"><div class="bhead"><h3><span class="dot' + (late || urge || lateTask ? ' bad' : busy(n) ? ' warn' : '') + '"></span><span class="bname" title="' + esc(n) + '">' + esc(n) + '</span>' +
+      '<span class="bcount" title="' + esc(totT) + '">' + tot + '</span></h3>' +
       '<div class="bstats">' + (pend.length ? '<span class="o">⏳ ' + pend.length + ' مستنية</span>' : '') + (late ? '<span class="r">⚠️ ' + late + ' متأخرة</span>' : '') +
       (urge ? '<span class="r">🔥 ' + urge + ' مستعجلة</span>' : '') + (openTk.length ? '<span>🛠️ ' + openTk.length + ' تذكرة</span>' : '') +
       (openTask.length ? '<span style="color:#6C4BD8">📋 ' + openTask.length + ' تاسك' + (lateTask ? ' (' + lateTask + ' متأخرة)' : '') + '</span>' : '') +
