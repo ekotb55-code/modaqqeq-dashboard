@@ -2928,6 +2928,21 @@ async function tkSetColor(store, c) { try { const r = await api('dStoreColor', {
 
 // ---------- التاسكات ----------
 let tasks = [], jrs = [], taskKnown = null, jrKnown = null, members = [];
+// بكرة الماوس على لوحة المحلات: بتحرّك يمين وشمال (وجوه عمود فيه كروت كتير بتنزل لتحت الأول، ومع Shift دايماً يمين وشمال)
+document.addEventListener('wheel', e => {
+  const b = document.getElementById('board');
+  if (!b || !b.contains(e.target) || b.scrollWidth <= b.clientWidth || e.ctrlKey) return;
+  const dy = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : 0;
+  if (!dy) return;
+  const body = e.target.closest('.bbody');
+  if (body && !e.shiftKey && body.scrollHeight > body.clientHeight + 2) {
+    const canDown = body.scrollTop + body.clientHeight < body.scrollHeight - 1, canUp = body.scrollTop > 0;
+    if ((dy > 0 && canDown) || (dy < 0 && canUp)) return; // العمود لسه بيتحرك لتحت/لفوق
+  }
+  e.preventDefault();
+  // الصفحة عربي (من اليمين للشمال): البكرة لتحت = نروح ناحية الشمال
+  b.scrollLeft -= dy * (e.deltaMode === 1 ? 30 : 1);
+}, { passive: false });
 // التاسك لمين: '' الفريق كله • role:دعم/جودة/مدير مستوى إداري • user:<إيميل> شخص معين
 const TASK_ROLES = { 'دعم': '🎧 الدعم', 'جودة': '🔍 الجودة', 'مدير': '👔 الإدارة' };
 function taskToLabel(to) {
