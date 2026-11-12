@@ -1,6 +1,6 @@
 // تطبيق الداش بورد: بيشتغل من غير ما يحتاج تنزيل من المتجر
 // الصفحة بتتجاب من النت الأول (علشان أي تحديث يظهر على طول)، ولو النت قاطع بتفتح آخر نسخة محفوظة
-const CACHE = 'modaqqeq-dash-v4';
+const CACHE = 'modaqqeq-dash-v5';
 const SHELL = ['./', './index.html', './logo_wide.png', './icon.png', './icon-192.png', './icon-512.png', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {
@@ -27,7 +27,7 @@ self.addEventListener('push', e => {
   const d = p.data || {}, n = p.notification || {};
   const title = d.title || n.title || 'داش بورد مدقق';
   const opts = {
-    body: d.body || n.body || '', icon: 'icon-192.png', badge: 'icon-192.png', dir: 'rtl', lang: 'ar',
+    body: d.body || n.body || '', icon: 'icon-192.png', badge: 'badge-96.png', dir: 'rtl', lang: 'ar',
     tag: d.tag || undefined, renotify: !!d.tag, vibrate: [200, 100, 200],
     data: { inv: d.inv || '', store: d.store || '', team: d.team || '', page: d.page || '', tk: d.tk || '' }
   };
