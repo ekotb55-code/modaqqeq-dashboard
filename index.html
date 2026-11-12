@@ -644,6 +644,7 @@
   #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 11px 20px; border-radius: 14px; z-index: 50; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
   .spin { display: inline-block; width: 16px; height: 16px; border: 2.5px solid currentColor; border-left-color: transparent; border-radius: 50%; animation: s .8s linear infinite; vertical-align: middle; }
   @keyframes s { to { transform: rotate(360deg); } }
+.tkitems td,.tkitems th{border:1px solid #DCE6F2;padding:6px 8px;vertical-align:top;font-size:13px}.tkitems th{background:#EEF4FB}
 </style>
 </head>
 <body>
@@ -1327,7 +1328,7 @@ function renderTk() {
     (v.assigneeName ? i('المسؤول', v.assigneeName + (v.pickedAt ? ' - استلمها ' + dt(v.pickedAt) : '')) : '') +
     (v.solvedAt ? i('اتحلت', dt(v.solvedAt) + ' (' + durTxt(mins(v.createdAt, v.solvedAt)) + ')') : '') +
     (v.rating ? i('تقييم الفرع', '★'.repeat(v.rating) + (v.ratingNote ? ' - ' + v.ratingNote : '')) : '') + '</div>';
-  if (v.desc) h += '<div class="pane" style="min-height:0;background:#F7FAFE;margin-bottom:10px"><b>المشكلة:</b><br>' + esc(v.desc).replace(/\n/g, '<br>') + '</div>';
+  if (v.desc) h += '<div class="pane" style="min-height:0;background:#F7FAFE;margin-bottom:10px"><b>المشكلة:</b><br>' + tkDescHtml(v.desc) + '</div>';
   if (v.photos.length) h += '<div class="tkpics">' + v.photos.map(f => '<img data-tkimg="' + esc(f) + '" onclick="chatImgFull(this)" alt="">').join('') + '</div>';
   // الأزرار
   if (open && !qa) {
@@ -2955,6 +2956,20 @@ const TASK_OPEN = 'مفتوحة';
 const taskDue = v => new Date(v.due || v.createdAt).getTime() <= now();
 const taskLate = v => v.status === TASK_OPEN && taskDue(v) && now() - new Date(v.due || v.createdAt).getTime() > 15 * 60000;
 const jrOpenSup = v => v.status === 'مستني الدعم';
+// وصف التذكرة: سطور الأصناف (1) اسم • باركود • ... • ✅ المطلوب) بتظهر جدول صغير
+function tkDescHtml(desc) {
+  const lines = String(desc || '').split('\n');
+  const items = lines.filter(l => /^\d+\) /.test(l));
+  if (!items.length) return esc(desc).replace(/\n/g, '<br>');
+  const other = lines.filter(l => !/^\d+\) /.test(l));
+  const row = l => {
+    const parts = l.replace(/^\d+\) /, '').split(' • ');
+    return '<tr><td style="font-weight:700">' + esc(parts[0]) + '</td><td>' + parts.slice(1).map(p => p.indexOf('✅') === 0
+      ? '<b style="color:#1A8A3E">' + esc(p) + '</b>' : esc(p)).join('<br>') + '</td></tr>';
+  };
+  return '<table style="width:100%;border-collapse:collapse;margin:6px 0" class="tkitems"><tr><th style="text-align:start">الصنف</th><th style="text-align:start">التفاصيل والمطلوب</th></tr>' +
+    items.map(row).join('') + '</table>' + (other.length ? esc(other.join('\n')).replace(/\n/g, '<br>') : '');
+}
 function taskInTab(k, v) {
   if (k === 'الكل') return true;
   // التاسكات المفتوحة اللي جه ميعادها بتظهر في "جديدة" مع الفواتير، والمتأخرة في "متأخرة"
