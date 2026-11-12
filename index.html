@@ -2967,7 +2967,7 @@ function tkDescHtml(desc) {
     return '<tr><td style="font-weight:700">' + esc(parts[0]) + '</td><td>' + parts.slice(1).map(p => p.indexOf('✅') === 0
       ? '<b style="color:#1A8A3E">' + esc(p) + '</b>' : esc(p)).join('<br>') + '</td></tr>';
   };
-  return '<table style="width:100%;border-collapse:collapse;margin:6px 0" class="tkitems"><tr><th style="text-align:start">الصنف</th><th style="text-align:start">التفاصيل والمطلوب</th></tr>' +
+  return '<table style="width:100%;border-collapse:collapse;margin:6px 0" class="tkitems"><tr><th style="text-align:start">' + (items[0].indexOf('👤') !== -1 ? 'الموظف' : 'الصنف') + '</th><th style="text-align:start">التفاصيل والمطلوب</th></tr>' +
     items.map(row).join('') + '</table>' + (other.length ? esc(other.join('\n')).replace(/\n/g, '<br>') : '');
 }
 function taskInTab(k, v) {
