@@ -1116,7 +1116,8 @@ const CARD_TABS = [
   { k: ST_WORK, c: 's2', t: '⚙️ يتم الادخال', stage: 2, f: v => v.status === ST_WORK },
   { k: ST_QA, c: 's11', t: '🔍 قسم الجودة', stage: 3, f: v => v.status === ST_QA },
   { k: ST_DONE, c: 's3', t: '✅ تم الإدخال', stage: 4, f: v => v.status === ST_DONE },
-  // فلاتر تانية (كروت صغيرة)
+  // فلاتر تانية (كروت صغيرة) - التاسكات أول واحدة علشان تبان على طول
+  { k: 'tasks', c: 's14', t: '📋 التاسكات وطلبات الجرد', f: () => false },
   { k: 'late', c: 's4', t: '⚠️ متأخرة', f: v => (pending(v) && mins(v.createdAt, now()) > SLA_MIN) || qaLate(v) },
   { k: 'urge', c: 's7', t: '🔥 الفرع مستعجلها', f: v => pending(v) && v.urgeCount, hideEmpty: true },
   { k: ST_REJ, c: 's6', t: '↩️ مرفوضة عند الفرع', f: v => v.status === ST_REJ },
@@ -1125,7 +1126,6 @@ const CARD_TABS = [
   { k: TAB_NOTES, c: 's8', t: '📝 ملاحظات الفروع', f: v => !!v.reviewNotes },
   { k: 'tk', c: 's12', t: '🛠️ تذاكر الدعم المفتوحة', f: () => false },
   { k: 'sched', c: 's13', t: '📅 تذاكر مجدولة', f: () => false, hideEmpty: true },
-  { k: 'tasks', c: 's14', t: '📋 تاسكات وطلبات جرد', f: () => false, hideEmpty: true },
   { k: 'الكل', c: 's9', t: '📋 الكل', f: () => true }
 ];
 // التذاكر بتتفلتر بقواعدها هي (tkInTab)
