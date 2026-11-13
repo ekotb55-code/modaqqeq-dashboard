@@ -3167,6 +3167,8 @@ function taskNewDlg() {
     '<optgroup label="مستوى إداري">' + Object.keys(TASK_ROLES).map(k => '<option value="role:' + esc(k) + '">' + TASK_ROLES[k] + ' بس</option>').join('') + '</optgroup>' +
     (members.length ? '<optgroup label="شخص معين">' + members.map(m => '<option value="user:' + esc(m.email) + '">👤 ' + esc(m.name) + (m.role ? ' (' + esc(m.role) + ')' : '') + '</option>').join('') + '</optgroup>' : '') +
     '</select><small style="color:var(--muted)">التاسك هتظهر لصاحبها بس، والتذكير يوصله هو بس</small>' +
+    '<label class="fl" style="margin-top:8px">⏱ الوقت المتوقع للتاسك (دقايق)</label><input id="kEst" type="number" min="1" max="480" step="1" value="' + TASK_EST_MIN + '" inputmode="numeric" style="width:100%">' +
+    '<small style="color:var(--muted)">لكل محل لوحده. بيتحسب بيه الدعم خلّص التاسكات في الميعاد ولا لأ</small>' +
     '<label class="fl" style="margin-top:8px">التكرار</label><select id="kR" onchange="$(\'kOnce\').style.display=this.value?\'none\':\'\';$(\'kRep\').style.display=this.value?\'\':\'none\';$(\'kWd\').style.display=this.value===\'أسبوعي\'?\'\':\'none\'">' +
     '<option value="">مرة واحدة</option><option value="يومي">كل يوم</option><option value="أسبوعي">كل أسبوع</option></select>' +
     '<div id="kOnce"><label class="fl" style="margin-top:8px">الميعاد</label><input type="datetime-local" id="kDue" value="' + local + '"></div>' +
@@ -3176,8 +3178,9 @@ function taskNewDlg() {
   $('dlgOk').onclick = async () => {
     const sel = [...document.querySelectorAll('.stpick input:checked')].map(x => x.value);
     const t = { title: $('kT').value, details: $('kD').value, stores: sel, all: $('kAll').checked, repeat: $('kR').value, to: $('kTo').value,
-      due: $('kDue').value ? new Date($('kDue').value).toISOString() : '', time: $('kTime').value, weekday: Number($('kWday').value) };
+      due: $('kDue').value ? new Date($('kDue').value).toISOString() : '', time: $('kTime').value, weekday: Number($('kWday').value), est: Math.round(Number($('kEst').value)) };
     if (!t.title.trim()) return toast('اكتب عنوان التاسك');
+    if (!(t.est >= 1 && t.est <= 480)) return toast('اكتب الوقت المتوقع للتاسك بالدقايق (من 1 لـ 480)');
     if (!t.all && !sel.length) return toast('اختار محل واحد على الأقل');
     $('dlgOk').disabled = true;
     try { const r = await api('dTaskNew', { token, task: t }, true); closeDlg(); taskApply(r); toast((t.repeat ? '✅ التاسك المتكررة اتسجلت' : '✅ التاسك اتبعتت لـ ' + (t.all ? 'كل المحلات' : sel.length + ' محل')) + (t.to ? ' • ' + taskToLabel(t.to) + ' بس' : '')); }
@@ -3604,7 +3607,94 @@ function hh_(m) { return (m / 60).toFixed(1); }
 // خصم المرتجعات بيزيد مع كل مرتجع: 1 ← 4 ، 2 ← 10 ، 3 ← 18 ، 4 ← 28
 function retPenalty_(n) { return n * 4 + n * (n - 1); }
 
-function perfCalc_(b, A, reps, SC) {
+// ---- التاسكات في الأداء ----
+// مهلة التاسك = ميعادها + 30 دقيقة سماح + وقت التاسكات اللي اتعملت من ميعادها لحد ما اتعملت،
+// مقسوم على عدد الناس الفاتحين في كل دقيقة (اللي شغال على فاتورة ما بيتحسبش فاضي للتاسكات).
+// يعني لو زميل فتح في النص، الطابور بيتقسم على اتنين من اللحظة دي والمهلة بتقصر.
+const TASK_EST_MIN = 4, TASK_GRACE_MIN = 30;
+function taskPerf_(b, A, TS, busy) {
+  const out = {}, MIN = 60000;
+  if (!TS || !TS.length) return out;
+  const who = {};
+  members.forEach(m => { who[m.name] = { email: m.email, role: m.role }; });
+  A.forEach(a => { if (!who[a.name]) who[a.name] = { email: a.email, role: a.role }; });
+  const roleOf = n => (who[n] || {}).role || 'دعم', mailOf = n => (who[n] || {}).email || n;
+  // المجموعة اللي بتشيل التاسك: الدعم (الفريق كله) • الجودة • شخص معين
+  const inG = (g, n) => g === 'S' ? roleOf(n) !== 'جودة' && roleOf(n) !== 'مدير' : g === 'Q' ? roleOf(n) === 'جودة' : g.slice(2) === mailOf(n);
+  const groupOf = x => {
+    const to = x.to || '';
+    const g = !to || to === 'role:دعم' ? 'S' : to === 'role:جودة' ? 'Q' : to.indexOf('user:') === 0 ? 'U:' + to.slice(5) : '';
+    return g && inG(g, x.doneBy) ? g : 'U:' + mailOf(x.doneBy);   // اللي عملها مش من المجموعة (زي المدير): على قده هو بس
+  };
+  const L = TS.filter(x => x.doneAt && x.doneBy).map(x => ({ x: x, d: new Date(x.due || x.createdAt).getTime(), e: new Date(x.doneAt).getTime(), est: Number(x.est) || TASK_EST_MIN }))
+    .filter(t => t.d > 0 && t.e > 0);
+  if (!L.length) return out;
+  let g0 = Infinity, g1 = now();
+  L.forEach(t => { g0 = Math.min(g0, t.d); g1 = Math.max(g1, t.e); });
+  g0 = Math.max(g0, b.from - 3 * 864e5, g1 - 400 * 864e5);
+  g0 = Math.floor(g0 / MIN) * MIN;
+  const n = Math.ceil((g1 - g0) / MIN) + 2;
+  const idx = t => Math.max(0, Math.min(n, Math.round((t - g0) / MIN)));
+  // وقت الانشغال بالفواتير لكل واحد (متجمّع من غير تكرار)
+  const busyM = {};
+  Object.keys(busy || {}).forEach(k => {
+    const iv = busy[k].map(x => [x.a, x.b]).filter(x => x[1] > x[0]).sort((p, q) => p[0] - q[0]), m = [];
+    iv.forEach(x => { const l = m[m.length - 1]; if (l && x[0] <= l[1]) l[1] = Math.max(l[1], x[1]); else m.push([x[0], x[1]]); });
+    busyM[k] = m;
+  });
+  const caps = {};
+  const capOf = g => {
+    if (caps[g]) return caps[g];
+    const diff = new Float64Array(n + 1), seen = {};
+    A.forEach(a => {
+      if (!inG(g, a.name)) return;
+      seen[a.day] = 1;
+      const s = new Date(a.first).getTime(), e = new Date(a.last).getTime();
+      if (!(e > s)) return;
+      diff[idx(s)] += 1; diff[idx(e)] -= 1;
+      (busyM[a.name] || []).forEach(x => { const s2 = Math.max(s, x[0]), e2 = Math.min(e, x[1]); if (e2 > s2) { diff[idx(s2)] -= 1; diff[idx(e2)] += 1; } });
+    });
+    // يوم مفيهوش حضور متسجل للمجموعة دي: بنعتبر واحد شغال في مواعيد الشغل (9 الصبح لـ 1 بالليل)
+    for (let k = dayKey9_(g0), guard = 0; dayStart9_(k) < g1 && guard < 500; k = dayKey9_(dayStart9_(k) + 36 * 3600000), guard++) {
+      if (seen[k]) continue;
+      const st = dayStart9_(k), p = k.split('-').map(Number), en = new Date(p[0], p[1] - 1, p[2] + 1, OFF_FROM, 0, 0).getTime();
+      diff[idx(st)] += 1; diff[idx(en)] -= 1;
+    }
+    const cum = new Float64Array(n + 1);
+    let cur = 0;
+    for (let i = 0; i < n; i++) { cur += diff[i]; cum[i + 1] = cum[i] + Math.max(0, cur); }
+    return (caps[g] = cum);
+  };
+  // الشغل اللي اتعمل في كل مجموعة مترتب بوقت التنفيذ
+  const works = {};
+  const workOf = g => {
+    if (works[g]) return works[g];
+    const W = L.filter(t => inG(g, t.x.doneBy)).sort((p, q) => p.e - q.e), pre = [0];
+    W.forEach(t => pre.push(pre[pre.length - 1] + t.est));
+    return (works[g] = { e: W.map(t => t.e), pre: pre });
+  };
+  const lb = (arr, v) => { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] < v) lo = m + 1; else hi = m; } return lo; };
+  const ub = (arr, v) => { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] <= v) lo = m + 1; else hi = m; } return lo; };
+  L.forEach(t => {
+    if (t.e < b.from) return;                                    // قبل الفترة: بيدخل في الطابور بس
+    const o = out[t.x.doneBy] || (out[t.x.doneBy] = { n: 0, ontime: 0, jard: 0, late: 0 });
+    o.n++; if (t.x.type === 'جرد') o.jard++;
+    let ok = t.e <= t.d;                                        // اتعملت قبل ميعادها
+    if (!ok) {
+      const g = groupOf(t.x), w = workOf(g), cum = capOf(g);
+      const d = Math.max(t.d, g0), need = w.pre[ub(w.e, t.e)] - w.pre[lb(w.e, d)];   // شغل الطابور من ميعادها لحد ما اتعملت (وهي منه)
+      const i0 = idx(d), target = cum[i0] + need;
+      let lo = i0, hi = n;
+      while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < target) lo = m + 1; else hi = m; }
+      const due = cum[n] < target ? Infinity : g0 + lo * MIN;   // آخر وقت المفروض تخلص فيه (من غير السماح)
+      ok = t.e <= due || mins(due, t.e) <= TASK_GRACE_MIN;
+    }
+    if (ok) o.ontime++; else o.late++;
+  });
+  return out;
+}
+
+function perfCalc_(b, A, reps, SC, TS) {
   const ppl = {};
   const P = n => ppl[n] || (ppl[n] = { name: n, n: 0, total: 0, mins: 0, ontime: 0, pick: 0, pickN: 0, lines: 0, qaN: 0, firstOk: 0, ret: 0, openRet: 0, retList: [], open: 0, cr: 0, crN: 0, att: null });
   const firstOpen = {};
@@ -3727,22 +3817,29 @@ function perfCalc_(b, A, reps, SC) {
     }
   });
 
-  const maxN = Math.max(1, ...Object.values(ppl).map(x => x.n + (x.tk ? x.tk.n : 0)));
+  // ---- التاسكات اللي اتعملت (بالطابور والمهلة)
+  const KP = taskPerf_(b, A, TS, busy);
+  Object.keys(KP).forEach(n => { P(n).tsk = KP[n]; });
+
+  const maxN = Math.max(1, ...Object.values(ppl).map(x => x.n + (x.tk ? x.tk.n : 0) + (x.tsk ? x.tsk.n : 0)));
   return Object.values(ppl).map(p => {
     const T = p.tk || { n: 0, ontime: 0, rated: 0, stars: 0, late: 0, lateMin: 0 };
-    p.tasks = p.n + T.n;
-    p.avg = p.n ? p.mins / p.n : 0; p.rate = p.tasks ? (p.ontime + T.ontime) / p.tasks : 0;
+    const K = p.tsk || { n: 0, ontime: 0, jard: 0, late: 0 };
+    p.tasks = p.n + T.n + K.n;
+    p.avg = p.n ? p.mins / p.n : 0; p.rate = p.tasks ? (p.ontime + T.ontime + K.ontime) / p.tasks : 0;
     const handled = p.qaN + p.openRet;
     p.fp = handled ? p.firstOk / handled : null;
     p.retRate = (p.n + p.openRet) ? p.ret / (p.n + p.openRet) : (p.ret ? 1 : 0);
     const cnt = p.tasks / maxN;
     const perInv = {}; p.retList.forEach(x => { perInv[x.v.id] = (perInv[x.v.id] || 0) + 1; });
     p.multi = Object.values(perInv).filter(c => c > 1).length;                    // فاتورة رجعت أكتر من مرة
-    // ---- التقييم: الجودة 35 + السرعة 25 + الحضور 25 + حجم الشغل 15
+    // ---- التقييم: الجودة 35 + السرعة 25 + الحضور 25 + حجم الشغل 15 (اللي مالوش رقم بتتوزع نسبته على الباقي)
     // الجودة = نسبة الصح من أول مرة (ولو مفيش مراجعة جودة: 1 - نسبة المرتجعات)، وكل فاتورة رجعت أكتر من مرة بتنزّلها 5%
     let q = Math.max(0, (p.fp !== null ? p.fp : 1 - Math.min(1, p.retRate)) - p.multi * 0.05);
     // تقييم الفروع للتذاكر (من 5) بيدخل في الجودة
     if (T.rated) { const r = T.stars / T.rated / 5; q = p.n ? q * 0.7 + r * 0.3 : r; }
+    // مفيش حاجة اتراجعت جودتها (تاسكات بس أو تذاكر من غير تقييم): الجودة ما بتتحسبش
+    if (!p.n && !p.qaN && !p.openRet && !p.ret && !T.rated) q = null;
     let at = p.att ? Math.max(0, 1 - p.att.pen / 25) : null;                      // الحضور والتأخير والساعات الناقصة
     if (p.sa && p.sa.days) {
       // على الجدول: كل دقيقة تأخير بعد السماح نص نقطة، الغياب 60 نقطة، المغادرة بدري ربع نقطة، والتغطية بتعوّض
@@ -3751,9 +3848,10 @@ function perfCalc_(b, A, reps, SC) {
     }
     // تذكرة مستعجلة ما اتستلمتش في 5 دقايق: كل دقيقة تأخير بنقطة من الحضور والالتزام
     if (T.lateMin) at = Math.max(0, (at === null ? 1 : at) - T.lateMin / 100);
-    const W = at === null ? { q: 35 / 75, s: 25 / 75, a: 0, v: 15 / 75 } : { q: .35, s: .25, a: .25, v: .15 };
-    p.parts = { q: Math.round(q * 100), s: Math.round(p.rate * 100), a: at === null ? null : Math.round(at * 100), v: Math.round(cnt * 100) };
-    p.base = !p.tasks ? 0 : Math.round(100 * (W.q * q + W.s * p.rate + W.a * (at || 0) + W.v * cnt));
+    const W0 = { q: q === null ? 0 : .35, s: .25, a: at === null ? 0 : .25, v: .15 }, wSum = W0.q + W0.s + W0.a + W0.v;
+    const W = { q: W0.q / wSum, s: W0.s / wSum, a: W0.a / wSum, v: W0.v / wSum };
+    p.parts = { q: q === null ? null : Math.round(q * 100), s: Math.round(p.rate * 100), a: at === null ? null : Math.round(at * 100), v: Math.round(cnt * 100) };
+    p.base = !p.tasks ? 0 : Math.round(100 * (W.q * (q || 0) + W.s * p.rate + W.a * (at || 0) + W.v * cnt));
     // سقف: اللي عنده مرتجعات كتير ما ياخدش تقييم عالي مهما كانت سرعته
     p.cap = p.ret >= 3 ? 69 : p.ret === 2 ? 84 : 100;
     p.penRet = Math.max(0, p.base - p.cap);
@@ -3768,9 +3866,10 @@ function perfCalc_(b, A, reps, SC) {
 function renderPerf() {
   drawPerf_();
   const b = perfBounds_(), key = perfRange;
-  Promise.all([api('dAttendance', { token, from: b.fromKey, to: b.toKey }), api('dShifts', { token, from: b.fromKey, to: b.toKey }).catch(() => null)])
-    .then(([j, sc]) => { attCache_ = { key: key, rows: j.rows, sched: sc }; if (key === perfRange) drawPerf_(); })
-    .catch(e => { attCache_ = { key: key, rows: [], err: msg(e) }; if (key === perfRange) drawPerf_(); });
+  const tsP = api('dTaskStats', { token, from: new Date(b.from).toISOString() }).catch(e => ({ err: msg(e) }));
+  Promise.all([api('dAttendance', { token, from: b.fromKey, to: b.toKey }), api('dShifts', { token, from: b.fromKey, to: b.toKey }).catch(() => null), tsP])
+    .then(([j, sc, ts]) => { attCache_ = { key: key, rows: j.rows, sched: sc, ts: ts }; if (key === perfRange) drawPerf_(); })
+    .catch(e => tsP.then(ts => { attCache_ = { key: key, rows: [], err: msg(e), ts: ts }; if (key === perfRange) drawPerf_(); }));
 }
 
 function drawPerf_() {
@@ -3779,25 +3878,29 @@ function drawPerf_() {
   const done = all.filter(v => v.status === ST_DONE && v.doneAt && new Date(v.doneAt) >= start);
   const reps = (chatSum.replies || []).filter(x => new Date(x.at) >= start);
   const SC = (attCache_ && attCache_.key === perfRange) ? attCache_.sched : null;
-  const list = perfCalc_(b, A, reps, SC);
+  const TSr = (attCache_ && attCache_.key === perfRange) ? attCache_.ts : null;
+  const TS = TSr && TSr.tasks ? TSr.tasks : null;
+  const list = perfCalc_(b, A, reps, SC, TS);
   const colors = r => r >= .9 ? 'var(--green)' : r >= .7 ? 'var(--yellow)' : 'var(--red)';
   const medals = ['🥇', '🥈', '🥉'];
   let medalK = 0;
-  let h = '<div class="perf-head"><h2>🏆 أداء الدعم في إدخال الفواتير</h2><select onchange="perfRange=this.value;renderPerf()">' +
+  let h = '<div class="perf-head"><h2>🏆 أداء الدعم: الفواتير والتذاكر والتاسكات</h2><select onchange="perfRange=this.value;renderPerf()">' +
     [['today', 'النهارده'], ['week', 'آخر 7 أيام'], ['month', 'آخر 30 يوم'], ['all', 'الكل']].map(([k, t]) => '<option value="' + k + '"' + (perfRange === k ? ' selected' : '') + '>' + t + '</option>').join('') +
     '</select></div>';
   const tot = done.length, avgAll = tot ? done.reduce((s, v) => s + mins(v.createdAt, v.doneAt), 0) / tot : 0;
   const onAll = tot ? done.filter(v => mins(v.createdAt, v.doneAt) <= SLA_MIN).length / tot : 0;
   const totRet = list.reduce((s, p) => s + p.ret, 0);
+  const totK = list.reduce((s, p) => s + (p.tsk ? p.tsk.n : 0), 0), totKo = list.reduce((s, p) => s + (p.tsk ? p.tsk.ontime : 0), 0);
   h += '<div class="stats"><div class="stat s3"><small>فواتير دخلت</small><b>' + tot + '</b></div>' +
     '<div class="stat s2"><small>متوسط الوقت</small><b>' + durTxt(avgAll) + '</b></div>' +
     '<div class="stat s1"><small>في الميعاد (≤ ' + SLA_MIN + ' د)</small><b>' + Math.round(onAll * 100) + '%</b></div>' +
     '<div class="stat s4"><small>متأخرة دلوقتي</small><b>' + all.filter(v => pending(v) && mins(v.createdAt, now()) > SLA_MIN).length + '</b></div>' +
     '<div class="stat s7"><small>↩️ رجوع من الجودة</small><b>' + totRet + '</b></div>' +
+    '<div class="stat s5"><small>📋 تاسكات اتعملت</small><b>' + (TS ? totK + (totK ? ' <small style="font-size:13px">(' + Math.round(totKo / totK * 100) + '% في الميعاد)</small>' : '') : '-') + '</b></div>' +
     '<div class="stat s10"><small>💬 متوسط الرد على الشات</small><b>' + (reps.length ? durTxt(reps.reduce((a, x) => a + mins(x.asked, x.at), 0) / reps.length) : '-') + '</b></div></div>';
 
   h += list.length ? '<div class="people">' + list.map(p => {
-    const medal = (p.n && !p.flag && p.ret < 2 && p.score >= 70 && medalK < 3) ? medals[medalK++] : '';
+    const medal = (p.tasks && !p.flag && p.ret < 2 && p.score >= 70 && medalK < 3) ? medals[medalK++] : '';
     const a = p.att;
     const gc = p.score >= 85 ? 'var(--green)' : p.score >= 70 ? 'var(--yellow)' : 'var(--red)';
     return '<div class="person' + (p.flag ? ' flagged' : '') + '"><div class="ph"><div class="av">' + esc((p.name || '?').trim().charAt(0)) + '</div><div class="nm">' + esc(p.name) +
@@ -3807,6 +3910,7 @@ function drawPerf_() {
       '<div class="kpis">' +
       '<div class="kpi"><small>فواتير</small><b>' + p.n + '</b></div>' +
       '<div class="kpi"><small>أصناف</small><b>' + p.lines + '</b></div>' +
+      '<div class="kpi"><small>📋 تاسكات</small><b>' + (!TS ? '-' : (p.tsk ? p.tsk.n : 0) + (p.tsk && p.tsk.n ? ' <small style="font-size:12px">(' + Math.round(p.tsk.ontime / p.tsk.n * 100) + '% في الميعاد' + (p.tsk.jard ? ' • ' + p.tsk.jard + ' جرد' : '') + ')</small>' : '')) + '</b></div>' +
       '<div class="kpi"><small>متوسط الوقت (من دخوله)</small><b>' + (p.n ? durTxt(p.avg) : '-') + '</b></div>' +
       '<div class="kpi"><small>متوسط الاستلام</small><b>' + (p.pickN ? durTxt(p.pick / p.pickN) : '-') + '</b></div>' +
       '<div class="kpi"><small>في الميعاد</small><b style="color:' + colors(p.rate) + '">' + Math.round(p.rate * 100) + '%</b></div>' +
@@ -3818,7 +3922,7 @@ function drawPerf_() {
       (p.tk ? '<div class="kpi"><small>🛠️ تذاكر اتحلت</small><b>' + p.tk.n + (p.tk.n ? ' <small style="font-size:12px">(' + Math.round(p.tk.ontime / p.tk.n * 100) + '% في الميعاد)</small>' : '') + '</b></div>' +
         '<div class="kpi"><small>⭐ تقييم الفروع</small><b style="color:#B8860B">' + (p.tk.rated ? (p.tk.stars / p.tk.rated).toFixed(1) + '/5' : '-') + '</b></div>' : '') +
       '</div><div class="bar"><i style="width:' + p.score + '%;background:' + colors(p.score / 100) + '"></i></div>' +
-      '<div class="parts"><span>🔍 الجودة <b>' + p.parts.q + '%</b></span><span>⚡ السرعة <b>' + p.parts.s + '%</b></span>' +
+      '<div class="parts"><span>🔍 الجودة <b>' + (p.parts.q === null ? '-' : p.parts.q + '%') + '</b></span><span>⚡ السرعة <b>' + p.parts.s + '%</b></span>' +
       '<span>⏱ الحضور <b>' + (p.parts.a === null ? '-' : p.parts.a + '%') + '</b></span><span>📦 حجم الشغل <b>' + p.parts.v + '%</b></span></div>' +
       '<small style="color:var(--muted)">الدرجة ' + p.score + '/100' +
       (p.penRet ? ' <b style="color:var(--red)">(اتقفلت على ' + p.cap + ' بسبب ' + p.ret + ' مرتجعات)</b>' : '') + '</small>' +
@@ -3829,7 +3933,7 @@ function drawPerf_() {
       (p.tk && p.tk.late ? '<div class="urgebox" style="margin-bottom:0">🚨 ' + p.tk.late + ' تذكرة مستعجلة اتأخرت في الاستلام (' + durTxt(p.tk.lateMin) + ' بعد الـ 5 دقايق) وهو في الوردية</div>' : '') +
       (p.excused > 1 ? '<small style="color:var(--muted)">⏳ ' + durTxt(p.excused) + ' ما اتحسبتش عليه لأنه كان شغال لوحده على فاتورة تانية</small>' : '') +
       '</div>';
-  }).join('') + '</div><p style="color:var(--muted);font-size:13px;margin:6px 4px 14px">📐 التقييم = 🔍 الجودة (الصح من أول مرة) 35% + ⚡ السرعة (في الميعاد) 25% + ⏱ الحضور والالتزام 25% + 📦 حجم الشغل 15% • اللي عنده 2 مرتجعات أقصاه 84 (جيد)، و3 أو أكتر أقصاه 69 (محتاج تحسين) • ممتاز ≥ 85</p>' : '<div class="pane empty">مفيش فواتير دخلت في الفترة دي</div>';
+  }).join('') + '</div><p style="color:var(--muted);font-size:13px;margin:6px 4px 14px">📐 التقييم = 🔍 الجودة (الصح من أول مرة) 35% + ⚡ السرعة (الفواتير والتذاكر والتاسكات في الميعاد) 25% + ⏱ الحضور والالتزام 25% + 📦 حجم الشغل (فواتير + تذاكر + تاسكات) 15% • مهلة التاسك = ميعادها + ' + TASK_GRACE_MIN + ' د سماح + وقت التاسكات اللي قبلها مقسوم على عدد الفاتحين ساعتها • اللي ما عندوش جودة أو حضور بتتوزع نسبتها على الباقي • اللي عنده 2 مرتجعات أقصاه 84 (جيد)، و3 أو أكتر أقصاه 69 (محتاج تحسين) • ممتاز ≥ 85</p>' : '<div class="pane empty">مفيش شغل اتسجل في الفترة دي</div>';
 
   // ---------- الفواتير اللي الجودة رجّعتها ----------
   const rets = [].concat.apply([], list.map(p => p.retList.map(x => ({ p: p, x: x })))).sort((u, w) => w.x.at.localeCompare(u.x.at));
@@ -3891,6 +3995,7 @@ function drawPerf_() {
   const sl = Object.entries(byStore).sort((a, c) => c[1].n - a[1].n);
   if (sl.length) h += '<div class="pane stores-perf"><h3 style="margin-top:0;color:var(--navy)">🏪 الفروع</h3><table><thead><tr><th>الفرع</th><th>فواتير</th><th>دخلت</th><th>متوسط وقت الإدخال</th><th>قيمة الفواتير</th></tr></thead><tbody>' +
     sl.map(([n, s]) => '<tr><td>' + esc(n) + '</td><td class="num">' + s.n + '</td><td class="num">' + s.done + '</td><td>' + (s.done ? durTxt(s.mins / s.done) : '-') + '</td><td class="num">' + money(s.total) + '</td></tr>').join('') + '</tbody></table></div>';
+  if (TSr && TSr.err) h = '<div class="warnbox">تعذر تحميل التاسكات: ' + esc(TSr.err.indexOf('مفتاح غلط') !== -1 ? 'السكريبت لسه ما اتحدّثش - انشر النسخة الجديدة' : TSr.err) + '</div>' + h;
   $('pagePerf').innerHTML = h;
 }
 
