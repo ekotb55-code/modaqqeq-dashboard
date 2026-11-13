@@ -1690,7 +1690,7 @@ async function posPush() {
   const sup = (pos.suppliers || []).find(o => o.id === pos.state.supplierId);
   const tot = pos.lines.reduce((s, l) => s + (Number(l.total) || 0), 0);
   if (!confirm('هتترفع فاتورة شراء آجل على البرنامج:\nالمورد: ' + (sup ? sup.name : '') + '\n' + pos.lines.length + ' صنف • الإجمالي ' + money(tot) + '\n\nموافق؟')) return;
-  try { await posRun('dPosPush', { supplierId: pos.state.supplierId }); toast('الفاتورة اترفعت على البرنامج ✅'); } catch (e) {}
+  try { await posRun('dPosPush', { supplierId: pos.state.supplierId }); toast('الفاتورة اترفعت على البرنامج ✅'); openInv(pos.id, true); } catch (e) {}
 }
 function i(k, v) { return '<div><small>' + esc(k) + '</small><b>' + esc(v) + '</b></div>'; }
 
