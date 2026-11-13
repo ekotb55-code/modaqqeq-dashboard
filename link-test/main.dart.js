@@ -140292,7 +140292,7 @@ if(k==null||n.c==null){s=1
 break}n.C(new A.b84(n))
 p=10
 s=13
-return A.c(n.a8m("posInvoice",A.aj(["id",J.a3(k,"id"),"no",J.a3(k,"no")],t.N,t.z),150),$async$pV)
+return A.c(n.a8m("posInvoice",A.aj(["id",J.a3(k,"id"),"no",J.a3(k,"no"),"kind",J.a3(k,"kind"),"type",J.a3(k,"type"),"date",J.a3(k,"date")],t.N,t.z),150),$async$pV)
 case 13:j=a7
 b=t.g.a(J.a3(j,"rows"))
 if(b==null)b=B.E
@@ -140450,10 +140450,13 @@ A.b8_.prototype={
 $2(a,b){return B.dM},
 $S:98}
 A.b7Z.prototype={
-$2(a,b){var s=null,r=this.a.a.h(0,b),q=J.ak(r),p=A.r(A.p(q.h(r,"supplier"))+"  \u2022  \u0631\u0642\u0645 "+A.p(q.h(r,"no")),s,s,s,s,B.di,s,s,s),o=A.p(q.h(r,"date"))
-q=A.vX(q.h(r,"total"))
-if(q==null)q=s
-return A.bu(!1,s,s,s,!0,s,s,s,!0,s,B.Ya,s,s,s,s,s,new A.b7V(this.b,r),!1,s,s,s,s,s,A.r(o+"  \u2022  "+A.dV(q==null?0:q)+" \u062c.\u0645",s,s,s,s,s,s,s,s),s,p,s,s,s,s)},
+$2(a,b){var s,r=null,q=this.a.a.h(0,b),p=J.ak(q),o=A.r(A.p(p.h(q,"supplier"))+"  \u2022  \u0631\u0642\u0645 "+A.p(p.h(q,"no")),r,r,r,r,B.di,r,r,r)
+if(J.d(p.h(q,"kind"),"o")){s=A.p(p.h(q,"date"))
+p=p.h(q,"status")
+p=s+"  \u2022  "+A.p(p==null?"":p)}else{s=A.p(p.h(q,"date"))
+p=A.vX(p.h(q,"total"))
+if(p==null)p=r
+p=s+"  \u2022  "+A.dV(p==null?0:p)+" \u062c.\u0645"}return A.bu(!1,r,r,r,!0,r,r,r,!0,r,B.Ya,r,r,r,r,r,new A.b7V(this.b,q),!1,r,r,r,r,r,A.r(p,r,r,r,r,r,r,r,r),r,o,r,r,r,r)},
 $S:131}
 A.b7V.prototype={
 $0(){A.a0(this.a,!1).a4(this.b)
