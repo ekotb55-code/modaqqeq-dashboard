@@ -97,24 +97,39 @@
         u.searchParams.set('v', Date.now());
         location.replace(u.toString());
       },
-      // مشاركة ملف (واتساب...) - لو المتصفح مش بيقبل الإكسل بنجرب نسخة CSV
-      // بيرجع: shared / cancel / needtap (محتاج دوسة جديدة) / unsupported
-      // سبب فشل المشاركة بيظهر على الشاشة (علشان نعرف المتصفح رافض ليه)
+      // أي غلط من المتصفح بيتترجم لكلام عربي مفهوم (مفيش إنجليزي يظهر للموظف)
+      arErr(e) {
+        const n = (e && e.name) || '', m = ((e && e.message) || String(e || '')).toLowerCase();
+        if (n === 'NotAllowedError' || m.includes('gesture')) return 'المتصفح محتاج تدوس على الزرار بإيدك - دوس تاني';
+        if (n === 'AbortError') return 'اتلغت';
+        if (n === 'DataError' || n === 'TypeError' && m.includes('share')) return 'المتصفح ده مش بيقبل يبعت الملف ده';
+        if (m.includes('fetch') || m.includes('network')) return 'النت فاصل أو ضعيف - اتأكد من النت وجرّب تاني';
+        return 'حصلت مشكلة في المشاركة - جرّب تاني';
+      },
+      // رسالة صفرا فوق بسبب فشل المشاركة (بالعربي)
       shareWhy(msg) {
-        const ua = navigator.userAgent;
-        const br = /SamsungBrowser/.test(ua) ? 'Samsung' : /EdgA/.test(ua) ? 'Edge' : /OPR|Opera/.test(ua) ? 'Opera' : /Chrome/.test(ua) ? 'Chrome' : /Safari/.test(ua) ? 'Safari' : 'غير معروف';
-        const v = (ua.match(/(?:Chrome|SamsungBrowser|Version)\/(\d+)/) || [])[1] || '';
         const t = document.createElement('div');
         t.dir = 'rtl';
-        t.style.cssText = 'position:fixed;left:12px;right:12px;top:70px;z-index:2147483647;background:#fff3cd;color:#5c4400;border:1px solid #e0b84c;border-radius:14px;padding:12px;font:14px system-ui;box-shadow:0 6px 20px rgba(0,0,0,.2)';
-        t.textContent = '🔎 سبب المشاركة: ' + msg + ' • المتصفح: ' + br + ' ' + v + (matchMedia('(display-mode: standalone)').matches ? ' • من الأيقونة' : '') + ' (دوس هنا يقفل)';
+        t.style.cssText = 'position:fixed;left:12px;right:12px;top:70px;z-index:2147483647;background:#fff3cd;color:#5c4400;border:1px solid #e0b84c;border-radius:14px;padding:12px;font:15px system-ui;box-shadow:0 6px 20px rgba(0,0,0,.2)';
+        t.textContent = '⚠️ ' + msg + ' (دوس هنا يقفل)';
         t.onclick = () => t.remove();
         document.body.append(t);
-        setTimeout(() => t.remove(), 20000);
+        setTimeout(() => t.remove(), 15000);
       },
+      // يفتح المشاركة - ولو المتصفح عاوز دوسة جديدة: يطلع زرار كبير يفتحها من الدوسة
+      // بيرجع: shared / cancel / unsupported
+      async _share(data, label) {
+        try { await navigator.share(data); return 'shared'; }
+        catch (e) {
+          if (e && e.name === 'AbortError') return 'cancel';
+          if (e && e.name === 'NotAllowedError') return await mdq.shareTap(data, label);
+          mdq.shareWhy(mdq.arErr(e));
+          return 'cancel';
+        }
+      },
+      // مشاركة ملف (واتساب...) - لو المتصفح مش بيقبل الإكسل بنجرب نسخة CSV
       async shareFile(name, mime, bytes, csvName, csvBytes, text) {
-        if (!navigator.share) { mdq.shareWhy('مفيش مشاركة خالص في المتصفح ده'); return 'unsupported'; }
-        if (!navigator.canShare) { mdq.shareWhy('المتصفح مش بيشارك ملفات'); return 'unsupported'; }
+        if (!navigator.share || !navigator.canShare) return 'unsupported';
         // CSV الأول: كل المتصفحات بتقبل تشاركه (وبيتفتح على الإكسل) - الإكسل نفسه كروم بيرفضه
         const cands = [];
         if (csvBytes && csvBytes.length) cands.push(new File([csvBytes.slice()], csvName, { type: 'text/csv' }));
@@ -122,31 +137,40 @@
         for (const f of cands) {
           let ok = false;
           try { ok = navigator.canShare({ files: [f] }); } catch (e) {}
-          if (!ok) { mdq.shareWhy('رافض نوع الملف ' + f.name.split('.').pop()); continue; }
-          try { await navigator.share({ files: [f], title: text, text: text }); return 'shared'; }
-          catch (e) {
-            if (!(e && e.name === 'NotAllowedError')) {
-              if (!(e && e.name === 'AbortError')) mdq.shareWhy('غلط: ' + (e && (e.name + ': ' + e.message)));
-              return 'cancel';
-            }
-            // المتصفح عاوز دوسة جديدة: زرار حقيقي في الصفحة يفتح المشاركة على طول من الدوسة
-            return await mdq.shareTap(f, text);
-          }
+          if (!ok) continue;
+          return await mdq._share({ files: [f], title: text, text: text }, text);
         }
         return 'unsupported';
       },
-      shareTap(f, text) {
+      // كذا ملف مرة واحدة (صور / PDF): shareAdd لكل ملف وبعدين shareGo
+      _pend: [],
+      shareAdd(name, mime, bytes) { mdq._pend.push(new File([bytes.slice()], name, { type: mime })); },
+      async shareGo(text) {
+        const files = mdq._pend; mdq._pend = [];
+        if (!files.length) return 'cancel';
+        if (!navigator.share || !navigator.canShare) return 'unsupported';
+        let ok = false;
+        try { ok = navigator.canShare({ files }); } catch (e) {}
+        if (!ok) return 'unsupported';
+        return await mdq._share({ files, title: text, text: text }, text);
+      },
+      // مشاركة كلام (رسالة واتساب) - لو مفيش مشاركة في المتصفح: يفتح واتساب على طول
+      async shareText(text) {
+        if (!navigator.share) { window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank'); return 'shared'; }
+        return await mdq._share({ text: text }, 'الرسالة جاهزة');
+      },
+      shareTap(data, text) {
         return new Promise(resolve => {
           const bg = document.createElement('div');
           bg.dir = 'rtl';
           bg.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif';
           const box = document.createElement('div');
           box.style.cssText = 'background:#fff;border-radius:22px;padding:22px 18px;width:min(86vw,360px);text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.3)';
-          box.innerHTML = '<div style="font-size:44px">✅</div><div style="font-size:20px;font-weight:800;margin:6px 0 4px">الملف جاهز</div>' +
-            '<div style="color:#555;font-size:15px;margin-bottom:16px"></div>';
-          box.children[2].textContent = text || '';
+          box.innerHTML = '<div style="font-size:44px">✅</div><div style="font-size:20px;font-weight:800;margin:6px 0 4px">جاهز</div>' +
+            '<div style="color:#555;font-size:15px;margin-bottom:16px;white-space:pre-line;max-height:30vh;overflow:auto"></div>';
+          box.children[2].textContent = (text || '').slice(0, 200);
           const go = document.createElement('button');
-          go.textContent = '📤 ابعته واتساب';
+          go.textContent = '📤 ابعت / شارك';
           go.style.cssText = 'width:100%;height:54px;border:0;border-radius:16px;background:#25D366;color:#fff;font-size:18px;font-weight:800;margin-bottom:8px';
           const no = document.createElement('button');
           no.textContent = 'رجوع';
@@ -157,12 +181,11 @@
           const done = r => { bg.remove(); resolve(r); };
           no.onclick = () => done('cancel');
           go.onclick = () => {
-            navigator.share({ files: [f], title: text, text: text })
+            navigator.share(data)
               .then(() => done('shared'))
               .catch(e => {
                 if (e && e.name === 'AbortError') return done('cancel');
-                mdq.lastShareErr = (e && (e.name + ': ' + e.message)) || 'error';
-                mdq.shareWhy('غلط وقت المشاركة: ' + mdq.lastShareErr);
+                mdq.shareWhy(mdq.arErr(e));
                 done('unsupported');
               });
           };
