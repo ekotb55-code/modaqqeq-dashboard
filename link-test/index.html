@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<!-- مفيش dir="rtl" هنا: بيزق فيديو الكاميرا برا الشاشة على الويب (Flutter بيظبط الاتجاه لوحده) -->
+<html lang="ar">
+<head>
+  <base href="/modaqqeq-dashboard/link-test/">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="مدقق - تجربة الربط">
+  <meta name="theme-color" content="#1479D3">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="مدقق - تجربة الربط">
+  <link rel="apple-touch-icon" href="icons/Icon-maskable.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
+  <title>مدقق - تجربة الربط</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #F3F7FC; }
+    #splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+      font-family: -apple-system, "Segoe UI", Tahoma, sans-serif; color: #fff; background: linear-gradient(180deg, #2696F0, #09488C); z-index: 1; }
+    #splash img { width: 120px; height: 120px; border-radius: 28px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    #splash b { font-size: 22px; }
+    #splash .bar { width: 140px; height: 5px; border-radius: 4px; background: rgba(255,255,255,.25); overflow: hidden; }
+    #splash .bar i { display: block; width: 40%; height: 100%; background: #fff; border-radius: 4px; animation: mv 1.1s infinite ease-in-out; }
+    @keyframes mv { 0% { transform: translateX(160%); } 100% { transform: translateX(-260%); } }
+  </style>
+  <!-- إشعارات (Firebase) - نفس مشروع مدقق -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+</head>
+<body>
+  <div id="splash" dir="rtl"><img src="icons/Icon-192.png" alt=""><b>مدقق - تجربة الربط</b><div class="bar"><i></i></div></div>
+  <script>
+    // ---- الجسر بين التطبيق والمتصفح: تخزين الملفات (IndexedDB) + الإشعارات ----
+    window.mdq = {
+      _db: null,
+      _open() {
+        return this._db || (this._db = new Promise((ok, bad) => {
+          const r = indexedDB.open('mdq-files', 1);
+          r.onupgradeneeded = () => r.result.createObjectStore('f');
+          r.onsuccess = () => ok(r.result);
+          r.onerror = () => bad(r.error);
+        }));
+      },
+      async _tx(mode, fn) {
+        const db = await this._open();
+        return new Promise((ok, bad) => {
+          const t = db.transaction('f', mode), q = fn(t.objectStore('f'));
+          t.oncomplete = () => ok(q && q.result);
+          t.onerror = () => bad(t.error);
+        });
+      },
+      async get(k) { const v = await this._tx('readonly', s => s.get(k)); return v ? new Uint8Array(v) : null; },
+      put(k, b) { return this._tx('readwrite', s => s.put(b.slice().buffer, k)); },
+      del(k) { return this._tx('readwrite', s => s.delete(k)); },
+      // الإشعارات
+      _cfg: { apiKey: 'AIzaSyD9oDfJSrYrPa1iQEDcg-Oa-iGEmFnR1ok', authDomain: 'modaqqeq-54f57.firebaseapp.com', projectId: 'modaqqeq-54f57',
+        messagingSenderId: '894594212138', appId: '1:894594212138:web:35cf6a1aa4b99a7ccffe53' },
+      _vapid: 'BKobeqFRKZa2eY7VwglxfttYN8pj4sHu3SNDTkJYuUAxPD4Ld0zveWKNGktx7U9-YAiJhwGSn_-hpfI-VxonoaI',
+      pushState() {
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported';
+        return Notification.permission;
+      },
+      async enablePush() {
+        if (this.pushState() === 'unsupported') return 'unsupported';
+        try { return await Notification.requestPermission(); } catch (e) { return 'denied'; }
+      },
+      async pushToken() {
+        if (this.pushState() !== 'granted' || !window.firebase) return null;
+        if (!firebase.apps.length) firebase.initializeApp(this._cfg);
+        const reg = await navigator.serviceWorker.ready;
+        return await firebase.messaging().getToken({ vapidKey: this._vapid, serviceWorkerRegistration: reg });
+      },
+      // الإشعار اللي فتح التطبيق
+      openTarget() { return new URLSearchParams(location.search).get('open') || ''; },
+      // تنزيل ملف (تقرير إكسل) باسمه الصح
+      saveFile(name, mime, bytes) {
+        const url = URL.createObjectURL(new Blob([bytes.slice()], { type: mime }));
+        const a = document.createElement('a');
+        a.href = url; a.download = name; a.style.display = 'none';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      },
+      // تحديث التطبيق لآخر نسخة من غير ما يقفله ويفتحه
+      async update() {
+        const o = document.createElement('div');
+        o.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(9,72,140,.92);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font:bold 20px system-ui;gap:14px';
+        o.innerHTML = '<div style="font-size:46px">🔄</div><div>بنجيب أحدث نسخة...</div>';
+        document.body.append(o);
+        try { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch (e) {}
+        try { const r = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch (e) {}
+        await Promise.all(['./', 'index.html', 'flutter_bootstrap.js', 'main.dart.js', 'manifest.json']
+          .map(u => fetch(u, { cache: 'reload' }).catch(() => {})));
+        const u = new URL(location.href);
+        u.searchParams.set('v', Date.now());
+        location.replace(u.toString());
+      },
+      // أي غلط من المتصفح بيتترجم لكلام عربي مفهوم (مفيش إنجليزي يظهر للموظف)
+      arErr(e) {
+        const n = (e && e.name) || '', m = ((e && e.message) || String(e || '')).toLowerCase();
+        if (n === 'NotAllowedError' || m.includes('gesture')) return 'المتصفح محتاج تدوس على الزرار بإيدك - دوس تاني';
+        if (n === 'AbortError') return 'اتلغت';
+        if (n === 'DataError' || n === 'TypeError' && m.includes('share')) return 'المتصفح ده مش بيقبل يبعت الملف ده';
+        if (m.includes('fetch') || m.includes('network')) return 'النت فاصل أو ضعيف - اتأكد من النت وجرّب تاني';
+        return 'حصلت مشكلة في المشاركة - جرّب تاني';
+      },
+      // رسالة صفرا فوق بسبب فشل المشاركة (بالعربي)
+      shareWhy(msg) {
+        const t = document.createElement('div');
+        t.dir = 'rtl';
+        t.style.cssText = 'position:fixed;left:12px;right:12px;top:70px;z-index:2147483647;background:#fff3cd;color:#5c4400;border:1px solid #e0b84c;border-radius:14px;padding:12px;font:15px system-ui;box-shadow:0 6px 20px rgba(0,0,0,.2)';
+        t.textContent = '⚠️ ' + msg + ' (دوس هنا يقفل)';
+        t.onclick = () => t.remove();
+        document.body.append(t);
+        setTimeout(() => t.remove(), 15000);
+      },
+      // يفتح المشاركة - ولو المتصفح عاوز دوسة جديدة: يطلع زرار كبير يفتحها من الدوسة
+      // بيرجع: shared / cancel / unsupported
+      async _share(data, label) {
+        try { await navigator.share(data); return 'shared'; }
+        catch (e) {
+          if (e && e.name === 'AbortError') return 'cancel';
+          if (e && e.name === 'NotAllowedError') return await mdq.shareTap(data, label);
+          mdq.shareWhy(mdq.arErr(e));
+          return 'cancel';
+        }
+      },
+      // مشاركة ملف (واتساب...) - لو المتصفح مش بيقبل الإكسل بنجرب نسخة CSV
+      async shareFile(name, mime, bytes, csvName, csvBytes, text) {
+        if (!navigator.share || !navigator.canShare) return 'unsupported';
+        // CSV الأول: كل المتصفحات بتقبل تشاركه (وبيتفتح على الإكسل) - الإكسل نفسه كروم بيرفضه
+        const cands = [];
+        if (csvBytes && csvBytes.length) cands.push(new File([csvBytes.slice()], csvName, { type: 'text/csv' }));
+        cands.push(new File([bytes.slice()], name, { type: mime }));
+        for (const f of cands) {
+          let ok = false;
+          try { ok = navigator.canShare({ files: [f] }); } catch (e) {}
+          if (!ok) continue;
+          return await mdq._share({ files: [f], title: text, text: text }, text);
+        }
+        return 'unsupported';
+      },
+      // كذا ملف مرة واحدة (صور / PDF): shareAdd لكل ملف وبعدين shareGo
+      _pend: [],
+      shareAdd(name, mime, bytes) { mdq._pend.push(new File([bytes.slice()], name, { type: mime })); },
+      async shareGo(text) {
+        const files = mdq._pend; mdq._pend = [];
+        if (!files.length) return 'cancel';
+        if (!navigator.share || !navigator.canShare) return 'unsupported';
+        let ok = false;
+        try { ok = navigator.canShare({ files }); } catch (e) {}
+        if (!ok) return 'unsupported';
+        return await mdq._share({ files, title: text, text: text }, text);
+      },
+      // مشاركة كلام (رسالة واتساب) - لو مفيش مشاركة في المتصفح: يفتح واتساب على طول
+      async shareText(text) {
+        if (!navigator.share) { window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank'); return 'shared'; }
+        return await mdq._share({ text: text }, 'الرسالة جاهزة');
+      },
+      shareTap(data, text) {
+        return new Promise(resolve => {
+          const bg = document.createElement('div');
+          bg.dir = 'rtl';
+          bg.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif';
+          const box = document.createElement('div');
+          box.style.cssText = 'background:#fff;border-radius:22px;padding:22px 18px;width:min(86vw,360px);text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.3)';
+          box.innerHTML = '<div style="font-size:44px">✅</div><div style="font-size:20px;font-weight:800;margin:6px 0 4px">جاهز</div>' +
+            '<div style="color:#555;font-size:15px;margin-bottom:16px;white-space:pre-line;max-height:30vh;overflow:auto"></div>';
+          box.children[2].textContent = (text || '').slice(0, 200);
+          const go = document.createElement('button');
+          go.textContent = '📤 ابعت / شارك';
+          go.style.cssText = 'width:100%;height:54px;border:0;border-radius:16px;background:#25D366;color:#fff;font-size:18px;font-weight:800;margin-bottom:8px';
+          const no = document.createElement('button');
+          no.textContent = 'رجوع';
+          no.style.cssText = 'width:100%;height:44px;border:0;border-radius:14px;background:#eef2f6;color:#333;font-size:16px';
+          box.append(go, no);
+          bg.append(box);
+          document.body.append(bg);
+          const done = r => { bg.remove(); resolve(r); };
+          no.onclick = () => done('cancel');
+          go.onclick = () => {
+            navigator.share(data)
+              .then(() => done('shared'))
+              .catch(e => {
+                if (e && e.name === 'AbortError') return done('cancel');
+                mdq.shareWhy(mdq.arErr(e));
+                done('unsupported');
+              });
+          };
+        });
+      }
+    };
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+    // ---- لو نزلت نسخة جديدة وهو فاتح: شريط "فيه تحديث جديد" تحت ----
+    (function () {
+      let base = null, shown = false;
+      const ver = () => fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => j.version + '+' + j.build_number).catch(() => null);
+      async function check() {
+        const v = await ver();
+        if (!v) return;
+        if (base === null) { base = v; return; }
+        if (v === base || shown) return;
+        shown = true;
+        const b = document.createElement('div');
+        b.dir = 'rtl';
+        b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:16px;z-index:2147483646;background:#0b5cad;color:#fff;border-radius:16px;padding:14px 16px;font:bold 16px system-ui;box-shadow:0 8px 24px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px;cursor:pointer';
+        b.innerHTML = '<span style="font-size:24px">🔄</span><span style="flex:1">فيه تحديث جديد للتطبيق - دوس هنا</span><span style="background:#fff;color:#0b5cad;border-radius:10px;padding:6px 12px">تحديث</span>';
+        b.onclick = () => mdq.update();
+        document.body.append(b);
+      }
+      check();
+      setInterval(check, 5 * 60 * 1000);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+    })();
+
+    // ---- زرار "ثبّت التطبيق" تحت (بيختفي لو التطبيق متثبت أو الموظف قفله) ----
+    (function () {
+      const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      let evt = null;
+      const KEY = 'mdq-install-hidden';
+      const hiddenRecently = () => { try { return Date.now() - Number(localStorage.getItem(KEY) || 0) < 3 * 86400000; } catch (e) { return false; } };
+      function bar() {
+        if (standalone() || hiddenRecently() || document.getElementById('mdqInstall')) return;
+        if (!evt && !ios) return;
+        const d = document.createElement('div');
+        d.id = 'mdqInstall';
+        d.setAttribute('dir', 'rtl');
+        d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:9999;' +
+          'background:#0B4F94;color:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;align-items:center;gap:10px;' +
+          'padding:10px 12px;font-family:-apple-system,"Segoe UI",Tahoma,sans-serif;font-size:15px';
+        d.innerHTML = '<img src="icons/Icon-192.png" alt="" style="width:40px;height:40px;border-radius:10px;background:#fff">' +
+          '<div style="flex:1;line-height:1.4"><b>ثبّت التطبيق على موبايلك</b><br><span style="font-size:13px;opacity:.85">يفتح من الأيقونة زي أي تطبيق</span></div>' +
+          '<button id="mdqInstallGo" style="border:0;border-radius:12px;background:#fff;color:#0B4F94;font-weight:bold;font-size:15px;padding:10px 14px;font-family:inherit">ثبّت</button>' +
+          '<button id="mdqInstallX" aria-label="قفل" style="border:0;background:transparent;color:#fff;font-size:22px;padding:4px 6px">×</button>';
+        document.body.appendChild(d);
+        document.getElementById('mdqInstallX').onclick = () => { try { localStorage.setItem(KEY, Date.now()); } catch (e) {} d.remove(); };
+        document.getElementById('mdqInstallGo').onclick = async () => {
+          if (evt) {
+            evt.prompt();
+            const r = await evt.userChoice.catch(() => null);
+            if (r && r.outcome === 'accepted') d.remove();
+            evt = null;
+            return;
+          }
+          // آيفون: نشرح الطريقة
+          const h = document.createElement('div');
+          h.setAttribute('dir', 'rtl');
+          h.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(8,25,45,.6);display:flex;align-items:flex-end;justify-content:center';
+          h.innerHTML = '<div style="background:#fff;color:#0B3D6E;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));width:min(520px,100%);line-height:1.9;font-family:-apple-system,Tahoma,sans-serif;font-size:16px">' +
+            '<b style="font-size:18px">ثبّت التطبيق على الآيفون</b><br>1- افتح الصفحة دي من <b>Safari</b><br>2- دوس زرار المشاركة <b>⬆️</b> اللي تحت<br>' +
+            '3- اختار <b>"إضافة إلى الشاشة الرئيسية"</b> وبعدين <b>إضافة</b>' +
+            '<div style="text-align:center;margin-top:12px"><button style="border:0;border-radius:12px;background:#1479D3;color:#fff;font-weight:bold;font-size:16px;padding:10px 28px">تمام</button></div></div>';
+          h.onclick = (e) => { if (e.target === h || e.target.tagName === 'BUTTON') h.remove(); };
+          document.body.appendChild(h);
+        };
+      }
+      window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); evt = e; bar(); });
+      window.addEventListener('appinstalled', () => { const d = document.getElementById('mdqInstall'); if (d) d.remove(); });
+      if (ios) setTimeout(bar, 4000);
+    })();
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
