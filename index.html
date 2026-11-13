@@ -346,6 +346,8 @@
   .pricebox { background: #F4EEFF; border: 1.5px solid #D4C6FA; border-radius: 12px; padding: 10px 12px; margin: 10px 0; }
   .pricebox label { display: flex; gap: 8px; align-items: center; font-weight: 800; color: #4B2FB5; cursor: pointer; }
   .pricebox input { width: 22px; height: 22px; }
+  .pricebox input.pin { width: 100%; height: auto; padding: 9px 10px; font-size: 15px; border: 1.5px solid #C9D8EA; border-radius: 10px; background: #fff; box-sizing: border-box; }
+  .pricebox input.pin.short { width: 120px; }
   .rejbox { background: #FDECEC; border: 2px solid #F5B5B7; color: #8E1519; border-radius: 14px; padding: 12px 14px; margin: 10px 0; line-height: 1.8; }
   .rejbox b { color: #C62828; }
   .revbox { border-radius: 14px; padding: 12px 14px; margin: 10px 0; line-height: 1.8; font-weight: 600; }
@@ -1628,8 +1630,8 @@ function posRender() {
       const k = l.n;
       h += '<div class="pricebox" style="display:block">' +
         '<div><b>' + esc(l.name) + '</b> <span class="new-item">🆕 ' + esc(l.barcode) + '</span> • ' + num(l.qty) + ' × ' + money(l.price) + '</div>' +
-        '<div class="grid2" style="margin-top:6px"><div><small>اسم الصنف في البرنامج</small><input id="pn' + k + '" value="' + esc(l.name) + '"></div>' +
-        '<div><small>سعر البيع</small><input id="ps' + k + '" dir="ltr" inputmode="decimal" value="' + (l.newSale !== null && l.newSale !== undefined ? l.newSale : '') + '" placeholder="سعر الشراء ' + money(l.price) + '"></div>' +
+        '<div class="grid2" style="margin-top:6px"><div><small>اسم الصنف في البرنامج</small><input class="pin" id="pn' + k + '" value="' + esc(l.name) + '"></div>' +
+        '<div><small>سعر البيع</small><input class="pin" id="ps' + k + '" dir="ltr" inputmode="decimal" value="' + (l.newSale !== null && l.newSale !== undefined ? l.newSale : '') + '" placeholder="سعر الشراء ' + money(l.price) + '"></div>' +
         '<div><small>الوحدة</small><select id="pu' + k + '" style="width:100%;padding:8px">' + posOpts(r.units, ((r.units || []).find(u => /قطع/.test(u.name)) || {}).id) + '</select></div>' +
         '<div><small>التصنيف</small><select id="pc' + k + '" style="width:100%;padding:8px">' + posOpts(r.classes, '') + '</select></div></div>' +
         '<button class="btn green" style="margin-top:8px" ' + (posBusy ? 'disabled' : '') + ' onclick="posItem(' + k + ')">✅ موافقة وتكويد في البرنامج</button></div>';
@@ -1644,7 +1646,7 @@ function posRender() {
       h += '<div class="pricebox" style="display:block"><div><b>' + esc(l.name) + '</b> • في البرنامج ' + money(l.posSale) + ' ← الفرع اقترح <b>' + money(l.newSale) + '</b></div>' +
         (d ? '<div style="color:' + (d.action === 'reject' ? '#B3261E' : '#1E7D3A') + ';font-weight:700">' +
           (d.action === 'reject' ? '❌ اترفض - هيفضل ' + money(l.posSale) : '✅ اتوافق على ' + money(d.value)) + ' (' + esc(d.by) + ')</div>' : '') +
-        '<div class="actions" style="margin-top:6px"><input id="pp' + k + '" dir="ltr" inputmode="decimal" style="width:110px" value="' + (d && d.value ? d.value : l.newSale) + '">' +
+        '<div class="actions" style="margin-top:6px"><input class="pin short" id="pp' + k + '" dir="ltr" inputmode="decimal" value="' + (d && d.value ? d.value : l.newSale) + '">' +
         '<button class="btn green" ' + (posBusy ? 'disabled' : '') + ' onclick="posPrice(' + k + ',\'accept\')">موافقة على ' + money(l.newSale) + '</button>' +
         '<button class="btn soft" ' + (posBusy ? 'disabled' : '') + ' onclick="posPrice(' + k + ',\'edit\')">موافقة بالسعر اللي كتبته</button>' +
         '<button class="btn soft" style="color:#B3261E" ' + (posBusy ? 'disabled' : '') + ' onclick="posPrice(' + k + ',\'reject\')">رفض</button></div></div>';
