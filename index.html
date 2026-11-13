@@ -698,6 +698,7 @@
           <button class="btn soft hidden" id="tkNewBtn" onclick="tkNewDlg()" title="افتح تذكرة دعم لفرع (مثلًا كلّمك في التليفون)">＋ تذكرة</button>
           <button class="btn soft hidden" id="taskNewBtn" onclick="taskNewDlg()" title="تاسك لمحل أو لكذا محل (ومكررة لو عاوز)">＋ تاسك</button>
           <button class="btn soft hidden" id="tkTypesBtn" onclick="tkTypesDlg()" title="أنواع المشاكل وأهمية العملاء">⚙️</button>
+          <button class="btn soft hidden" id="bsBtn" onclick="bsDlg()" title="تحديث فروع أبو سمره من الرئيسي (الأصناف والأسعار والوحدات)">🔄 الفروع</button>
         </div>
         <div id="list"></div>
       </div>
@@ -1107,7 +1108,7 @@ async function loadList(quiet) {
     });
     if (cur && !quiet) openInv(cur.invoice.id, true);
     if (curTk && !quiet) openTk(curTk.ticket.id, true);
-    $('tkTypesBtn').classList.toggle('hidden', myRole !== 'مدير'); $('tkNewBtn').classList.toggle('hidden', isQA()); $('taskNewBtn').classList.toggle('hidden', isQA());
+    $('tkTypesBtn').classList.toggle('hidden', myRole !== 'مدير'); $('tkNewBtn').classList.toggle('hidden', isQA()); $('bsBtn').classList.toggle('hidden', isQA()); $('taskNewBtn').classList.toggle('hidden', isQA());
   } catch (e) { if (!quiet) toast(msg(e)); }
 }
 // الفلاتر = الكروت الملونة اللي فوق (بتعدّ على حسب المحل والبحث المختارين)
@@ -3146,6 +3147,46 @@ function tasksAfterLoad() {
 
 // ---------- الورديات: جدول أسبوعي + طلبات التبديل ----------
 let sh = { week: null, data: null, att: [] };
+// ---------- تحديث فروع أبو سمره من الرئيسي (BranchSync.gs) ----------
+const JKEY = 'b4d1771abd401101';
+let bsStore = '', bsTimer = 0;
+async function bsCall(action, data) {
+  if (!bsStore) {
+    const r = await fetch(API + '?key=' + JKEY + '&action=stores').then(x => x.json());
+    bsStore = ((r.stores || []).find(x => x.jard) || {}).name || '';
+  }
+  const u = API + '?key=' + JKEY + '&jstore=' + encodeURIComponent(bsStore) + '&action=' + action + '&data=' + encodeURIComponent(JSON.stringify(data || {}));
+  const j = await fetch(u).then(x => x.json());
+  if (!j.ok) throw new Error(j.error || 'خطأ');
+  return j;
+}
+function bsHtml(s) {
+  const B = s.branches || {};
+  const rows = Object.keys(B).map(n => '<tr><td><b>' + esc(n) + '</b></td><td>' + (B[n].error ? '⚠️ ' + esc(B[n].error) :
+    Object.keys(B[n].pages || {}).map(p => esc(p) + ': ' + esc(B[n].pages[p])).join('<br>')) + '</td></tr>').join('');
+  const t = s.finished || s.started;
+  return '<h3>🔄 تحديث الفروع من الرئيسي</h3>' +
+    (s.running ? '<p style="background:#FFF4D6;padding:10px;border-radius:10px">⏳ شغال دلوقتي: <b>' + esc(s.current || '') + '</b> • ' + esc(s.step || '') +
+      '<br>' + s.done + ' من ' + s.total + ' فرع' + (s.waiting ? ' • الفرع الجاي بعد ' + s.waiting + ' ثانية' : '') + ' • ' + (s.auto ? 'تلقائي' : 'بدأه ' + esc(s.by || '')) + '</p>'
+      : '<p style="color:var(--muted)">' + (t ? 'آخر تحديث: ' + esc(new Date(t).toLocaleString('ar-EG')) + (s.auto ? ' (تلقائي)' : s.by ? ' (' + esc(s.by) + ')' : '') : 'لسه ما اتعملش تحديث') + '</p>') +
+    (rows ? '<table style="width:100%;border-collapse:collapse;font-size:13px">' + rows + '</table>' : '') +
+    '<p style="color:var(--muted);font-size:12px">لوحده 4 مرات في اليوم: 9:30 • 1:30 • 5:30 • 9:30 - فرع ورا فرع، ودقيقتين بين كل فرع.</p>' +
+    '<div class="acts"><button class="btn" id="bsGo" ' + (s.running ? 'disabled' : '') + ' onclick="bsGo()">' + (s.running ? 'استنى لما يخلص' : 'حدّث كل الفروع دلوقتي') + '</button><button class="btn soft" onclick="closeDlg()">قفل</button></div>';
+}
+async function bsDlg() {
+  clearInterval(bsTimer);
+  let s; try { s = await bsCall('bsStatus'); } catch (e) { return toast(msg(e)); }
+  dlg('<div id="bsBox">' + bsHtml(s) + '</div>');
+  bsTimer = setInterval(async () => {
+    const box = $('bsBox'); if (!box) return clearInterval(bsTimer);
+    try { box.innerHTML = bsHtml(await bsCall('bsStatus')); } catch (e) {}
+  }, 10000);
+}
+async function bsGo() {
+  if (!confirm('هيتعمل "تحديث الكل" في الـ 3 صفحات لكل الفروع المربوطة، فرع ورا فرع. نبدأ؟')) return;
+  try { const s = await bsCall('bsAll', { token }); $('bsBox').innerHTML = bsHtml(s); toast('التحديث بدأ ✅'); } catch (e) { toast(msg(e)); }
+}
+
 function dlg(html) { closeDlg(); document.body.insertAdjacentHTML('beforeend', '<div id="dlg" onclick="if(event.target===this)closeDlg()"><div class="box">' + html + '</div></div>'); }
 function closeDlg() { const d = $('dlg'); if (d) d.remove(); }
 // أول الأسبوع = السبت (حسب يوم الشغل اللي بيبدأ 9 الصبح)
