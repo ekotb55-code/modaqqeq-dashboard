@@ -132,7 +132,7 @@
       <button class="btn block" id="lBtn" type="submit">دخول</button>
       <div class="err" id="lErr"></div>
     </form>
-    <button class="btn ghost block install-login hidden" id="installBtn2" type="button">📲 تثبيت التطبيق على الموبايل</button>
+    <button class="btn ghost block install-login" id="installBtn2" type="button">📲 تثبيت التطبيق على الموبايل</button>
   </div>
 </section>
 
@@ -643,12 +643,15 @@ let installEvt = null;
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 function showInstall() {
-  const show = !isStandalone() && (!!installEvt || isIOS || /android/i.test(navigator.userAgent));
-  ['installBtn', 'installBtn2'].forEach(id => $(id).classList.toggle('hidden', !show));
+  // شاشة الدخول: الزرار ظاهر دايماً - الهيدر: بس لو التطبيق مش متثبت
+  $('installBtn2').classList.remove('hidden');
+  $('installBtn2').textContent = isStandalone() ? '✓ التطبيق متثبت على الموبايل' : '📲 تثبيت التطبيق على الموبايل';
+  $('installBtn').classList.toggle('hidden', isStandalone() || !(installEvt || isIOS || /android/i.test(navigator.userAgent)));
 }
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; showInstall(); });
 window.addEventListener('appinstalled', () => { installEvt = null; showInstall(); toast('اتثبت التطبيق ✓ هتلاقيه على الشاشة الرئيسية', 'ok'); });
 async function doInstall() {
+  if (isStandalone()) return toast('التطبيق متثبت بالفعل ✓ - افتحه من أيقونته على الشاشة الرئيسية', 'ok');
   if (installEvt) {
     installEvt.prompt();
     try { await installEvt.userChoice; } catch (e) {}
