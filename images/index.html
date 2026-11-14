@@ -97,6 +97,10 @@
   .empty { text-align: center; color: var(--mute); padding: 40px 20px; }
   #more { height: 40px; }
 
+  #installHelp { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 20px; }
+  #installHelp .box { background: #fff; border-radius: 16px; padding: 20px; max-width: 360px; line-height: 2; font-size: 15px; }
+  #installHelp h3 { margin: 0 0 8px; color: var(--blue-d); }
+  .install-login { margin-top: 12px; }
   #toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 22px); transform: translateX(-50%); background: #1B2430; color: #fff; padding: 10px 18px; border-radius: 12px; z-index: 100; max-width: 92vw; text-align: center; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.2); }
   #toast.ok { background: var(--ok); }
   #toast.bad { background: var(--bad); }
@@ -128,6 +132,7 @@
       <button class="btn block" id="lBtn" type="submit">دخول</button>
       <div class="err" id="lErr"></div>
     </form>
+    <button class="btn ghost block install-login hidden" id="installBtn2" type="button">📲 تثبيت التطبيق على الموبايل</button>
   </div>
 </section>
 
@@ -136,6 +141,9 @@
   <header id="hdr">
     <div class="hrow">
       <div class="title"><b id="brName">-</b><span id="who"></span></div>
+      <button class="icon-btn hidden" id="installBtn" title="تثبيت التطبيق على الموبايل">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M12 7v7M9 11l3 3 3-3"/><path d="M10.5 18.5h3"/></svg>
+      </button>
       <button class="icon-btn hidden" id="btnBranch" title="تغيير الفرع">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v7h14v-7"/></svg>
       </button>
@@ -629,6 +637,34 @@ function closeScan() {
   $('scan').classList.add('hidden');
 }
 $('scanClose').onclick = closeScan;
+
+// ---------- التثبيت على الموبايل ----------
+let installEvt = null;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+function showInstall() {
+  const show = !isStandalone() && (!!installEvt || isIOS || /android/i.test(navigator.userAgent));
+  ['installBtn', 'installBtn2'].forEach(id => $(id).classList.toggle('hidden', !show));
+}
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; showInstall(); });
+window.addEventListener('appinstalled', () => { installEvt = null; showInstall(); toast('اتثبت التطبيق ✓ هتلاقيه على الشاشة الرئيسية', 'ok'); });
+async function doInstall() {
+  if (installEvt) {
+    installEvt.prompt();
+    try { await installEvt.userChoice; } catch (e) {}
+    installEvt = null; showInstall();
+    return;
+  }
+  const old = $('installHelp'); if (old) old.remove();
+  document.body.insertAdjacentHTML('beforeend', '<div id="installHelp"><div class="box"><h3>📲 تثبيت تطبيق صور الأصناف</h3>' +
+    (isIOS ? '1️⃣ افتح الصفحة دي من <b>Safari</b><br>2️⃣ دوس زرار المشاركة <b>⬆️</b> اللي تحت<br>3️⃣ اختار <b>«إضافة إلى الشاشة الرئيسية»</b> ← <b>إضافة</b>'
+      : '1️⃣ افتح الصفحة دي من <b>Chrome</b><br>2️⃣ دوس على <b>⋮</b> اللي فوق<br>3️⃣ اختار <b>«تثبيت التطبيق»</b> أو <b>«إضافة إلى الشاشة الرئيسية»</b><br><small style="color:#6B7785">لو مكتوب «فتح في التطبيق» بدل التثبيت: اقفل الصفحة وافتحها تاني بعد دقيقة</small>') +
+    '<br><button class="btn block" style="margin-top:12px" onclick="this.closest(\'#installHelp\').remove()">تمام</button></div></div>');
+  $('installHelp').addEventListener('click', e => { if (e.target.id === 'installHelp') e.target.remove(); });
+}
+$('installBtn').onclick = doInstall;
+$('installBtn2').onclick = doInstall;
+showInstall();
 
 // ---------- البداية ----------
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
