@@ -196,6 +196,11 @@
   .bcard.k-jr { border-inline-start-color: #00897B; background: #F1FBF9; }
   .bcard .kind { font-size: 11px; font-weight: 800; color: #6B7785; margin-inline-end: 4px; }
   .bacts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .bcard.k-mk { border-inline-start-color: #6C4BD8; background: #F5F1FF; }
+  .mkbox { background: #F5F1FF; border: 1.5px solid #D8CCFA; border-radius: 16px; padding: 10px 12px; margin-bottom: 10px; }
+  .mkbox h4 { margin: 0 0 6px; color: #4B2FB0; font-size: 15px; }
+  .mkrow { background: #fff; border-radius: 12px; padding: 8px 10px; margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+  .mkrow .mkt { flex: 1 1 220px; font-size: 13.5px; line-height: 1.6; }
   .bacts .btn { padding: 5px 10px; font-size: 12.5px; }
   .bdesc { font-size: 12.5px; color: #33404D; white-space: pre-wrap; margin-bottom: 4px; }
   .s14 { background: linear-gradient(135deg, #7E57C2, #4527A0); }
@@ -693,6 +698,7 @@
     <div class="stats" id="stats"></div>
     <div class="wrap" id="wrap">
       <div id="listPane">
+        <div id="markBox"></div>
         <div class="tabs" id="tabs"></div>
         <div class="filters">
           <select id="fStore" onchange="renderList()"><option value="">كل المحلات</option></select>
@@ -1051,8 +1057,8 @@ async function loadList(quiet) {
     prevStatus = {}; r.invoices.forEach(v => { prevStatus[v.id] = v.status; });
     all = r.invoices; stores = r.stores;
     tks = (r.tickets || []).map(t => Object.assign(t, { kind: 'tk' })); if (r.storePrio) storePrio = r.storePrio;
-    tasks = r.tasks || []; jrs = r.jrs || []; if (r.storeColor) storeColor = r.storeColor; if (r.members) members = r.members;
-    tasksAfterLoad();
+    tasks = r.tasks || []; jrs = r.jrs || []; marks = r.marks || []; if (r.storeColor) storeColor = r.storeColor; if (r.members) members = r.members;
+    tasksAfterLoad(); marksAfterLoad();
     tkAfterLoad(tks);
     chatSum = r.chat || { threads: [], replies: [] };
     if (r.team) teamTick(r.team);
@@ -1062,7 +1068,7 @@ async function loadList(quiet) {
     const sel = $('fStore'), val = sel.value;
     sel.innerHTML = '<option value="">كل المحلات</option>' + stores.map(s => '<option>' + esc(s) + '</option>').join('');
     sel.value = val;
-    renderStats(); renderList(); updateTitle();
+    renderStats(); renderList(); renderMarks(); updateTitle();
     if (!$('pagePerf').classList.contains('hidden')) renderPerf();
     if (!$('pageStores').classList.contains('hidden')) renderBoard();
     if (fresh.length && !isQA()) { alertNew(fresh); pendAt = now(); }
@@ -2971,7 +2977,7 @@ function renderBoard() {
   const by = {}; names0.forEach(n => by[n] = { inv: [], tk: [], task: [], jr: [] });
   const put = (k, v) => { (by[v.store] = by[v.store] || { inv: [], tk: [], task: [], jr: [] })[k].push(v); };
   list.forEach(v => put('inv', v)); tkL.forEach(v => put('tk', v)); taskL.forEach(v => put('task', v)); jrL.forEach(v => put('jr', v));
-  const busy = n => by[n].inv.filter(pending).length + by[n].tk.filter(tkOpen).length + by[n].task.filter(x => x.status === 'مفتوحة').length + by[n].jr.filter(x => jrOpenSup(x)).length;
+  const busy = n => marks.filter(m => m.store === n && m.state === 'requested').length + by[n].inv.filter(pending).length + by[n].tk.filter(tkOpen).length + by[n].task.filter(x => x.status === 'مفتوحة').length + by[n].jr.filter(x => jrOpenSup(x)).length;
   const score = n => busy(n) * 1000 + by[n].inv.length + by[n].tk.length + by[n].task.length;
   // وانت بتدوّر: المحلات اللي فيها نتيجة بس (أو اسمها نفسه مطابق)
   const order = Object.keys(by).filter(n => !q || storeHit(n) || by[n].inv.length + by[n].tk.length + by[n].task.length + by[n].jr.length)
@@ -2989,6 +2995,7 @@ function renderBoard() {
     const openTk = B.tk.filter(tkOpen), openTask = B.task.filter(x => x.status === 'مفتوحة'), lateTask = openTask.filter(taskLate).length;
     // الترتيب جوه العمود: طلب الجرد ← التاسكات المفتوحة ← التذاكر المفتوحة ← الفواتير المستنية ← الباقي
     const cards = [].concat(
+      marks.filter(m => m.store === n).map(markCard),
       B.jr.map(v => jrCard(v, true)),
       openTask.sort((a, b) => String(a.due).localeCompare(String(b.due))).map(v => taskCard(v, true)),
       openTk.sort(qSort).map(v => tkBoardCard(v)),
@@ -3269,6 +3276,79 @@ function tasksAfterLoad() {
     const j = freshJ[0], t = freshT[0];
     toast(j ? '📋 ' + j.store + ': ' + (j.status === 'مستني الدعم' ? 'طلب جرد مستني ردك' : 'تاسكات جرد جديدة') : '📋 تاسك جديدة: ' + t.store + ' - ' + t.title);
   }
+}
+
+// ---------- طلبات علامة الجرد (الكميات 9999 ← 0 في برنامج البيع) ----------
+// الفرع بيعدّي 30 صنف في الجرد ← طلب هنا. الدعم بيكلّم المحل ويتأكد إنه بدأ الجرد، وبعدين يأكّد بكلمة السر بتاعته
+let marks = [], markKnown = null;
+function markState(m) {
+  const ok = m.ok || [0, 0];
+  return m.state === 'requested' ? { c: 'b-new', t: '⏳ مستني تأكيدك' }
+    : m.state === 'queued' ? { c: 'b-work', t: '🕐 اتأكدت - هتبدأ خلال دقيقة' }
+    : m.state === 'running' ? { c: 'b-work', t: '⚙️ شغالة' + (m.total ? ': 9999 لـ ' + ok[0] + ' • 0 لـ ' + ok[1] + ' من ' + m.total : '') }
+    : m.state === 'done' ? { c: 'b-done', t: '✅ اتعملت' + (m.total ? ' (' + m.total + ' صنف)' : '') }
+    : m.state === 'error' ? { c: 'b-rej', t: '❌ فشلت' }
+    : { c: 'b-rej', t: 'اتلغت' };
+}
+function markInfo(m) {
+  return 'الفرع جرد <b>' + (m.counted || 0) + '</b> صنف • ' + dt(m.at) +
+    (m.by ? ' • ' + (m.state === 'cancelled' ? 'لغاها ' : 'أكّدها ') + esc(m.by) : '') +
+    (m.state === 'error' && m.error ? '<br><span style="color:#C62828">' + esc(m.error) + '</span>' : '');
+}
+function markActs(m) {
+  if (m.state !== 'requested' || isQA()) return '';
+  const s = esc(m.store).replace(/'/g, "\\'");
+  return '<div class="bacts"><button class="btn" onclick="markGoDlg(\'' + s + '\')">🏷️ اتأكدت من المحل - أكّد</button>' +
+    '<button class="btn soft" onclick="markCancel(\'' + s + '\')">إلغاء</button></div>';
+}
+function renderMarks() {
+  const el = $('markBox'); if (!el) return;
+  const L = isQA() ? [] : marks;
+  if (!L.length) { el.innerHTML = ''; return; }
+  const wait = L.filter(m => m.state === 'requested').length;
+  el.innerHTML = '<div class="mkbox"><h4>🏷️ طلبات علامة الجرد' + (wait ? ' <span class="badge b-new">' + wait + ' مستني</span>' : '') + '</h4>' +
+    L.map(m => { const st = markState(m); return '<div class="mkrow"><div class="mkt">' + sdot(m.store) + '<b>' + esc(m.store) + '</b> <span class="badge ' + st.c + '">' + st.t + '</span><br>' + markInfo(m) + '</div>' + markActs(m) + '</div>'; }).join('') + '</div>';
+}
+function markCard(m) {
+  const st = markState(m);
+  return '<div class="bcard k-mk' + (m.state === 'requested' ? ' late' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
+    '<div class="bt"><b><span class="kind">🏷️</span>علامة الجرد</b><span class="badge ' + st.c + '">' + st.t + '</span></div>' +
+    '<div class="bm">' + markInfo(m) + '</div>' + markActs(m) + '</div>';
+}
+function markGoDlg(store) {
+  const m = marks.find(x => x.store === store); if (!m) return;
+  dlg('<h3>🏷️ علامة الجرد - ' + esc(store) + '</h3>' +
+    '<p style="margin-top:0">' + markInfo(m) + '</p>' +
+    '<p style="background:#FFF6E5;border-radius:10px;padding:8px 10px;line-height:1.7"><b>قبل ما تأكّد:</b> كلّم المحل واتأكد إنهم بدأوا الجرد فعلاً.<br>' +
+    'بعد التأكيد السكريبت هيعدّل كمية <b>كل أصناف المحل</b> في برنامج البيع لـ 9999 وبعدين لـ 0 (وبياخد نسخة بالكميات الأول). الخطوة دي مش بترجع.</p>' +
+    '<label class="fl">كلمة السر بتاعتك (اللي بتدخل بيها الداش بورد)</label><input type="password" id="mkPw" autocomplete="current-password" style="width:100%">' +
+    '<div class="acts"><button class="btn" id="dlgOk">✅ تأكيد العلامة</button><button class="btn soft" onclick="closeDlg()">رجوع</button></div>');
+  const go = async () => {
+    const pw = $('mkPw').value;
+    if (!pw.trim()) return toast('اكتب كلمة السر بتاعتك');
+    $('dlgOk').disabled = true; $('dlgOk').textContent = '⏳ ...';
+    try { const r = await api('dMarkGo', { token, store, password: pw }, true); closeDlg(); marks = r.marks || []; markRefresh(); toast('✅ اتأكدت - العلامة هتبدأ في البرنامج خلال دقيقة'); }
+    catch (e) { $('dlgOk').disabled = false; $('dlgOk').textContent = '✅ تأكيد العلامة'; toast(msg(e)); }
+  };
+  $('dlgOk').onclick = go;
+  $('mkPw').onkeydown = e => { if (e.key === 'Enter') go(); };
+  setTimeout(() => $('mkPw') && $('mkPw').focus(), 50);
+}
+async function markCancel(store) {
+  if (!confirm('تلغي طلب علامة الجرد لـ ' + store + '؟ (مش هيتطلب تاني غير مع جرد جديد)')) return;
+  try { const r = await api('dMarkCancel', { token, store }, true); marks = r.marks || []; markRefresh(); toast('اتلغى'); } catch (e) { toast(msg(e)); }
+}
+function markRefresh() { renderMarks(); if (!$('pageStores').classList.contains('hidden')) renderBoard(); }
+// تنبيه: طلب علامة جديد، أو علامة خلصت/فشلت
+function marksAfterLoad() {
+  const pk = markKnown;
+  markKnown = {}; marks.forEach(m => { markKnown[m.store] = m.state; });
+  if (!pk || isQA()) return;
+  const fresh = marks.filter(m => pk[m.store] !== m.state && ['requested', 'done', 'error'].indexOf(m.state) >= 0);
+  if (!fresh.length) return;
+  const m = fresh[0];
+  if (m.state === 'requested') ding();
+  toast('🏷️ ' + m.store + ': ' + (m.state === 'requested' ? 'طلب علامة الجرد مستني تأكيدك' : m.state === 'done' ? 'علامة الجرد اتعملت ✅' : 'علامة الجرد فشلت ❌'));
 }
 
 // ---------- الورديات: جدول أسبوعي + طلبات التبديل ----------
