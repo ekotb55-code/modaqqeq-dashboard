@@ -34,6 +34,10 @@
   <div id="splash" dir="rtl"><img src="icons/Icon-192.png" alt=""><b>مدقق</b><div class="bar"><i></i></div></div>
   <script>
     // ---- الجسر بين التطبيق والمتصفح: تخزين الملفات (IndexedDB) + الإشعارات ----
+    document.addEventListener('visibilitychange', () => {
+      // الموبايل بيلغي طلب الشاشة لما التطبيق يروح الخلفية - نرجّعه أول ما يرجع
+      if (document.visibilityState === 'visible' && window.mdq && mdq._wlWant) mdq.wakeLock(true);
+    });
     window.mdq = {
       _db: null,
       _open() {
@@ -72,6 +76,19 @@
         if (!firebase.apps.length) firebase.initializeApp(this._cfg);
         const reg = await navigator.serviceWorker.ready;
         return await firebase.messaging().getToken({ vapidKey: this._vapid, serviceWorkerRegistration: reg });
+      },
+      // الشاشة ما تنطفيش لوحدها طول ما فيه أصناف جرد لسه ما اترفعتش
+      _wl: null, _wlWant: false,
+      async wakeLock(on) {
+        this._wlWant = on;
+        try {
+          if (on && !this._wl && navigator.wakeLock && document.visibilityState === 'visible') {
+            this._wl = await navigator.wakeLock.request('screen');
+            this._wl.addEventListener('release', () => { this._wl = null; });
+          } else if (!on && this._wl) {
+            const w = this._wl; this._wl = null; await w.release();
+          }
+        } catch (e) { this._wl = null; }
       },
       // بصمة كلمة السر (PBKDF2-SHA256) للدخول من غير نت - كلمة السر نفسها ما بتتحفظش
       async pbkdf2(pass, salt, iter) {
