@@ -54,6 +54,19 @@
   .sep { flex: 1; }
   .count { font-size: 12px; color: var(--mute); padding: 2px 16px 6px; }
 
+  /* خط التقدّم الثابت تحت البحث */
+  .strip { margin-top: 10px; }
+  .strip .row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #fff; }
+  .strip .row .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .strip .row .pc { font-weight: 800; direction: ltr; }
+  .strip .track { height: 6px; background: rgba(255,255,255,.28); border-radius: 99px; overflow: hidden; margin-top: 5px; }
+  .strip .track i { display: block; height: 100%; width: 0; background: #fff; border-radius: 99px; transition: width .35s; }
+  .strip.ok .track i { background: #7CF0A8; }
+  .strip.bad .track i { background: #FFB4B4; }
+  .strip.busy .track i.ind { width: 35% !important; animation: ind 1.1s ease-in-out infinite; }
+  @keyframes ind { 0% { transform: translateX(-120%); } 100% { transform: translateX(320%); } }
+  .ph .pbar { position: absolute; left: 6px; right: 6px; top: 6px; height: 5px; background: var(--line); border-radius: 99px; overflow: hidden; }
+  .ph .pbar i { display: block; height: 100%; background: var(--blue); width: 0; transition: width .25s; }
   .banner { margin: 8px 14px 0; background: #fff; border: 1.5px solid var(--line); border-radius: 14px; padding: 12px 14px; font-size: 13px; }
   .banner b { color: var(--blue-d); }
   .bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 8px; }
@@ -134,9 +147,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>
       </button>
     </div>
+    <div class="strip hidden" id="strip">
+      <div class="row"><span class="t" id="stripT"></span><span class="pc" id="stripP"></span></div>
+      <div class="track"><i id="stripBar"></i></div>
+    </div>
   </header>
-
-  <div id="prog" class="banner hidden"></div>
 
   <div class="tools">
     <button class="chip on" data-f="all">الكل <span class="n" id="nAll"></span></button>
@@ -169,7 +184,7 @@ const REFRESH_HOURS = 12;  // كل قد إيه القايمة بتتحدّث م�
 const $ = id => document.getElementById(id);
 const st = {
   user: null, branches: [], branch: '', items: [], base: '', byId: {},
-  filter: 'all', sort: 'az', q: '', onlyIds: null, view: [], shown: 0, busy: {}, scanning: false, target: null
+  filter: 'all', sort: 'az', q: '', onlyIds: null, view: [], shown: 0, busy: {}, saves: {}, scanP: null, scanning: false, target: null
 };
 
 // ---------- أدوات ----------
@@ -277,6 +292,8 @@ async function loadItems() {
 async function runScan(restart, quiet) {
   if (st.scanning) return;
   st.scanning = true;
+  st.scanP = st.scan && !st.scan.finished ? st.scan : null;
+  showProgress();
   const b = st.branch;
   let first = true, lastLoad = Date.now(), errors = 0;
   try {
@@ -292,8 +309,8 @@ async function runScan(restart, quiet) {
         continue;
       }
       first = false;
-      st.scan = p;
-      if (!quiet) showProgress(p);
+      st.scan = p; st.scanP = p;
+      showProgress();
       // القايمة بتظهر وهي بتتجهز (كل شوية)
       if (p.finished || Date.now() - lastLoad > 45000 || (!st.items.length && p.total)) { await loadItems(); lastLoad = Date.now(); }
       if (p.finished) break;
@@ -303,25 +320,48 @@ async function runScan(restart, quiet) {
     if (!quiet) toast(arErr(err), 'bad');
   } finally {
     st.scanning = false;
-    showProgress(null);
+    st.scanP = null;
+    showProgress();
   }
 }
-function showProgress(p) {
-  const el = $('prog');
-  if (!p || p.finished) { el.classList.add('hidden'); return; }
-  let txt, pct;
+// ---------- خط التقدّم: حفظ الصور (الأولوية) أو تجهيز الأصناف ----------
+function scanLine(p) {
+  if (!p || p.finished) return null;
   if (p.stage === 'list' || !p.listed) {
-    txt = 'بنجهّز أصناف الفرع من برنامج البيع (أول مرة بس)... صفحة <b>' + (p.page || 0) + '</b> من <b>' + (p.pages || '؟') + '</b>';
-    pct = p.pages ? Math.round(100 * (p.page || 0) / p.pages) : 3;
-  } else {
-    txt = 'بنجيب صور الأصناف: <b>' + p.checked + '</b> من <b>' + p.total + '</b> - تقدر تشتغل عادي';
-    pct = p.total ? Math.round(100 * p.checked / p.total) : 0;
+    const est = p.pages ? p.pages * 30 : 0;
+    return { t: 'بنجيب أصناف الفرع من البرنامج: ' + (p.total || 0).toLocaleString('en-US') + (est ? ' من حوالي ' + est.toLocaleString('en-US') : ''),
+      pct: p.pages ? Math.min(100, Math.round(100 * (p.page || 0) / p.pages)) : null };
   }
-  el.innerHTML = txt + '<div class="bar"><i style="width:' + pct + '%"></i></div>';
-  el.classList.remove('hidden');
+  return { t: 'بنجيب صور الأصناف: ' + (p.checked || 0).toLocaleString('en-US') + ' من ' + (p.total || 0).toLocaleString('en-US') + ' - تقدر تشتغل عادي',
+    pct: p.total ? Math.round(100 * p.checked / p.total) : 0 };
+}
+const PH = { prep: 'بيجهّز الصورة', up: 'بيرفع ويحفظ على البرنامج', done: 'اتحفظت على البرنامج ✓', err: 'ما اتحفظتش' };
+function showProgress() {
+  const el = $('strip');
+  let line = null, cls = '';
+  const ids = Object.keys(st.saves);
+  if (ids.length) {
+    // آخر صورة لسه شغالة (أو آخر واحدة خلصت)
+    const active = ids.filter(id => ['prep', 'up'].indexOf(st.saves[id].ph) >= 0);
+    const sv = st.saves[active[0] || ids[ids.length - 1]];
+    const left = active.length > 1 ? ' • فاضل ' + (active.length - 1 === 1 ? 'صورة' : (active.length - 1) + ' صور') : '';
+    line = { t: PH[sv.ph] + ': ' + sv.name + left, pct: sv.pct };
+    cls = sv.ph === 'done' ? 'ok' : sv.ph === 'err' ? 'bad' : '';
+  } else if (st.scanning || (st.scan && !st.scan.finished && st.scan.stage !== 'none')) {
+    line = st.scanP ? scanLine(st.scanP) : { t: 'بنبدأ تجهيز الأصناف...', pct: null };
+    if (line && !st.scanning) line.t += ' (متوقف - دوس تحديث)';
+  }
+  if (!line) { el.classList.add('hidden'); hh(); return; }
+  el.className = 'strip ' + cls + (line.pct == null ? ' busy' : '');
+  $('stripT').textContent = line.t;
+  $('stripP').textContent = line.pct == null ? '' : line.pct + '%';
+  const bar = $('stripBar');
+  bar.className = line.pct == null ? 'ind' : '';
+  bar.style.width = (line.pct == null ? 35 : line.pct) + '%';
+  hh();
 }
 $('btnRefresh').onclick = () => {
-  if (st.scanning) return toast('التحديث شغال بالفعل');
+  if (st.scanning) { showProgress(); return toast('التحديث شغال بالفعل - شوف الخط تحت البحث'); }
   toast('بنحدّث الأصناف من البرنامج...');
   runScan(true, false);
 };
@@ -386,12 +426,13 @@ function more() {
   list.insertAdjacentHTML('beforeend', html);
 }
 function rowHtml(it) {
-  const u = imgUrl(it.img), busy = st.busy[it.id];
+  const sv = st.saves[it.id], busy = st.busy[it.id];
+  const u = (busy && sv && sv.preview) || imgUrl(it.img);
   return '<div class="item" id="it' + it.id + '">' +
     '<div class="ph' + (u ? '' : ' none') + '" data-id="' + it.id + '">' +
       '<img loading="lazy" decoding="async" src="' + esc(u || LOGO) + '" alt="" onerror="this.onerror=null;this.src=\'' + LOGO + '\';this.parentNode.classList.add(\'none\')">' +
       '<span class="cam">' + CAM + '</span>' +
-      (busy ? '<div class="busy"><div class="spin"></div></div>' : '') +
+      (busy ? (sv && sv.preview ? '<div class="pbar"><i style="width:' + (sv.pct || 0) + '%"></i></div>' : '<div class="busy"><div class="spin"></div></div>') : '') +
     '</div>' +
     '<div class="info"><div class="nm">' + esc(it.name) + (it.img === '-' ? '<span class="tag-none">بدون صورة</span>' : '') + '</div>' +
     '<div class="sub">' + (it.code ? '<span class="code">' + esc(it.code) + '</span> • ' : '') + esc(it.cat) + '</div></div>' +
@@ -420,14 +461,23 @@ $('pick').addEventListener('change', async () => {
   const f = $('pick').files && $('pick').files[0], id = st.target;
   if (!f || !id) return;
   const it = st.byId[id];
-  st.busy[id] = true; refreshRow(id);
+  const sv = st.saves[id] = { name: it.name, ph: 'prep', pct: 5, t0: Date.now() };
+  st.busy[id] = true; refreshRow(id); showProgress();
+  // خلال الرفع والحفظ: النسبة بتزيد بالوقت (السيرفر بياخد حوالي 5 ثواني) لحد ما يرد
+  const tick = setInterval(() => {
+    if (sv.ph !== 'up') return;
+    const t = (Date.now() - sv.t1) / 1000;
+    sv.pct = Math.min(95, Math.round(25 + 70 * (1 - Math.exp(-t / 3.5))));
+    showProgress(); setRowPct(id, sv.pct);
+  }, 300);
   try {
     const data = await squareJpeg(f, 800, 0.82);
-    // نوري الصورة الجديدة على طول وهي بتترفع
-    const el = document.querySelector('#it' + id + ' .ph img');
-    if (el) { el.src = data; el.parentNode.classList.remove('none'); }
+    sv.preview = data;
+    sv.ph = 'up'; sv.pct = 25; sv.t1 = Date.now();
+    refreshRow(id); showProgress();
     const r = await api('imgSet', { branch: st.branch, id: id, image: data });
     it.img = r.img;
+    sv.ph = 'done'; sv.pct = 100;
     delete st.busy[id];
     refreshRow(id);
     const ph = document.querySelector('#it' + id + ' .ph');
@@ -435,12 +485,22 @@ $('pick').addEventListener('change', async () => {
     toast('اتحفظت الصورة على البرنامج ✓', 'ok');
     $('nNone').textContent = '(' + st.items.filter(x => x.img === '-').length + ')';
   } catch (err) {
+    sv.ph = 'err'; sv.pct = 100;
     delete st.busy[id];
     refreshRow(id);
-    if (err.auth) { toast(arErr(err), 'bad'); return showLogin(); }
+    if (err.auth) { toast(arErr(err), 'bad'); clearInterval(tick); delete st.saves[id]; showProgress(); return showLogin(); }
     toast(arErr(err), 'bad');
+  } finally {
+    clearInterval(tick);
+    showProgress();
+    // الحالة الأخيرة بتفضل ظاهرة شوية وبعدين تختفي
+    setTimeout(() => { if (st.saves[id] === sv) { delete st.saves[id]; showProgress(); } }, sv.ph === 'err' ? 6000 : 2500);
   }
 });
+function setRowPct(id, pct) {
+  const b = document.querySelector('#it' + id + ' .pbar i');
+  if (b) b.style.width = pct + '%';
+}
 // قص مربع من النص + تصغير ← data:image/jpeg
 async function squareJpeg(file, size, q) {
   let src;
