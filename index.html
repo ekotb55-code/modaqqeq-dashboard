@@ -699,6 +699,7 @@
     <div class="wrap" id="wrap">
       <div id="listPane">
         <div id="markBox"></div>
+        <div id="devBox"></div>
         <div class="tabs" id="tabs"></div>
         <div class="filters">
           <select id="fStore" onchange="renderList()"><option value="">كل المحلات</option></select>
@@ -1057,7 +1058,7 @@ async function loadList(quiet) {
     prevStatus = {}; r.invoices.forEach(v => { prevStatus[v.id] = v.status; });
     all = r.invoices; stores = r.stores;
     tks = (r.tickets || []).map(t => Object.assign(t, { kind: 'tk' })); if (r.storePrio) storePrio = r.storePrio;
-    tasks = r.tasks || []; jrs = r.jrs || []; marks = r.marks || []; if (r.storeColor) storeColor = r.storeColor; if (r.members) members = r.members;
+    tasks = r.tasks || []; jrs = r.jrs || []; marks = r.marks || []; jardDevs = r.jardDevs || []; if (r.storeColor) storeColor = r.storeColor; if (r.members) members = r.members;
     tasksAfterLoad(); marksAfterLoad();
     tkAfterLoad(tks);
     chatSum = r.chat || { threads: [], replies: [] };
@@ -1068,7 +1069,7 @@ async function loadList(quiet) {
     const sel = $('fStore'), val = sel.value;
     sel.innerHTML = '<option value="">كل المحلات</option>' + stores.map(s => '<option>' + esc(s) + '</option>').join('');
     sel.value = val;
-    renderStats(); renderList(); renderMarks(); updateTitle();
+    renderStats(); renderList(); renderMarks(); renderDevs(); updateTitle();
     if (!$('pagePerf').classList.contains('hidden')) renderPerf();
     if (!$('pageStores').classList.contains('hidden')) renderBoard();
     if (fresh.length && !isQA()) { alertNew(fresh); pendAt = now(); }
@@ -3281,6 +3282,31 @@ function tasksAfterLoad() {
 // ---------- طلبات علامة الجرد (الكميات 9999 ← 0 في برنامج البيع) ----------
 // الفرع بيعدّي 30 صنف في الجرد ← طلب هنا. الدعم بيكلّم المحل ويتأكد إنه بدأ الجرد، وبعدين يأكّد بكلمة السر بتاعته
 let marks = [], markKnown = null;
+// ---------- أصناف جرد لسه على موبايلات الموظفين (ما اترفعتش) ----------
+// كل موبايل بيبلّغ بعدده وهو شغال - لو النت قطع عنده بيفضل آخر بلاغ (ومكتوب من إمتى)
+let jardDevs = [];
+function agoAr(iso) {
+  const t = new Date(iso).getTime(); if (!t) return '';
+  const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+  if (m < 1) return 'دلوقتي'; if (m < 60) return 'من ' + m + ' دقيقة';
+  const h = Math.floor(m / 60), mm = m % 60; return 'من ' + h + ' ساعة' + (mm ? ' و' + mm + ' دقيقة' : '');
+}
+function renderDevs() {
+  const el = $('devBox'); if (!el) return;
+  const L = isQA() ? [] : jardDevs;
+  if (!L.length) { el.innerHTML = ''; return; }
+  const waiting = L.filter(d => d.pending > 0).length;
+  el.innerHTML = '<div class="mkbox" style="background:#FFF4E5;border-color:#FFD8A8"><h4 style="color:#B35C00">📱 الجرد على الموبايلات' +
+    (waiting ? ' <span class="badge b-new">' + waiting + ' موبايل عليه أصناف</span>' : '') + '</h4>' +
+    L.map(d => {
+      const stale = (Date.now() - new Date(d.at).getTime()) > 5 * 60000;
+      const st = d.pending > 0
+        ? '<b style="color:#C62828">' + d.pending + ' صنف ما اترفعش</b>' + (d.oldest ? ' • أقدمهم ' + agoAr(d.oldest) : '')
+        : '<span style="color:#2E7D32">اترفع كله</span> • <b>ما داسش «خلصت»</b>';
+      return '<div class="mkrow"><div class="mkt">' + sdot(d.store) + '<b>' + esc(d.store) + '</b> • ' + esc(d.user || '') + '<br>' + st +
+        '<br><span style="color:#888">آخر بلاغ من الموبايل ' + agoAr(d.at) + (stale && d.pending > 0 ? ' - غالباً التطبيق مقفول أو مفيش نت: كلّمه يفتحه' : '') + '</span></div></div>';
+    }).join('') + '</div>';
+}
 function markState(m) {
   const ok = m.ok || [0, 0];
   return m.state === 'requested' ? { c: 'b-new', t: '⏳ مستني تأكيدك' }
