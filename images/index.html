@@ -88,6 +88,11 @@
   .info .nm { font-weight: 700; line-height: 1.45; word-break: break-word; }
   .info .sub { font-size: 12px; color: var(--mute); margin-top: 2px; direction: rtl; }
   .info .sub .code { direction: ltr; unicode-bidi: embed; }
+  .acts { display: flex; flex-direction: column; gap: 6px; flex: none; }
+  .act { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 62px; height: 32px; padding: 0 8px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; color: var(--blue-d); font-size: 12px; font-weight: 700; cursor: pointer; }
+  .act svg { width: 15px; height: 15px; flex: none; }
+  .act:active { background: #EAF3FC; }
+  .act.done { border-color: var(--ok); color: var(--ok); }
   .tag-none { display: inline-block; font-size: 11px; color: var(--bad); background: #FDECEC; border-radius: 6px; padding: 0 6px; margin-inline-start: 6px; }
   .empty { text-align: center; color: var(--mute); padding: 40px 20px; }
   #more { height: 40px; }
@@ -178,6 +183,8 @@
 const API = 'https://script.google.com/macros/s/AKfycbxUjxuVtROKO7MrxHtmBfzOxsjgwgfvWMVodCHxUdxuFszmgTyWMQFavjt82iJ8U0s/exec';
 const LOGO = '../icon-192.png';
 const CAM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+const ICO_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+const ICO_SEARCH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>';
 const PAGE = 60;           // كام صنف بيترسم مرة واحدة
 const REFRESH_HOURS = 12;  // كل قد إيه القايمة بتتحدّث من البرنامج لوحدها
 
@@ -436,6 +443,10 @@ function rowHtml(it) {
     '</div>' +
     '<div class="info"><div class="nm">' + esc(it.name) + (it.img === '-' ? '<span class="tag-none">بدون صورة</span>' : '') + '</div>' +
     '<div class="sub">' + (it.code ? '<span class="code">' + esc(it.code) + '</span> • ' : '') + esc(it.cat) + '</div></div>' +
+    '<div class="acts">' +
+      '<button class="act" data-act="copy" data-id="' + it.id + '" title="نسخ اسم الصنف">' + ICO_COPY + 'نسخ</button>' +
+      '<button class="act" data-act="google" data-id="' + it.id + '" title="دوّر على صورة الصنف في جوجل">' + ICO_SEARCH + 'جوجل</button>' +
+    '</div>' +
   '</div>';
 }
 function refreshRow(id) {
@@ -448,6 +459,30 @@ function hh() { document.documentElement.style.setProperty('--hh', $('hdr').offs
 window.addEventListener('resize', hh);
 
 // ---------- تغيير الصورة ----------
+// نسخ الاسم / البحث عن صورة في جوجل
+$('list').addEventListener('click', async e => {
+  const b = e.target.closest('.act');
+  if (!b) return;
+  const it = st.byId[b.dataset.id];
+  if (!it) return;
+  if (b.dataset.act === 'google') {
+    window.open('https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(it.name), '_blank', 'noopener');
+    return;
+  }
+  let ok = false;
+  try { await navigator.clipboard.writeText(it.name); ok = true; } catch (err) {
+    const ta = document.createElement('textarea');
+    ta.value = it.name; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-100px;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    try { ok = document.execCommand('copy'); } catch (e2) {}
+    ta.remove();
+  }
+  if (ok) {
+    toast('اتنسخ اسم الصنف ✓', 'ok');
+    b.classList.add('done');
+    setTimeout(() => b.classList.remove('done'), 1500);
+  } else toast('مقدرتش أنسخ - اضغط على الاسم مطوّل وانسخه', 'bad');
+});
 $('list').addEventListener('click', e => {
   const ph = e.target.closest('.ph');
   if (!ph) return;
