@@ -533,8 +533,21 @@ function sndOrderDone() {
 // الكلام (صوت الموبايل): اسم الصنف والمطلوب، والعدد مع كل قطعة
 st.voice = ls('wh_voice') !== '0';
 let arVoice = null;
+function arVoices() { try { return speechSynthesis.getVoices().filter(v => /^ar/i.test(v.lang)); } catch (e) { return []; } }
 function pickVoice() {
-  try { const vs = speechSynthesis.getVoices(); arVoice = vs.find(v => /^ar[-_]EG/i.test(v.lang)) || vs.find(v => /^ar/i.test(v.lang)) || null; } catch (e) {}
+  const vs = arVoices(), saved = ls('wh_voice_name');
+  arVoice = vs.find(v => v.name === saved) || vs.find(v => /^ar[-_]EG/i.test(v.lang)) || vs.find(v => /^ar/i.test(v.lang)) || null;
+}
+// الأرقام بالمصري (علشان النطق يبقى "تلاتة" مش "ثلاثة")
+function numAr(n) {
+  n = Number(n) || 0;
+  const one = ['صِفر', 'واحِد', 'اتْنين', 'تَلاتَة', 'أَرْبَعَة', 'خَمْسَة', 'سِتَّة', 'سَبْعَة', 'تَمانْيَة', 'تِسْعَة', 'عَشَرَة',
+    'حِداشَر', 'اتْناشَر', 'تَلَتّاشَر', 'أَرْبَعْتاشَر', 'خَمَسْتاشَر', 'سِتّاشَر', 'سَبَعْتاشَر', 'تَمَنْتاشَر', 'تِسَعْتاشَر'];
+  const ten = ['', '', 'عِشْرين', 'تَلاتين', 'أَرْبِعين', 'خَمْسين', 'سِتّين', 'سَبْعين', 'تَمانين', 'تِسْعين'];
+  if (n < 20) return one[n];
+  if (n < 100) return (n % 10 ? one[n % 10] + ' وْ ' : '') + ten[Math.floor(n / 10)];
+  if (n === 100) return 'مِيَّة';
+  return String(n);
 }
 if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 function say(text, now) {
@@ -543,7 +556,7 @@ function say(text, now) {
     if (now) speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = arVoice ? arVoice.lang : 'ar-EG'; if (arVoice) u.voice = arVoice;
-    u.rate = 1.1; u.volume = 1;
+    u.rate = Number(ls('wh_voice_rate')) || 1; u.volume = 1;
     speechSynthesis.speak(u);
   } catch (e) {}
 }
@@ -556,7 +569,7 @@ function paintFrames() { $('prep').classList.toggle('noframe', !st.frames); $('f
 $('frameToggle').onclick = () => { st.frames = !st.frames; ls('wh_frames', st.frames ? '1' : '0'); paintFrames(); };
 $('voiceToggle').onclick = () => {
   st.voice = !st.voice; ls('wh_voice', st.voice ? '1' : '0'); paintVoice();
-  if (st.voice) { const c = curItem(); say(c ? c.name + '، مطلوب ' + (c.qty - c.done) : 'الصوت شغال', true); } else try { speechSynthesis.cancel(); } catch (e) {}
+  if (st.voice) { const c = curItem(); say(c ? c.name + '. مَطْلوب ' + numAr(c.qty - c.done) : 'الصوت شَغّال', true); } else try { speechSynthesis.cancel(); } catch (e) {}
 };
 
 // ---------- اللوجوهات ----------
@@ -704,11 +717,13 @@ $('btnMe').onclick = async () => {
     '<div class="field"><input id="pNew" type="password" placeholder="كلمة السر الجديدة" aria-label="كلمة السر الجديدة"></div>' +
     '<div class="field"><input id="pNew2" type="password" placeholder="اكتب الجديدة تاني" aria-label="تأكيد كلمة السر الجديدة"></div>' +
     '<button class="btn block" id="pSave">حفظ كلمة السر</button><div class="err" id="pErr"></div>' +
+    '<hr class="hr"><h3>صوت الموبايل</h3>' + voiceSettingsHtml() +
     (canBio ? '<hr class="hr"><button class="btn ' + (bio ? 'danger' : 'ok') + ' block" id="meBio">' + (bio ? 'إلغاء الدخول بالبصمة' : 'تفعيل الدخول بالبصمة') + '</button>' : '') +
     '<hr class="hr"><button class="btn danger block" id="meOut">خروج من التطبيق</button></div>');
   bg.querySelector('#meC').onclick = () => { $('meCam').value = ''; $('meCam').click(); };
   bg.querySelector('#meG').onclick = () => { $('meGal').value = ''; $('meGal').click(); };
   bg.querySelector('#meAv').onclick = () => { $('meGal').value = ''; $('meGal').click(); };
+  wireVoiceSettings(bg);
   bg.querySelector('#pSave').onclick = async () => {
     const o = $('pOld').value.trim(), n = $('pNew').value.trim();
     $('pErr').textContent = '';
@@ -733,6 +748,21 @@ $('btnMe').onclick = async () => {
     st.user = null; showLogin();
   };
 };
+function voiceSettingsHtml() {
+  const vs = arVoices();
+  if (!vs.length) return '<div class="note">الموبايل ده مفيهوش صوت عربي متسطّب. من إعدادات الموبايل ← تحويل النص إلى كلام ← نزّل اللغة العربية (ولو فيه "مصر" اختاره).</div>';
+  const cur = arVoice ? arVoice.name : '';
+  return '<div class="field"><select id="vSel" class="sel" style="width:100%">' + vs.map(v => '<option value="' + esc(v.name) + '"' + (v.name === cur ? ' selected' : '') + '>' +
+    esc(v.name) + (/EG/i.test(v.lang) ? ' (مصري)' : '') + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label>سرعة الكلام</label><input type="range" id="vRate" min="0.7" max="1.4" step="0.1" value="' + (Number(ls('wh_voice_rate')) || 1) + '" style="width:100%"></div>' +
+    '<button class="btn ghost block" id="vTest">جرّب الصوت</button>';
+}
+function wireVoiceSettings(bg) {
+  const sel = bg.querySelector('#vSel'), rate = bg.querySelector('#vRate'), t = bg.querySelector('#vTest');
+  if (sel) sel.onchange = () => { ls('wh_voice_name', sel.value); pickVoice(); };
+  if (rate) rate.onchange = () => ls('wh_voice_rate', rate.value);
+  if (t) t.onclick = () => { const was = st.voice; st.voice = true; say('مَنادِيل سَحْب. مَطْلوب ' + numAr(12) + '. ' + numAr(1) + '، ' + numAr(2) + '، ' + numAr(3), true); st.voice = was; };
+}
 async function setMyPhoto(e) {
   const f = e.target.files && e.target.files[0]; if (!f) return;
   document.querySelectorAll('.sheet-bg').forEach(x => x.remove());
@@ -887,20 +917,29 @@ async function openPrep(id) {
 }
 function backHome() { show('home'); loadOrders(true); }
 $('prepBack').onclick = async () => { await flushSave(); backHome(); };
-function curItem() { return st.items.find(it => !it.na && it.done < it.qty); }
+// الصنف اتقفل على عدد أقل من المطلوب ("خلص كده") - بيتحفظ كعلامة في خانة الباركودات
+function isClosed(it) { return (',' + (it.codes || '') + ',').indexOf(',ناقص,') >= 0; }
+function setClosed(it, on) {
+  const parts = String(it.codes || '').split(',').filter(x => x && x !== 'ناقص');
+  if (on) parts.push('ناقص');
+  it.codes = parts.join(',');
+}
+function isOpen(it) { return !it.na && !isClosed(it) && it.done < it.qty; }
+function curItem() { return st.items.find(isOpen); }
 function renderPrep(hitN) {
   const items = st.items;
-  const handled = items.filter(it => it.na || it.done >= it.qty).length;
+  const handled = items.filter(it => !isOpen(it)).length;
   $('pCount').textContent = handled + ' من ' + items.length;
   $('pTrack').style.width = (items.length ? Math.round(100 * handled / items.length) : 0) + '%';
   const cur = curItem();
-  const pending = items.filter(it => !it.na && it.done < it.qty && (!cur || it.n !== cur.n));
+  const pending = items.filter(it => isOpen(it) && (!cur || it.n !== cur.n));
   const na = items.filter(it => it.na);
-  const done = items.filter(it => !it.na && it.done >= it.qty);
+  const done = items.filter(it => !it.na && !isOpen(it));
   const fresh = cur && st.curShown !== cur.n; st.curShown = cur ? cur.n : null;
   $('curBox').innerHTML = cur ? '<div class="cur' + (hitN === cur.n ? ' hit' : '') + (fresh ? ' enter' : '') + '" data-n="' + cur.n + '"><div class="top"><div class="no">' + cur.n + '</div><div class="nm">' + esc(cur.name) + '</div></div>' +
     '<div class="cnt">' + cur.done + ' <small>من ' + cur.qty + '</small></div>' +
-    '<div class="acts"><button class="btn ghost" data-a="type">' + ICO_KEY + 'اكتب العدد</button><button class="btn danger" data-a="na">' + ICO_NA + 'غير متوفر</button></div></div>'
+    '<div class="acts"><button class="btn ghost" data-a="type">' + ICO_KEY + 'اكتب العدد</button>' +
+    (cur.done > 0 ? '<button class="btn ok" data-a="close">' + ICO_OK + 'خلص كده</button>' : '<button class="btn danger" data-a="na">' + ICO_NA + 'غير متوفر</button>') + '</div></div>'
     : '<div class="alldone">كل الأصناف خلصت ✓<br><span style="font-size:14px">دوس «تم التحضير» وصوّر البرنيكة</span></div>';
   const row = (it, cls) => {
     const q = it.na ? '<span class="tag t-back">غير متوفر</span>' : it.done + ' من ' + it.qty;
@@ -917,7 +956,7 @@ function renderPrep(hitN) {
   // أول ما يبدأ صنف جديد: الموبايل يقول اسمه والمطلوب منه
   if (cur && st.lastAnn !== cur.n && !$('prep').classList.contains('hidden')) {
     st.lastAnn = cur.n;
-    say(cur.name + '، مطلوب ' + (cur.qty - cur.done), false);
+    say(cur.name + '. مَطْلوب ' + numAr(cur.qty - cur.done), false);
   }
 }
 $('curBox').addEventListener('click', e => {
@@ -925,8 +964,20 @@ $('curBox').addEventListener('click', e => {
   const it = st.items.find(x => x.n === Number(c.dataset.n)); if (!it) return;
   if (b && b.dataset.a === 'type') return typeQty(it);
   if (b && b.dataset.a === 'na') return setNa(it, true);
+  if (b && b.dataset.a === 'close') return closeItem(it);
   itemMenu(it);
 });
+// "خلص كده": الصنف يتقفل على اللي اتحضّر (أقل من المطلوب) ويروح للي بعده
+function closeItem(it) {
+  if (!confirm('تقفل «' + it.name + '» على ' + it.done + ' من ' + it.qty + '؟')) return;
+  setClosed(it, true);
+  const orderDone = !st.items.some(isOpen);
+  if (orderDone) { sndOrderDone(); say('خلاص، الطلبية خِلْصِت. صَوَّر البَرْنِيكَة', true); }
+  else { sndLast(); say('اتقفل على ' + numAr(it.done), true); }
+  setLast('ok', 'الصنف اتقفل', it.name, it.done + ' من ' + it.qty);
+  changed(it.n);
+  if (orderDone) $('prep').classList.add('done');
+}
 $('ilist').addEventListener('click', e => {
   const b = e.target.closest('[data-a]'), r = e.target.closest('.it');
   if (!r) return;
@@ -936,10 +987,10 @@ $('ilist').addEventListener('click', e => {
   itemMenu(it);
 });
 $('doneBtn').onclick = () => {
-  const list = st.items.filter(it => it.na || it.done >= it.qty);
+  const list = st.items.filter(it => !isOpen(it));
   const bg = sheet('<h3>اللي اتحضّر (' + list.length + ')</h3><div class="sub">دوس على صنف لو عايز تعدّله أو تصفّره</div>' +
     list.map(it => '<div class="it ' + (it.na ? 'na' : 'done') + '" data-n="' + it.n + '" style="background:' + (it.na ? 'var(--bad-l)' : 'var(--ok-l)') + '"><div class="no">' + it.n + '</div><div class="nm">' + esc(it.name) + '</div><div class="q">' +
-      (it.na ? 'غير متوفر' : it.done + ' من ' + it.qty) + '</div></div>').join('') + '<button class="btn ghost block" data-x="1">قفل</button>');
+      (it.na ? 'غير متوفر' : it.done + ' من ' + it.qty + (isClosed(it) ? ' (اتقفل)' : '')) + '</div></div>').join('') + '<button class="btn ghost block" data-x="1">قفل</button>');
   bg.addEventListener('click', e => {
     if (e.target.closest('[data-x]')) return bg.remove();
     const r = e.target.closest('.it'); if (!r) return;
@@ -951,6 +1002,7 @@ function itemMenu(it) {
   const bg = sheet('<h3>' + esc(it.name) + '</h3><div class="sub">المطلوب ' + it.qty + ' · المحضّر ' + it.done + (it.na ? ' · متعلم عليه غير متوفر' : '') + '</div>' +
     '<button class="btn block" data-m="type">' + ICO_KEY + 'اكتب العدد</button>' +
     (it.na ? '<button class="btn ghost block" data-m="unna">رجّعه متوفر</button>' : '<button class="btn danger block" data-m="na">' + ICO_NA + 'غير متوفر</button>') +
+    (isClosed(it) ? '<button class="btn ghost block" data-m="reopen">رجّعه للتحضير</button>' : (it.done > 0 && it.done < it.qty ? '<button class="btn ok block" data-m="close">' + ICO_OK + 'خلص كده (' + it.done + ' من ' + it.qty + ')</button>' : '')) +
     '<button class="btn ghost block" data-m="zero">صفّر الصنف ده</button><button class="btn ghost block" data-m="x">قفل</button>');
   bg.addEventListener('click', e => {
     const m = e.target.closest('[data-m]'); if (!m) return;
@@ -958,7 +1010,9 @@ function itemMenu(it) {
     if (m.dataset.m === 'type') typeQty(it);
     else if (m.dataset.m === 'na') setNa(it, true);
     else if (m.dataset.m === 'unna') setNa(it, false);
-    else if (m.dataset.m === 'zero') { if (confirm('تصفّر «' + it.name + '»؟')) { it.done = 0; it.manual = 0; it.codes = ''; it.na = false; changed(it.n); } }
+    else if (m.dataset.m === 'reopen') { setClosed(it, false); $('prep').classList.remove('done'); changed(it.n); }
+    else if (m.dataset.m === 'close') closeItem(it);
+    else if (m.dataset.m === 'zero') { if (confirm('تصفّر «' + it.name + '»؟')) { it.done = 0; it.manual = 0; it.codes = ''; it.na = false; $('prep').classList.remove('done'); changed(it.n); } }
   });
 }
 function typeQty(it) {
@@ -1158,16 +1212,17 @@ async function handleCode(code) {
   if (!names.length) { beep(false); return setLast('bad', 'باركود مش معروف في المخزن', code, 'اتأكد إنه الصنف الصح'); }
   if (!match.length) { beep(false); return setLast('bad', 'الصنف ده مش في الطلبية', names[0], 'رجّعه مكانه'); }
   match.forEach(it => { st.codes[code] = it.name; });
-  const it = match.find(x => x.na) && !match.find(x => !x.na && x.done < x.qty) ? match.find(x => x.na) : match.find(x => !x.na && x.done < x.qty);
+  // صنف لسه مفتوح، ولو مفيش: صنف متعلم عليه غير متوفر أو اتقفل ناقص يرجع يتفتح
+  const it = match.find(isOpen) || match.find(x => (x.na || isClosed(x)) && x.done < x.qty);
   if (!it) { beep(false); const m = match[0]; return setLast('bad', 'الكمية زيادة', m.name, 'المطلوب ' + m.qty + ' بس - رجّع القطعة دي'); }
-  it.na = false;
+  it.na = false; setClosed(it, false);
   it.done += 1;
   it.codes = (it.codes ? it.codes + ',' : '') + code;
   const itemDone = it.done >= it.qty;
-  const orderDone = itemDone && !st.items.some(x => !x.na && x.done < x.qty);
-  if (orderDone) { sndOrderDone(); say('خلاص، الطلبية خلصت. صوّر البرنيكة', true); }
-  else if (itemDone) { sndLast(); say('خلص', true); }
-  else { beep(true); say(String(it.done), true); }
+  const orderDone = itemDone && !st.items.some(isOpen);
+  if (orderDone) { sndOrderDone(); say('خلاص، الطلبية خِلْصِت. صَوَّر البَرْنِيكَة', true); }
+  else if (itemDone) { sndLast(); say('خِلِص', true); }
+  else { beep(true); say(numAr(it.done), true); }
   setLast('ok', itemDone ? 'الصنف اكتمل ✓' : 'اتحسبت قطعة', it.name, it.done + ' من ' + it.qty);
   changed(it.n);
   if (orderDone) $('prep').classList.add('done');
@@ -1175,7 +1230,7 @@ async function handleCode(code) {
 
 // ---------- إنهاء التحضير ----------
 $('btnFinish').onclick = async () => {
-  const left = st.items.filter(it => !it.na && it.done < it.qty);
+  const left = st.items.filter(isOpen);
   if (left.length && !confirm('فيه ' + left.length + ' صنف لسه ناقص - تكمل وتبعت كده؟')) return;
   await flushSave();
   openFinish();
@@ -1186,7 +1241,7 @@ function openFinish() {
   $('fSub').textContent = o.store + ' · طلب ' + o.id;
   const ok = its.filter(it => !it.na && it.done >= it.qty), part = its.filter(it => !it.na && it.done < it.qty), na = its.filter(it => it.na);
   $('fOk').textContent = ok.length; $('fPart').textContent = part.length; $('fNa').textContent = na.length;
-  $('fLines').innerHTML = part.map(it => '<div class="w"><span>' + esc(it.name) + '</span><b>' + it.done + ' من ' + it.qty + '</b></div>').join('') +
+  $('fLines').innerHTML = part.map(it => '<div class="w"><span>' + esc(it.name) + '</span><b>' + it.done + ' من ' + it.qty + (isClosed(it) ? ' (اتقفل)' : '') + '</b></div>').join('') +
     na.map(it => '<div class="b"><span>' + esc(it.name) + '</span><b>غير متوفر</b></div>').join('') +
     its.filter(it => it.manual && !it.na).map(it => '<div class="m"><span>' + esc(it.name) + '</span><b>' + it.done + ' · إدخال يدوي</b></div>').join('') +
     (its.some(it => it.done > it.qty) ? its.filter(it => it.done > it.qty).map(it => '<div class="w"><span>' + esc(it.name) + '</span><b>' + it.done + ' (زيادة عن ' + it.qty + ')</b></div>').join('') : '');
