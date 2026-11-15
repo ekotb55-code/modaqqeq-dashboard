@@ -293,6 +293,13 @@
   .b-rej { background: #FDE2E2; color: #C62828; }
   .b-qa { background: #EDE7F6; color: #5B3CC4; }
   .b-sr { background: #FFF3CD; color: #8A5300; }
+  /* التاسكات والتذاكر العادية: عنوان بس، وبتفتح لما الماوس يقرّب (أو بالضغط على الموبايل) */
+  .card.fold .xbody { display: none; }
+  .card.fold:hover .xbody, .card.fold.open .xbody { display: block; }
+  .card.fold .sub::after { content: ' ▾'; color: var(--muted); font-size: 11px; }
+  .card.fold:hover .sub::after, .card.fold.open .sub::after { content: ''; }
+  .hidex { border: 0; background: transparent; color: #999; font-size: 15px; cursor: pointer; padding: 2px 6px; border-radius: 8px; font-family: inherit; }
+  .hidex:hover { background: #0001; color: #C62828; }
   .srbox { background: #FFF8E1; border: 2px solid #F3C969; border-radius: 14px; padding: 12px 14px; margin: 10px 0; line-height: 1.8; }
   .srbox.wait { background: #EEF5FF; border-color: #A9CBF2; }
   .srbox.ok { background: #E8F7EC; border-color: #9ED8AE; }
@@ -1274,6 +1281,7 @@ function renderList() {
   if (tab === ST_NEW || tab === ST_WORK || tab === 'late' || tab === 'urge' || tab === 'tk' || tab === 'sched') list = list.slice().sort(qSort);
   if (tab === 'الكل' || tab === 'chat' || tab === TAB_NOTES) list = list.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   if (tab === 'tasks') list = list.slice().sort((a, b) => taskRank(a) - taskRank(b) || String(a.due || a.at).localeCompare(String(b.due || b.at)));
+  list = list.map((v, k) => [v, k]).sort((a, b) => kRank(a[0]) - kRank(b[0]) || a[1] - b[1]).map(x => x[0]);
   $('list').innerHTML = list.length ? list.map(v => v.kind === 'task' ? taskCard(v, false) : v.kind === 'jr' ? jrCard(v, false) : v.kind === 'tk' ? tkCard(v) :
     '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : v.status === ST_QA ? 'st-qa' : '') + (v.urgeCount && pending(v) ? ' urged' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
     '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</span>' + timerHtml(v) + '</div>' +
@@ -1324,7 +1332,9 @@ function tkInTab(k, v) {
   }
 }
 // ترتيب الطابور: مستعجلة (وقف حال) ← الفواتير ← عادية ← مجدولة، وبعدين أهمية العميل، وبعدين الأقدم
-function qRank(v) { return v.kind === 'tk' ? (v.priority === TK_URGENT ? 0 : v.priority === TK_SCHED ? 3 : 2) : 1; }
+function qRank(v) { return v.kind === 'tk' ? (v.priority === TK_URGENT && tkOpen(v) ? 0 : v.priority === TK_SCHED ? 3 : 2) : v.kind === 'task' || v.kind === 'jr' ? 4 : 1; }
+// في أي قايمة فيها الكل: المستعجل اللي الفرع عامله فوق، بعده فواتير المشتريات، وبعدين التذاكر والتاسكات
+function kRank(v) { return v.kind === 'tk' ? (v.priority === TK_URGENT && tkOpen(v) ? 0 : 2) : v.kind === 'task' || v.kind === 'jr' ? 3 : 1; }
 function qTime(v) { return v.kind === 'tk' && v.priority === TK_SCHED && v.scheduledAt ? v.scheduledAt : v.kind === 'task' ? (v.due || v.createdAt) : v.kind === 'jr' ? (v.updatedAt || v.createdAt || v.at) : v.createdAt; }
 function qSort(a, b) {
   return qRank(a) - qRank(b) || (Number(storePrio[b.store]) || 1) - (Number(storePrio[a.store]) || 1) ||
@@ -1363,14 +1373,14 @@ setInterval(() => {
 }, 1000);
 function tkCard(v) {
   const sel = curTk && curTk.ticket.id === v.id;
-  return '<div class="card tkcard ' + (v.status === TK_WORK ? 'st-work' : v.status === TK_SOLVED || v.status === TK_CLOSED ? 'st-done' : '') + (tkUrgentWaiting(v) ? ' tk-urgent' : '') + (sel ? ' sel' : '') + '" onclick="openTk(\'' + esc(v.id) + '\')">' +
+  return '<div class="card tkcard ' + (v.status === TK_WORK ? 'st-work' : v.status === TK_SOLVED || v.status === TK_CLOSED ? 'st-done' : '') + (tkUrgentWaiting(v) ? ' tk-urgent' : '') + (sel ? ' sel' : '') + (v.priority === TK_URGENT && tkOpen(v) ? '' : ' fold') + '" onclick="openTk(\'' + esc(v.id) + '\')">' +
     '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + ' ' + (PRIO_TAG[v.priority] || '') + ((Number(storePrio[v.store]) || 1) > 1 ? ' <span class="tkp tkp-vip">' + '⭐'.repeat((Number(storePrio[v.store]) || 1) - 1) + ' عميل مهم</span>' : '') +
     (v.lastSide === 'فرع' && v.comments && tkOpen(v) ? ' <span class="ctag">💬 الفرع رد</span>' : '') + '</span>' + tkTimer(v) + '</div>' +
-    '<div class="sub"><span class="lbl">تاسك:</span> 🛠️ ' + esc(v.title) + '</div>' +
+    '<div class="sub"><span class="lbl">تاسك:</span> 🛠️ ' + esc(v.title) + '</div><div class="xbody">' +
     '<div class="meta">' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
     (v.desc ? '<div class="meta" style="color:var(--text)">' + esc(v.desc) + '</div>' : '') +
     '<div class="meta">' + tkBadge(v) + (v.assigneeName ? ' • 👤 ' + esc(v.assigneeName) : '') + (v.photos ? ' • 📷 ' + v.photos : '') +
-    (v.reopens ? ' • <b style="color:#C62828">↩️ اتفتحت تاني ×' + v.reopens + '</b>' : '') + (v.rating ? ' • ' + stars(v.rating) : '') + '</div></div>';
+    (v.reopens ? ' • <b style="color:#C62828">↩️ اتفتحت تاني ×' + v.reopens + '</b>' : '') + (v.rating ? ' • ' + stars(v.rating) : '') + '</div></div></div>';
 }
 // بانر الإنذار: طول ما فيه تذكرة مستعجلة محدش استلمها، الصوت شغال كل 4 ثواني
 function tkBanner() {
@@ -3349,9 +3359,9 @@ function taskCard(v, board) {
     '<div class="bm">' + (v.type === 'جرد' ? '📋 من طلب الجرد • ' : '') + 'اتعملت ' + tm(v.createdAt) + ' بواسطة ' + esc(v.createdBy) + '</div>' +
     (done ? '<div class="bm">✅ ' + esc(v.doneBy) + ' • ' + tm(v.doneAt) + (v.data && v.data.progTotal !== undefined ? ' • البرنامج ' + money(v.data.progTotal) + ' = الجرد ' + money(v.data.appTotal) : '') + '</div>' : '');
   if (!board) {
-    return '<div class="card" style="border-inline-start:5px solid #6C4BD8" onclick="if(!event.target.closest(\'button\'))this.classList.toggle(\'sel\')">' +
+    return '<div class="card fold" style="border-inline-start:5px solid #6C4BD8" onclick="if(!event.target.closest(\'button\'))this.classList.toggle(\'open\')">' +
       '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + '</span>' + st + '</div>' +
-      '<div class="sub"><span class="lbl">تاسك:</span> 📋 ' + esc(v.title) + '</div><div class="meta">الميعاد ' + dt(v.due) + '</div>' + body + btn + '</div>';
+      '<div class="sub"><span class="lbl">تاسك:</span> 📋 ' + esc(v.title) + '</div><div class="xbody"><div class="meta">الميعاد ' + dt(v.due) + '</div>' + body + btn + '</div></div>';
   }
   return '<div class="bcard k-task' + (done ? ' done' : '') + (late ? ' late' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
     '<div class="bt"><b><span class="kind">📋</span>' + esc(v.title) + (v.to ? ' <small style="color:#4527A0">' + esc(taskToLabel(v.to)) + '</small>' : '') + '</b>' + st + '</div>' +
@@ -3571,10 +3581,10 @@ function jrCard(v, board) {
   const stage = v.status === 'شغال' ? ['', 'التحضير', 'الفرع بيجرد', 'الفرع خلص - رفع الكميات والتقرير'][v.stage] || '' : '';
   const log = '<ul class="tl">' + (v.log || []).map(e => '<li><span>' + (e.side === 'فرع' ? '🏪' : '🎧') + '</span><span>' + esc(e.text) + (e.by ? ' - ' + esc(e.by) : '') + '</span><span class="tm">' + tm(e.at) + '</span></li>').join('') + '</ul>';
   if (!board) {
-    return '<div class="card" style="border-inline-start:5px solid #00897B"><div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + '</span>' + st + '</div>' +
-      '<div class="sub"><span class="lbl">تاسك:</span> 📋 طلب جرد</div>' +
+    return '<div class="card fold" style="border-inline-start:5px solid #00897B" onclick="if(!event.target.closest(\'button\'))this.classList.toggle(\'open\')"><div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + '</span>' + st + '</div>' +
+      '<div class="sub"><span class="lbl">تاسك:</span> 📋 طلب جرد</div><div class="xbody">' +
       '<div class="meta">الميعاد <b>' + dt(v.at) + '</b>' + (stage ? ' • ' + stage : '') + '</div>' +
-      (v.notes ? '<div class="meta">' + esc(v.notes) + '</div>' : '') + acts + log + '</div>';
+      (v.notes ? '<div class="meta">' + esc(v.notes) + '</div>' : '') + acts + log + '</div></div>';
   }
   return '<div class="bcard k-jr' + (jrOpenSup(v) ? ' late' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
     '<div class="bt"><b><span class="kind">📋</span>طلب جرد • ' + dt(v.at) + '</b>' + st + '</div>' +
@@ -3634,7 +3644,7 @@ function agoAr(iso) {
 }
 function renderDevs() {
   const el = $('devBox'); if (!el) return;
-  const L = isQA() ? [] : jardDevs;
+  const L = isQA() ? [] : jardDevs.filter(d => !hidden[devSig(d)]);
   if (!L.length) { el.innerHTML = ''; return; }
   const waiting = L.filter(d => d.pending > 0).length;
   el.innerHTML = '<div class="mkbox" style="background:#FFF4E5;border-color:#FFD8A8"><h4 style="color:#B35C00">📱 الجرد على الموبايلات' +
@@ -3645,7 +3655,7 @@ function renderDevs() {
         ? '<b style="color:#C62828">' + d.pending + ' صنف ما اترفعش</b>' + (d.oldest ? ' • أقدمهم ' + agoAr(d.oldest) : '')
         : '<span style="color:#2E7D32">اترفع كله</span> • <b>ما داسش «خلصت»</b>';
       return '<div class="mkrow"><div class="mkt">' + sdot(d.store) + '<b>' + esc(d.store) + '</b> • ' + esc(d.user || '') + '<br>' + st +
-        '<br><span style="color:#888">آخر بلاغ من الموبايل ' + agoAr(d.at) + (stale && d.pending > 0 ? ' - غالباً التطبيق مقفول أو مفيش نت: كلّمه يفتحه' : '') + '</span></div></div>';
+        '<br><span style="color:#888">آخر بلاغ من الموبايل ' + agoAr(d.at) + (stale && d.pending > 0 ? ' - غالباً التطبيق مقفول أو مفيش نت: كلّمه يفتحه' : '') + '</span></div>' + hideBtn(devSig(d)) + '</div>';
     }).join('') + '</div>';
 }
 function markState(m) {
@@ -3668,13 +3678,22 @@ function markActs(m) {
   return '<div class="bacts"><button class="btn" onclick="markGoDlg(\'' + s + '\')">🏷️ اتأكدت من المحل - أكّد</button>' +
     '<button class="btn soft" onclick="markCancel(\'' + s + '\')">إلغاء</button></div>';
 }
+// الشيل بيتحفظ على الجهاز ده بس (مش بيمسح حاجة من السيرفر). السطر بيرجع لو حالته اتغيّرت
+let hidden = {};
+try { hidden = JSON.parse(localStorage.getItem('mdq-hidden') || '{}') || {}; } catch (e) { hidden = {}; }
+function hideSave() { const k = Object.keys(hidden); if (k.length > 200) k.slice(0, k.length - 200).forEach(x => delete hidden[x]); try { localStorage.setItem('mdq-hidden', JSON.stringify(hidden)); } catch (e) {} }
+const markSig = m => 'mk|' + m.store + '|' + m.state + '|' + m.at;
+const devSig = d => 'dv|' + (d.key || d.store + d.user) + '|' + (d.pending || 0) + '|' + (d.needsDone ? 1 : 0);
+function hideItem(sig) { hidden[sig] = Date.now(); hideSave(); renderMarks(); renderDevs(); }
+const markDone = m => ['done', 'cancelled', 'error'].indexOf(m.state) !== -1;
+function hideBtn(sig) { return '<button class="hidex" title="شيل من هنا" onclick="hideItem(decodeURIComponent(\'' + encodeURIComponent(sig).replace(/'/g, '%27') + '\'))">✕ شيل</button>'; }
 function renderMarks() {
   const el = $('markBox'); if (!el) return;
-  const L = isQA() ? [] : marks;
+  const L = isQA() ? [] : marks.filter(m => !(markDone(m) && hidden[markSig(m)]));
   if (!L.length) { el.innerHTML = ''; return; }
   const wait = L.filter(m => m.state === 'requested').length;
   el.innerHTML = '<div class="mkbox"><h4>🏷️ طلبات علامة الجرد' + (wait ? ' <span class="badge b-new">' + wait + ' مستني</span>' : '') + '</h4>' +
-    L.map(m => { const st = markState(m); return '<div class="mkrow"><div class="mkt">' + sdot(m.store) + '<b>' + esc(m.store) + '</b> <span class="badge ' + st.c + '">' + st.t + '</span><br>' + markInfo(m) + '</div>' + markActs(m) + '</div>'; }).join('') + '</div>';
+    L.map(m => { const st = markState(m); return '<div class="mkrow"><div class="mkt">' + sdot(m.store) + '<b>' + esc(m.store) + '</b> <span class="badge ' + st.c + '">' + st.t + '</span><br>' + markInfo(m) + '</div>' + markActs(m) + (markDone(m) ? hideBtn(markSig(m)) : '') + '</div>'; }).join('') + '</div>';
 }
 function markCard(m) {
   const st = markState(m);
