@@ -125,7 +125,7 @@
   /* شاشة التحضير: الكاميرا ورا كل حاجة */
   #prep { height: 100vh; height: 100dvh; overflow: hidden; position: relative; background: #13263A; }
   .bgcam { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
-  .veil { position: absolute; inset: 0; z-index: 1; background: rgba(8,20,36,.42); backdrop-filter: blur(1.5px); -webkit-backdrop-filter: blur(1.5px); pointer-events: none; transition: background .2s; }
+  .veil { position: absolute; inset: 0; z-index: 1; background: rgba(8,20,36,.3); backdrop-filter: blur(1.5px); -webkit-backdrop-filter: blur(1.5px); pointer-events: none; transition: background .2s; }
   #prep.flash .veil { background: rgba(21,128,61,.45); }
   #prep.flashbad .veil { background: rgba(185,28,28,.45); }
   #prep.done .veil { background: rgba(21,128,61,.6); }
@@ -145,12 +145,12 @@
   .thin i { display: block; height: 100%; background: var(--gold); transition: width .3s; }
   .pbody { position: relative; z-index: 2; flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; -webkit-overflow-scrolling: touch; }
   .backnote { background: rgba(255,244,236,.95); border-radius: 12px; padding: 8px 10px; font-size: 12.5px; color: #7C2D12; }
-  .last { border-radius: 14px; padding: 6px 12px; font-size: 13px; background: rgba(255,255,255,.88); display: flex; flex-direction: column; gap: 0; text-align: center; }
+  .last { border-radius: 14px; padding: 6px 12px; font-size: 13px; background: rgba(255,255,255,.7); display: flex; flex-direction: column; gap: 0; text-align: center; }
   .last .h { font-weight: 800; font-size: 14px; }
   .last .nm { font-weight: 700; }
   .last.ok { background: rgba(220,252,231,.95); } .last.ok .h { color: var(--ok); }
   .last.bad { background: rgba(254,226,226,.96); } .last.bad .h { color: var(--red); }
-  .cur { background: rgba(255,255,255,.9); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 6px 22px rgba(0,0,0,.25); }
+  .cur { background: rgba(255,255,255,.72); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 6px 22px rgba(0,0,0,.25); }
   .cur .top { display: flex; align-items: flex-start; gap: 10px; }
   .cur .no { width: 32px; height: 32px; border-radius: 999px; background: var(--blue); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; flex: none; }
   .cur .nm { flex: 1; font-size: 18px; font-weight: 800; line-height: 1.45; }
@@ -167,7 +167,7 @@
   .alldone { background: rgba(220,252,231,.96); border-radius: 18px; padding: 18px; text-align: center; font-size: 18px; font-weight: 800; color: var(--ok); }
   .lh { font-size: 12px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); padding: 2px 4px 0; }
   #prep.nocam .lh { color: #355070; text-shadow: none; }
-  .it { background: rgba(255,255,255,.82); border-radius: 14px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; min-height: 48px; margin: 6px 0; cursor: pointer; }
+  .it { background: rgba(255,255,255,.62); border-radius: 14px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; min-height: 48px; margin: 6px 0; cursor: pointer; }
   .it .no { width: 28px; height: 28px; border-radius: 999px; background: var(--blue-l); color: var(--blue); font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex: none; }
   .it .nm { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; line-height: 1.5; }
   .it .nm small { display: block; font-size: 11px; color: var(--mute); font-weight: 600; }
@@ -177,6 +177,18 @@
   .it.part .q { color: var(--warn); }
   @keyframes hit { 0% { transform: scale(1.03); } 100% { transform: none; } }
   .dh { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 800; color: var(--ok); background: rgba(255,255,255,.85); border: 0; border-radius: 12px; min-height: 40px; cursor: pointer; width: 100%; margin-top: 4px; }
+  /* من غير إطار: الكلام بس على الكاميرا */
+  #prep.noframe .veil { background: rgba(8,20,36,.45); }
+  #prep.noframe .cur, #prep.noframe .it, #prep.noframe .last { background: transparent !important; box-shadow: none; border: 0; }
+  #prep.noframe .cur .nm, #prep.noframe .it .nm, #prep.noframe .it .q, #prep.noframe .last, #prep.noframe .last .nm { color: #fff; text-shadow: 0 1px 3px #000, 0 0 10px rgba(0,0,0,.7); }
+  #prep.noframe .cur .cnt { color: #fff; text-shadow: 0 2px 8px #000; }
+  #prep.noframe .cur .cnt small { color: #E2E8F0; }
+  #prep.noframe .last.ok .h { color: #4ADE80; text-shadow: 0 1px 3px #000; }
+  #prep.noframe .last.bad .h { color: #FCA5A5; text-shadow: 0 1px 3px #000; }
+  #prep.noframe .last .h { color: #fff; text-shadow: 0 1px 3px #000; }
+  #prep.noframe .cur .acts .btn { background: rgba(0,0,0,.35); color: #fff; border-color: rgba(255,255,255,.8); }
+  #prep.noframe .it .no { background: rgba(255,255,255,.85); }
+  #prep.noframe.nocam .veil { background: #13263A; }
   .pfoot { position: relative; z-index: 2; background: rgba(255,255,255,.94); padding: 8px 12px calc(env(safe-area-inset-bottom) + 10px); display: flex; flex-direction: column; gap: 6px; }
   .ctl { display: flex; align-items: center; gap: 8px; }
   .cbtn { width: 44px; height: 40px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff; color: var(--ink); display: flex; align-items: center; justify-content: center; font-weight: 800; cursor: pointer; flex: none; }
@@ -347,6 +359,7 @@
       <button class="cbtn hidden" id="camZoom" aria-label="تكبير">2x</button>
       <button class="cbtn" id="doneBtn" style="width:auto;padding:0 10px;font-size:12px">اتحضّروا (0)</button>
       <button class="cbtn" id="voiceToggle" aria-label="الصوت"></button>
+      <button class="cbtn" id="frameToggle" aria-label="إطار الكلام" style="width:auto;padding:0 10px;font-size:12px"></button>
       <span class="savest" id="saveSt"></span>
     </div>
     <button class="btn ok block" id="btnFinish"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>تم التحضير</button>
@@ -420,7 +433,7 @@
 // ضع هنا رابط السيرفر بعد النشر (تطبيق ويب ← ‎/exec)
 const API = 'https://script.google.com/macros/s/AKfycbzDGYdOe6QKbGZrkT7Wy0-Ch-YrQ-pXIpXRD017h98aH0lLBfHYSMkuXPyJFsgf9yPU/exec';
 const MQ_LOGO = '/modaqqeq-dashboard/logo_wide.png';
-const GAP = 700;          // لازم الباركود يغيب عن الكاميرا المدة دي (ملي ثانية) علشان نفس القطعة ما تتحسبش مرتين
+const GAP = 500;          // لازم الباركود يغيب عن الكاميرا المدة دي (ملي ثانية) علشان نفس القطعة ما تتحسبش مرتين
 const SAVE_DELAY = 2500;  // الحفظ على السيرفر بعد آخر مسحة بالمدة دي
 const ST = { NEW: 'لسه', WORK: 'شغال فيها', WAIT: 'مستني الاعتماد', BACK: 'اترجعت', DONE: 'اتعمدت', CANCEL: 'اتلغت' };
 const TAGC = { 'لسه': 't-new', 'شغال فيها': 't-work', 'مستني الاعتماد': 't-wait', 'اترجعت': 't-back', 'اتعمدت': 't-done', 'اتلغت': 't-cancel' };
@@ -537,6 +550,10 @@ function say(text, now) {
 const ICO_VOL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>';
 const ICO_MUTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>';
 function paintVoice() { $('voiceToggle').innerHTML = st.voice ? ICO_VOL : ICO_MUTE; $('voiceToggle').classList.toggle('off', !st.voice); }
+// شكل الكلام فوق الكاميرا: بإطار شفاف أو كلام بس من غير إطار
+st.frames = ls('wh_frames') === '1';
+function paintFrames() { $('prep').classList.toggle('noframe', !st.frames); $('frameToggle').textContent = st.frames ? 'بإطار' : 'من غير إطار'; }
+$('frameToggle').onclick = () => { st.frames = !st.frames; ls('wh_frames', st.frames ? '1' : '0'); paintFrames(); };
 $('voiceToggle').onclick = () => {
   st.voice = !st.voice; ls('wh_voice', st.voice ? '1' : '0'); paintVoice();
   if (st.voice) { const c = curItem(); say(c ? c.name + '، مطلوب ' + (c.qty - c.done) : 'الصوت شغال', true); } else try { speechSynthesis.cancel(); } catch (e) {}
@@ -1034,10 +1051,24 @@ async function camStart() {
       const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf'] });
       let alive = true;
       stopLoop = () => { alive = false; };
+      // بندوّر في نص الصورة (أصغر = أسرع وأدق)، وكل تالت مرة في الصورة كلها لو الباركود على الجنب
+      const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+      let k = 0;
       const tick = async () => {
         if (!alive) return;
-        try { const r = await det.detect(vid); if (r && r[0] && r[0].rawValue) onCode(r[0].rawValue); } catch (e) {}
-        setTimeout(tick, 80);
+        try {
+          const vw = vid.videoWidth, vh = vid.videoHeight;
+          let src = vid;
+          if (vw && vh && (k++ % 3) !== 2) {
+            const w = Math.round(vw * 0.8), h = Math.round(vh * 0.5);
+            if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+            cx.drawImage(vid, (vw - w) / 2, (vh - h) / 2, w, h, 0, 0, w, h);
+            src = cv;
+          }
+          const r = await det.detect(src);
+          if (r && r.length) r.forEach(x => { if (x.rawValue) onCode(x.rawValue); });
+        } catch (e) {}
+        setTimeout(tick, 15);
       };
       tick();
     } else {
@@ -1093,14 +1124,15 @@ function onCode(raw) {
   const now = Date.now();
   // بعد كل مسحة الكاميرا بتقف ثانية تعرض النتيجة (ولو نفس القطعة لسه قدامها ما تتحسبش تاني)
   if (now < (st.pauseUntil || 0)) { if (code === st.last.code) st.last.at = now; return; }
-  // لازم نفس الرقم يتقري مرتين ورا بعض (في أقل من ثانية) علشان يتحسب
-  if (!(code === st.last.code && now - st.last.at < GAP)) {
+  // الباركود اللي ليه رقم تأكيد (EAN/UPC) بيتحسب من أول قراية - غير كده لازم يتقري مرتين ورا بعض
+  const sure = /^\d+$/.test(code) && [8, 12, 13, 14].indexOf(code.length) >= 0;
+  if (!sure && !(code === st.last.code && now - st.last.at < GAP)) {
     if (!st.cand || st.cand.code !== code || now - st.cand.at > 900) { st.cand = { code: code, at: now }; return; }
   }
   st.cand = null;
   if (code === st.last.code && now - st.last.at < GAP) { st.last.at = now; return; }
   st.last = { code: code, at: now };
-  st.pauseUntil = now + 1000;
+  st.pauseUntil = now + 600;
   st.queue = st.queue.then(() => handleCode(code)).catch(() => {});
 }
 async function namesOf(code) {
@@ -1482,6 +1514,7 @@ window.addEventListener('beforeunload', () => { if (st.dirty) doSave(); });
 (function start() {
   paintLogos();
   paintVoice();
+  paintFrames();
   showInstall();
   const u = ls('wh_user');
   if (u && ls('wh_pass')) {
