@@ -80,6 +80,16 @@
   .net.ok { background: #FFF6E0; color: #9A6700; border-color: #F5DD9C; }
   .net.slow { background: #FFEBD9; color: #C25400; border-color: #F7C9A0; }
   .net.off { background: #FDECEA; color: #B3261E; border-color: #F5C2BD; animation: netblink 1s infinite; }
+  /* حالة تحديث شيت أصناف المخزن */
+  .isp { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; border: 1px solid #BFE5CB; background: #E7F6EC; color: #1E7D3A; white-space: nowrap; }
+  .isp.run { background: #E6F0FB; color: #1460A8; border-color: #B9D3F0; }
+  .isp.bad { background: #FDECEA; color: #B3261E; border-color: #F5C2BD; }
+  .isbox h3 { margin: 0 0 10px; }
+  .isrow { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #EEF2F7; font-size: 14px; }
+  .isrow b { white-space: nowrap; }
+  .isbig { font-size: 26px; font-weight: 800; color: var(--navy); text-align: center; margin: 6px 0 2px; }
+  .isnote { font-size: 12px; color: #6B7A90; text-align: center; margin-bottom: 8px; }
+  @media (max-width: 800px) { #isTxt { display: none; } }
   @keyframes netblink { 50% { opacity: .55; } }
   /* الاستعجال */
   .urge { display: inline-block; background: #B3261E; color: #fff; border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 800; animation: urgepulse 1.2s infinite; }
@@ -697,6 +707,7 @@
       </div>
       <span class="sp"></span>
       <span class="net good" id="netPill" onclick="netInfo()" title="سرعة النت"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><span id="netTxt">النت...</span></span>
+      <span class="isp hidden" id="isPill" onclick="isDlg()" title="تحديث شيت أصناف المخزن من السيستم">📦 <span id="isTxt">الأصناف...</span></span>
       <button class="btn soft bell" id="bellBtn" onclick="enableAlerts()" title="الإشعارات والصوت">🔔</button>
       <button class="btn soft" onclick="loadList()" title="تحديث">⟳</button>
       <button class="btn soft hidden" id="installBtn" onclick="installApp()" title="ثبّت الداش بورد كتطبيق على جهازك">📲 ثبّت التطبيق</button>
@@ -931,6 +942,7 @@ function showApp() {
   updateBell();
   loadList().then(() => { const g = new URLSearchParams(location.search).get('go'); if (g) { try { noteGo(JSON.parse(g)); } catch (e) {} history.replaceState(null, '', location.pathname + '?app=1'); } });
   setInterval(() => loadList(true), 20000);
+  isStart();
   if ('Notification' in window && Notification.permission === 'granted') setupPush();
 }
 function page(p) {
@@ -3674,6 +3686,84 @@ async function bsAutoSet(on) {
 async function bsGo() {
   if (!confirm('هيتعمل "تحديث الكل" في الـ 3 صفحات لكل الفروع المربوطة، فرع ورا فرع. نبدأ؟')) return;
   try { const s = await bsCall('bsAll', { token }); $('bsBox').innerHTML = bsHtml(s); toast('التحديث بدأ ✅'); } catch (e) { toast(msg(e)); }
+}
+
+// ---------- تحديث شيت أصناف المخزن (من سيستم المخزن 4 مرات في اليوم) ----------
+let isState = null, isLoaded = 0;
+function isStart() {
+  isLoad();
+  setInterval(isLoad, 3 * 60000);       // الحالة من السيرفر كل 3 دقايق
+  setInterval(isPaint, 30000);          // العدّاد بيتحدّث كل نص دقيقة
+}
+async function isLoad() {
+  try { isState = await api('dItemsSync', { token }); isLoaded = Date.now(); isPaint(); }
+  catch (e) { /* لو السيرفر لسه ما اتحدّثش: الكارت يفضل مستخبي */ }
+}
+function isAgo_(iso) {
+  if (!iso) return '—';
+  const m = Math.max(0, Math.round((now() - new Date(iso).getTime()) / 60000));
+  if (m < 1) return 'دلوقتي';
+  if (m < 60) return 'من ' + m + ' دقيقة';
+  const h = Math.floor(m / 60), r = m % 60;
+  return 'من ' + h + ' ساعة' + (r ? ' و' + r + ' دقيقة' : '');
+}
+function isLeft_(iso) {
+  const m = Math.round((new Date(iso).getTime() - now()) / 60000);
+  if (m <= 0) return 'دلوقتي';
+  const h = Math.floor(m / 60), r = m % 60;
+  return (h ? h + ' ساعة' : '') + (h && r ? ' و' : '') + (r ? r + ' دقيقة' : '');
+}
+function isClock_(iso) { return iso ? new Date(iso).toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' }) : '—'; }
+function isDay_(iso) {
+  if (!iso) return '';
+  const d = new Date(iso), t = new Date(now());
+  const same = (a, b) => a.toDateString() === b.toDateString();
+  const y = new Date(t); y.setDate(t.getDate() - 1);
+  const tm = new Date(t); tm.setDate(t.getDate() + 1);
+  return same(d, t) ? 'النهارده' : same(d, y) ? 'امبارح' : same(d, tm) ? 'بكرة' : d.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'numeric' });
+}
+function isPaint() {
+  const s = isState, pill = $('isPill');
+  if (!s || !pill) return;
+  pill.classList.remove('hidden');
+  const failed = s.last && s.last.status !== 'تم بنجاح';
+  const bad = failed || s.stale;
+  pill.className = 'isp' + (s.running ? ' run' : bad ? ' bad' : '');
+  $('isTxt').textContent = s.running ? 'الأصناف بتتحدّث...' :
+    failed ? 'تحديث الأصناف فشل' :
+    'الأصناف: ' + (s.lastOk ? isClock_(s.lastOk.at) : '—') + ' • الجاي بعد ' + isLeft_(s.next);
+  if ($('isBox')) $('isBox').innerHTML = isHtml_();
+}
+function isHtml_() {
+  const s = isState;
+  if (!s) return '<div class="empty"><span class="spin"></span></div>';
+  const failed = s.last && s.last.status !== 'تم بنجاح';
+  let h = '<div class="isbox"><h3>📦 تحديث شيت أصناف المخزن</h3>';
+  if (s.running) h += '<div class="isnote" style="color:#1460A8">⏳ التحديث شغال دلوقتي...</div>';
+  h += '<div class="isnote">التحديث الجاي</div><div class="isbig">بعد ' + esc(isLeft_(s.next)) + '</div>' +
+    '<div class="isnote">' + esc(isDay_(s.next)) + ' بين ' + esc(isClock_(s.next)) + ' و ' + esc(isClock_(s.nextEnd)) + '</div>';
+  if (s.lastOk) h += '<div class="isrow"><span>✅ آخر تحديث ناجح</span><b>' + esc(isDay_(s.lastOk.at) + ' ' + isClock_(s.lastOk.at)) + ' (' + esc(isAgo_(s.lastOk.at)) + ')</b></div>' +
+    '<div class="isrow"><span>اللي حصل فيه</span><b>' + esc(s.lastOk.details || '') + '</b></div>';
+  else h += '<div class="isrow"><span>✅ آخر تحديث ناجح</span><b>لسه مافيش</b></div>';
+  if (failed) h += '<div class="isrow" style="color:#B3261E"><span>⚠️ آخر محاولة فشلت ' + esc(isDay_(s.last.at) + ' ' + isClock_(s.last.at)) + '</span><b style="white-space:normal">' + esc(s.last.details || '') + '</b></div>';
+  else if (s.stale) h += '<div class="isrow" style="color:#B3261E"><span>⚠️ عدّى وقت كبير من غير تحديث</span><b>اتأكد إن المواعيد شغالة</b></div>';
+  h += '<div class="isrow"><span>المواعيد كل يوم</span><b>' + (s.hours || []).map(x => (x % 12 || 12) + (x < 12 ? ' ص' : ' م')).join(' • ') + '</b></div>';
+  if (s.error) h += '<div class="isrow" style="color:#B3261E"><span>⚠️ آخر ضغطة</span><b style="white-space:normal">' + esc(s.error) + '</b></div>';
+  h += '<div style="display:flex;gap:8px;justify-content:flex-start;margin-top:14px">' +
+    (isQA() ? '' : '<button class="btn" id="isNowBtn" onclick="isNow()"' + (s.running ? ' disabled' : '') + '>🔄 حدّث دلوقتي</button>') +
+    '<button class="btn ghost" onclick="closeDlg()">قفل</button></div></div>';
+  return h;
+}
+function isDlg() { dlg('<div id="isBox">' + isHtml_() + '</div>'); isLoad(); }
+async function isNow() {
+  if (!confirm('هيتنزّل ملف الأصناف من سيستم المخزن ويتحدّث الشيت دلوقتي (حوالي نص دقيقة). نبدأ؟')) return;
+  const b = $('isNowBtn'); if (b) { b.disabled = true; b.innerHTML = '<span class="spin"></span> بيتحدّث...'; }
+  if (isState) { isState.running = true; isPaint(); }
+  try {
+    isState = await api('dItemsSyncNow', { token });
+    isPaint();
+    toast(isState.error ? '⚠️ ' + isState.error : '✅ الأصناف اتحدّثت');
+  } catch (e) { toast(msg(e)); isLoad(); }
 }
 
 function dlg(html) { closeDlg(); document.body.insertAdjacentHTML('beforeend', '<div id="dlg" onclick="if(event.target===this)closeDlg()"><div class="box">' + html + '</div></div>'); }
