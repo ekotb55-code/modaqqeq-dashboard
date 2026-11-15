@@ -133,17 +133,23 @@
   .track { height: 8px; border-radius: 999px; background: rgba(255,255,255,.25); overflow: hidden; margin-top: 8px; }
   .track i { display: block; height: 100%; background: var(--gold); border-radius: 999px; transition: width .3s; }
   .camrow { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 2px; }
-  .cam { width: 100%; height: 30vh; min-height: 190px; max-height: 300px; border-radius: 16px; background: #13263A; position: relative; overflow: hidden; flex: none; }
-  .cam video { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .cam .fr { position: absolute; left: 12%; right: 12%; top: 22%; bottom: 22%; border: 3px solid rgba(255,255,255,.9); border-radius: 14px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,.18); }
-  .cam .laser { position: absolute; left: 15%; right: 15%; top: 50%; height: 2px; background: #FF4D4D; pointer-events: none; }
-  .cam .lbl { position: absolute; bottom: 6px; left: 0; right: 0; text-align: center; font-size: 12px; color: #fff; pointer-events: none; text-shadow: 0 1px 3px #000; }
-  .cam .cb { position: absolute; top: 8px; width: 44px; height: 44px; border-radius: 12px; border: 0; background: rgba(0,0,0,.45); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 800; font-size: 13px; }
-  .cam .cb svg { width: 20px; height: 20px; }
-  .cam .cb.on { background: var(--gold); color: var(--ink); }
-  .cam .off { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #CFE0F2; font-size: 12px; font-weight: 700; background: #13263A; border: 0; width: 100%; cursor: pointer; }
-  .cam.flash { box-shadow: 0 0 0 3px var(--ok); }
-  .cam.flashbad { box-shadow: 0 0 0 3px var(--red); }
+  #scan { position: fixed; inset: 0; background: #000; z-index: 80; }
+  #scan video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  #scan .sfr { position: absolute; left: 8%; right: 8%; top: 32%; height: 24%; border: 3px solid rgba(255,255,255,.95); border-radius: 18px; box-shadow: 0 0 0 9999px rgba(0,0,0,.35); pointer-events: none; transition: border-color .15s; }
+  #scan.ok .sfr { border-color: #4ADE80; } #scan.bad .sfr { border-color: #F87171; }
+  #scan .slaser { position: absolute; left: 12%; right: 12%; top: 44%; height: 2px; background: #FF4D4D; pointer-events: none; }
+  #scan .stop { position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 10px; right: 10px; display: flex; align-items: center; gap: 8px; }
+  #scan .sb { width: 48px; height: 48px; border-radius: 14px; border: 0; background: rgba(0,0,0,.5); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 800; flex: none; }
+  #scan .sb svg { width: 22px; height: 22px; }
+  #scan .sb.on { background: var(--gold); color: var(--ink); }
+  #scan .scur { flex: 1; min-width: 0; color: #fff; font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px #000; text-align: center; }
+  #scan .sres { position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 84px); background: rgba(255,255,255,.95); border-radius: 16px; padding: 12px 14px; text-align: center; min-height: 84px; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+  #scan .sres .h { font-size: 15px; font-weight: 800; color: var(--ink); }
+  #scan .sres .nm { font-size: 15px; font-weight: 700; }
+  #scan .sres .sbig { font-size: 26px; font-weight: 800; }
+  #scan .sres.ok { background: #DCFCE7; } #scan .sres.ok .h, #scan .sres.ok .sbig { color: var(--ok); }
+  #scan .sres.bad { background: #FEE2E2; } #scan .sres.bad .h { color: var(--red); }
+  #scan .sbot { position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 14px); }
   .side { display: flex; align-items: center; gap: 8px; }
   .last { border-radius: 14px; padding: 6px 10px; font-size: 12px; background: #fff; border: 1.5px solid var(--line); flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 0; min-height: 52px; }
   .last.ok { background: var(--ok-l); border-color: var(--ok); }
@@ -325,17 +331,8 @@
     <div class="track"><i id="pTrack" style="width:0"></i></div>
   </div>
   <div class="camrow">
-    <div class="cam" id="cam">
-      <video id="vid" playsinline muted></video>
-      <div class="fr"></div><div class="laser"></div>
-      <div class="lbl">وجّه الباركود للكاميرا</div>
-      <button class="cb" id="camTorch" style="left:8px" aria-label="الفلاش"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button>
-      <button class="cb hidden" id="camZoom" style="left:56px" aria-label="تكبير">2x</button>
-      <button class="cb" id="camStop" style="right:8px" aria-label="إيقاف الكاميرا"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6v12M15 6v12"/></svg></button>
-      <button class="off hidden" id="camOff"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span id="camOffT">دوس لتشغيل الكاميرا</span></button>
-    </div>
     <div class="side">
-      <div class="last" id="last"><div class="h">جاهز</div><div class="nm">امسح أول صنف</div></div>
+      <div class="last" id="last"><div class="h">جاهز</div><div class="nm">دوس «امسح» وابدأ بأول صنف</div></div>
       <div class="savest" id="saveSt"></div>
     </div>
   </div>
@@ -343,7 +340,10 @@
   <div class="lh">الأصناف بالترتيب</div>
   <div class="list" id="ilist"></div>
   <div class="foot">
-    <button class="btn ok block" id="btnFinish"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>تم التحضير</button>
+    <div class="row">
+      <button class="btn" id="btnScan" style="flex:2;min-height:56px;font-size:17px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>امسح</button>
+      <button class="btn ok" id="btnFinish" style="flex:1;min-height:56px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>تم التحضير</button>
+    </div>
     <div class="hint" id="pHint"></div>
   </div>
 </section>
@@ -406,6 +406,19 @@
   </div>
 </section>
 
+<!-- الكاميرا (شاشة كاملة) -->
+<div id="scan" class="hidden">
+  <video id="vid" playsinline muted></video>
+  <div class="sfr"></div><div class="slaser"></div>
+  <div class="stop">
+    <button class="sb" id="scanClose" aria-label="قفل الكاميرا"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="scur" id="scanCur"></div>
+    <button class="sb hidden" id="camZoom" aria-label="تكبير">2x</button>
+    <button class="sb" id="camTorch" aria-label="الفلاش"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button>
+  </div>
+  <div class="sres" id="scanRes"><div class="h">وجّه الكاميرا على باركود القطعة</div></div>
+  <div class="sbot"><button class="btn block" id="scanDone" style="background:#fff;color:var(--ink)">قفل الكاميرا</button></div>
+</div>
 <div id="toast" class="hidden"></div>
 <input type="file" id="meCam" accept="image/*" capture="user" class="hidden">
 <input type="file" id="meGal" accept="image/*" class="hidden">
@@ -458,7 +471,7 @@ async function api(action, data) {
 function show(id) {
   ['login', 'home', 'prep', 'finish', 'appr', 'invoice'].forEach(s => $(s).classList.toggle('hidden', s !== id));
   window.scrollTo(0, 0);
-  if (id !== 'prep') camStop();
+  if (id !== 'prep') closeScan();
 }
 function sheet(html) {
   const bg = document.createElement('div');
@@ -795,7 +808,7 @@ async function openPrep(id) {
   $('ilist').innerHTML = '<div class="empty"><div class="spin"></div>بنجيب أصناف الطلبية...</div>';
   $('pBranch').textContent = '...'; $('pSub').textContent = ''; $('backNote').classList.add('hidden');
   st.take = false; st.dirty = false; st.last = { code: '', at: 0 };
-  setLast('', 'جاهز', 'امسح أول صنف', 'شيل القطعة من قدام الكاميرا قبل اللي بعدها');
+  setLast('', 'جاهز', 'دوس «امسح» وابدأ بأول صنف', '');
   st.cand = null;
   try {
     const r = await api('whOrder', { id: id });
@@ -820,7 +833,6 @@ async function openPrep(id) {
     $('pSub').textContent = 'مخزن ' + o.store + ' · طلب رقم ' + o.id;
     if (o.status === ST.BACK && o.anote) { $('backNote').textContent = 'اترجعت من المعتمد: ' + o.anote; $('backNote').classList.remove('hidden'); }
     renderPrep();
-    camStart();
   } catch (err) {
     toast(arErr(err), 'bad'); backHome();
   }
@@ -902,9 +914,13 @@ function setLast(kind, h, nm, extra) {
   const el = $('last');
   el.className = 'last' + (kind ? ' ' + kind : '');
   el.innerHTML = '<div class="h">' + esc(h) + '</div><div class="nm">' + esc(nm) + '</div>' + (extra ? '<div>' + esc(extra) + '</div>' : '');
-  const cam = $('cam');
-  cam.classList.remove('flash', 'flashbad');
-  if (kind) { void cam.offsetWidth; cam.classList.add(kind === 'ok' ? 'flash' : 'flashbad'); setTimeout(() => cam.classList.remove('flash', 'flashbad'), 450); }
+  if (!$('scan').classList.contains('hidden')) {
+    const r = $('scanRes');
+    r.className = 'sres' + (kind ? ' ' + kind : '');
+    r.innerHTML = '<div class="h">' + esc(h) + '</div><div class="nm">' + esc(nm) + '</div>' + (extra ? '<div class="' + (kind === 'ok' ? 'sbig' : '') + '">' + esc(extra) + '</div>' : '');
+    $('scan').classList.remove('ok', 'bad');
+    if (kind) { $('scan').classList.add(kind); clearTimeout(st.flashT); st.flashT = setTimeout(() => $('scan').classList.remove('ok', 'bad'), 900); }
+  }
 }
 
 // ---------- الحفظ على السيرفر ----------
@@ -942,9 +958,23 @@ function loadZx() {
     document.head.appendChild(s);
   });
 }
+// فتح الكاميرا شاشة كاملة (زي الجرد والاستلام) - بتفضل مفتوحة لحد ما يقفلها
+function scanCurText() { const c = curItem(); $('scanCur').textContent = c ? 'الحالي: ' + c.name + ' (' + c.done + ' من ' + c.qty + ')' : 'كل الأصناف خلصت ✓'; }
+function openScan() {
+  try { audio(); } catch (e) {}
+  $('scan').classList.remove('hidden', 'ok', 'bad');
+  $('scanRes').className = 'sres';
+  $('scanRes').innerHTML = '<div class="h">وجّه الكاميرا على باركود القطعة</div><div class="nm">قطعة قطعة - بعد كل مسحة شيل القطعة</div>';
+  scanCurText();
+  st.last = { code: '', at: 0 }; st.cand = null; st.pauseUntil = 0;
+  camStart();
+}
+function closeScan() { camStop(); $('scan').classList.add('hidden'); }
+$('btnScan').onclick = openScan;
+$('scanClose').onclick = closeScan;
+$('scanDone').onclick = closeScan;
 async function camStart() {
   if (stream) return;
-  $('camOff').classList.add('hidden');
   const vid = $('vid');
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
@@ -977,8 +1007,8 @@ async function camStart() {
       stopLoop = () => { try { zx.reset(); } catch (e) {} };
     }
   } catch (err) {
-    camStop();
-    $('camOffT').textContent = /Permission|NotAllowed|denied/i.test(String(err && (err.name || err.message))) ? 'اسمح للتطبيق يستخدم الكاميرا ودوس هنا' : 'الكاميرا مش شغالة - دوس هنا';
+    closeScan();
+    toast(/Permission|NotAllowed|denied/i.test(String(err && (err.name || err.message))) ? 'لازم تسمح للتطبيق يستخدم الكاميرا' : 'الكاميرا مش شغالة - جرّب تاني', 'bad');
   }
 }
 function camStop() {
@@ -986,10 +1016,7 @@ function camStop() {
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
   track = null;
   const v = $('vid'); if (v) v.srcObject = null;
-  if ($('camOff')) { $('camOff').classList.remove('hidden'); $('camOffT').textContent = 'دوس لتشغيل الكاميرا'; }
 }
-$('camOff').onclick = camStart;
-$('camStop').onclick = camStop;
 async function setZoom(on) {
   const z = st.zoomCaps; if (!track || !z) return;
   st.zoomOn = on;
@@ -1004,7 +1031,7 @@ $('camTorch').onclick = async () => {
 };
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { camStop(); flushSave(); }
-  else if (!$('prep').classList.contains('hidden')) camStart();
+  else if (!$('scan').classList.contains('hidden')) camStart();
 });
 
 // كل مسحة: نفس الباركود ما يتحسبش تاني غير لما يغيب عن الكاميرا GAP ملي ثانية
@@ -1017,9 +1044,11 @@ function validCode(c) {
 }
 function onCode(raw) {
   const code = String(raw || '').trim();
-  if (!code || !st.order || $('prep').classList.contains('hidden')) return;
+  if (!code || !st.order || $('scan').classList.contains('hidden')) return;
   if (!validCode(code)) return;
   const now = Date.now();
+  // بعد كل مسحة الكاميرا بتقف ثانية تعرض النتيجة (ولو نفس القطعة لسه قدامها ما تتحسبش تاني)
+  if (now < (st.pauseUntil || 0)) { if (code === st.last.code) st.last.at = now; return; }
   // لازم نفس الرقم يتقري مرتين ورا بعض (في أقل من ثانية) علشان يتحسب
   if (!(code === st.last.code && now - st.last.at < GAP)) {
     if (!st.cand || st.cand.code !== code || now - st.cand.at > 900) { st.cand = { code: code, at: now }; return; }
@@ -1027,6 +1056,7 @@ function onCode(raw) {
   st.cand = null;
   if (code === st.last.code && now - st.last.at < GAP) { st.last.at = now; return; }
   st.last = { code: code, at: now };
+  st.pauseUntil = now + 1000;
   st.queue = st.queue.then(() => handleCode(code)).catch(() => {});
 }
 async function namesOf(code) {
@@ -1060,10 +1090,12 @@ async function handleCode(code) {
   beep(true);
   setLast('ok', it.done >= it.qty ? 'الصنف اكتمل ✓' : 'آخر مسحة', it.name, 'اتحسبت قطعة · ' + it.done + ' من ' + it.qty);
   changed(it.n);
+  scanCurText();
 }
 
 // ---------- إنهاء التحضير ----------
 $('btnFinish').onclick = async () => {
+  closeScan();
   const left = st.items.filter(it => !it.na && it.done < it.qty);
   if (left.length && !confirm('فيه ' + left.length + ' صنف لسه ناقص - تكمل وتبعت كده؟')) return;
   await flushSave();
@@ -1125,7 +1157,7 @@ function viewImg(u) {
   d.onclick = () => d.remove();
   document.body.appendChild(d);
 }
-$('fBack').onclick = () => { show('prep'); renderPrep(); camStart(); };
+$('fBack').onclick = () => { show('prep'); renderPrep(); };
 $('fSend').onclick = async () => {
   if (st.photos.some(p => p.busy)) return toast('استنى الصورة تخلص رفع', 'bad');
   if (!st.photos.filter(p => p.url).length) return toast('لازم تصوّر البرنيكة الأول', 'bad');
