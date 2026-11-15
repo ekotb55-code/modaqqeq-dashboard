@@ -3699,28 +3699,26 @@ async function isLoad() {
   try { isState = await api('dItemsSync', { token }); isLoaded = Date.now(); isPaint(); }
   catch (e) { /* لو السيرفر لسه ما اتحدّثش: الكارت يفضل مستخبي */ }
 }
+function isH_(n) { return n === 1 ? 'ساعة' : n === 2 ? 'ساعتين' : n <= 10 ? n + ' ساعات' : n + ' ساعة'; }
+function isM_(n) { return n === 1 ? 'دقيقة' : n === 2 ? 'دقيقتين' : n <= 10 ? n + ' دقايق' : n + ' دقيقة'; }
+function isHM_(m) { const h = Math.floor(m / 60), r = m % 60; return h && r ? isH_(h) + ' و' + isM_(r) : h ? isH_(h) : isM_(r); }
 function isAgo_(iso) {
   if (!iso) return '—';
   const m = Math.max(0, Math.round((now() - new Date(iso).getTime()) / 60000));
-  if (m < 1) return 'دلوقتي';
-  if (m < 60) return 'من ' + m + ' دقيقة';
-  const h = Math.floor(m / 60), r = m % 60;
-  return 'من ' + h + ' ساعة' + (r ? ' و' + r + ' دقيقة' : '');
+  return m < 1 ? 'دلوقتي' : 'من ' + isHM_(m);
 }
 function isLeft_(iso) {
   const m = Math.round((new Date(iso).getTime() - now()) / 60000);
-  if (m <= 0) return 'دلوقتي';
-  const h = Math.floor(m / 60), r = m % 60;
-  return (h ? h + ' ساعة' : '') + (h && r ? ' و' : '') + (r ? r + ' دقيقة' : '');
+  return m <= 0 ? 'دلوقتي' : isHM_(m);
 }
-function isClock_(iso) { return iso ? new Date(iso).toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' }) : '—'; }
+function isClock_(iso) { return iso ? new Date(iso).toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit', numberingSystem: 'latn' }) : '—'; }
 function isDay_(iso) {
   if (!iso) return '';
   const d = new Date(iso), t = new Date(now());
   const same = (a, b) => a.toDateString() === b.toDateString();
   const y = new Date(t); y.setDate(t.getDate() - 1);
   const tm = new Date(t); tm.setDate(t.getDate() + 1);
-  return same(d, t) ? 'النهارده' : same(d, y) ? 'امبارح' : same(d, tm) ? 'بكرة' : d.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'numeric' });
+  return same(d, t) ? 'النهارده' : same(d, y) ? 'امبارح' : same(d, tm) ? 'بكرة' : d.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'numeric', numberingSystem: 'latn' });
 }
 function isPaint() {
   const s = isState, pill = $('isPill');
@@ -3740,10 +3738,10 @@ function isHtml_() {
   const failed = s.last && s.last.status !== 'تم بنجاح';
   let h = '<div class="isbox"><h3>📦 تحديث شيت أصناف المخزن</h3>';
   if (s.running) h += '<div class="isnote" style="color:#1460A8">⏳ التحديث شغال دلوقتي...</div>';
-  h += '<div class="isnote">التحديث الجاي</div><div class="isbig">بعد ' + esc(isLeft_(s.next)) + '</div>' +
+  h += '<div class="isnote">التحديث الجاي</div><div class="isbig">' + (isLeft_(s.next) === 'دلوقتي' ? 'دلوقتي' : 'بعد ' + esc(isLeft_(s.next))) + '</div>' +
     '<div class="isnote">' + esc(isDay_(s.next)) + ' بين ' + esc(isClock_(s.next)) + ' و ' + esc(isClock_(s.nextEnd)) + '</div>';
   if (s.lastOk) h += '<div class="isrow"><span>✅ آخر تحديث ناجح</span><b>' + esc(isDay_(s.lastOk.at) + ' ' + isClock_(s.lastOk.at)) + ' (' + esc(isAgo_(s.lastOk.at)) + ')</b></div>' +
-    '<div class="isrow"><span>اللي حصل فيه</span><b>' + esc(s.lastOk.details || '') + '</b></div>';
+    '<div class="isrow"><span>النتيجة</span><b>' + esc(s.lastOk.details || '') + '</b></div>';
   else h += '<div class="isrow"><span>✅ آخر تحديث ناجح</span><b>لسه مافيش</b></div>';
   if (failed) h += '<div class="isrow" style="color:#B3261E"><span>⚠️ آخر محاولة فشلت ' + esc(isDay_(s.last.at) + ' ' + isClock_(s.last.at)) + '</span><b style="white-space:normal">' + esc(s.last.details || '') + '</b></div>';
   else if (s.stale) h += '<div class="isrow" style="color:#B3261E"><span>⚠️ عدّى وقت كبير من غير تحديث</span><b>اتأكد إن المواعيد شغالة</b></div>';
