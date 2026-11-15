@@ -3186,7 +3186,8 @@ function pushRender(r, store, cmp) {
   if (st === 'queued') h += '<b style="color:#1565C0">🕐 اتأكد - هيبدأ خلال دقيقة</b>';
   if (st === 'running') h += '<b style="color:#1565C0">⚙️ بيرفع: دفعة ' + (p.chunk || 0) + ' من ' + (p.chunks || 0) + ' • ' + num(p.ok || 0) + ' من ' + num(p.total || 0) + ' صنف</b>';
   if (st === 'verify') h += '<b style="color:#1565C0">🔎 خلص الرفع - بيراجع الكميات على البرنامج ويقرا الموقف المالى...</b>';
-  if (st === 'error') h += '<span style="color:#C62828">❌ الرفع فشل: ' + esc(p.error || '') + '</span><br>';
+  if (st === 'error') h += '<span style="color:#C62828">❌ الرفع فشل: ' + esc(p.error || '') + '</span><br>' +
+    (p.total ? '<div class="bacts" style="margin-top:6px"><button class="btn soft" id="puRe">🔎 راجع اللي على البرنامج (من غير رفع)</button></div>' : '');
   if (st === 'done') {
     const prog = p.fin !== null && p.fin !== undefined ? p.fin : p.posValue, ok = Math.abs(p.diff || 0) <= 1;
     h += '<div style="background:#fff;border-radius:10px;padding:8px 10px;margin-top:4px">' +
