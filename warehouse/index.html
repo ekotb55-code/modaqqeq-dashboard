@@ -159,6 +159,11 @@
   .cur .acts { display: flex; gap: 8px; }
   .cur .acts .btn { flex: 1; min-height: 44px; font-size: 13px; }
   .cur.hit { animation: hit .5s; }
+  .cur.enter { animation: slidein .35s ease-out; }
+  @keyframes slidein { from { transform: translateY(-70px); opacity: .3; } to { transform: none; opacity: 1; } }
+  .it.nx2 { opacity: .78; transform: scale(.94); }
+  .it.nx1 { opacity: .92; transform: scale(.97); }
+  #ilist .it { margin: 6px 0 0; }
   .alldone { background: rgba(220,252,231,.96); border-radius: 18px; padding: 18px; text-align: center; font-size: 18px; font-weight: 800; color: var(--ok); }
   .lh { font-size: 12px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); padding: 2px 4px 0; }
   #prep.nocam .lh { color: #355070; text-shadow: none; }
@@ -332,14 +337,15 @@
   <div class="pbody" id="pbody">
     <div class="backnote hidden" id="backNote"></div>
     <div class="last" id="last"><div class="h">الكاميرا شغالة</div><div class="nm">قرّب باركود أول قطعة</div></div>
-    <div id="curBox"></div>
+    <div style="flex:1"></div>
     <div id="ilist"></div>
+    <div id="curBox"></div>
   </div>
   <div class="pfoot">
     <div class="ctl">
       <button class="cbtn" id="camTorch" aria-label="الفلاش"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button>
       <button class="cbtn hidden" id="camZoom" aria-label="تكبير">2x</button>
-      <button class="cbtn" id="camToggle" aria-label="إيقاف الكاميرا"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+      <button class="cbtn" id="doneBtn" style="width:auto;padding:0 10px;font-size:12px">اتحضّروا (0)</button>
       <button class="cbtn" id="voiceToggle" aria-label="الصوت"></button>
       <span class="savest" id="saveSt"></span>
     </div>
@@ -495,20 +501,20 @@ function tone(freq, start, dur, type, vol) {
 }
 function beep(ok) {
   try {
-    if (ok) { tone(2400, 0, 0.12, 'square', 0.9); }          // بيب واحدة عالية زي جهاز الكاشير
+    if (ok) { tone(2400, 0, 0.1, 'square', 1); }          // تيت قصيرة لكل قطعة
     else { tone(330, 0, 0.18, 'sawtooth', 1); tone(220, 0.22, 0.32, 'sawtooth', 1); } // غلط: صوتين تقال
   } catch (e) {}
   if (navigator.vibrate) navigator.vibrate(ok ? 60 : [200, 80, 200]);
 }
 
-// آخر قطعة في الصنف: تيت تيت تيت سريعة
+// آخر قطعة في الصنف: تيييييت طويلة
 function sndLast() {
-  try { for (let i = 0; i < 7; i++) tone(2600, i * 0.09, 0.06, 'square', 0.9); } catch (e) {}
-  if (navigator.vibrate) navigator.vibrate(600);
+  try { tone(2400, 0, 0.9, 'square', 1); } catch (e) {}
+  if (navigator.vibrate) navigator.vibrate(800);
 }
 // الطلبية كلها خلصت: نغمة طالعة
 function sndOrderDone() {
-  try { [1047, 1319, 1568, 2093].forEach((f, i) => tone(f, i * 0.16, i === 3 ? 0.45 : 0.15, 'square', 0.85)); } catch (e) {}
+  try { tone(2400, 0, 0.9, 'square', 1); [1047, 1319, 1568, 2093].forEach((f, i) => tone(f, 1.05 + i * 0.16, i === 3 ? 0.45 : 0.15, 'square', 0.85)); } catch (e) {}
   if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 600]);
 }
 // الكلام (صوت الموبايل): اسم الصنف والمطلوب، والعدد مع كل قطعة
@@ -874,7 +880,8 @@ function renderPrep(hitN) {
   const pending = items.filter(it => !it.na && it.done < it.qty && (!cur || it.n !== cur.n));
   const na = items.filter(it => it.na);
   const done = items.filter(it => !it.na && it.done >= it.qty);
-  $('curBox').innerHTML = cur ? '<div class="cur' + (hitN === cur.n ? ' hit' : '') + '" data-n="' + cur.n + '"><div class="top"><div class="no">' + cur.n + '</div><div class="nm">' + esc(cur.name) + '</div></div>' +
+  const fresh = cur && st.curShown !== cur.n; st.curShown = cur ? cur.n : null;
+  $('curBox').innerHTML = cur ? '<div class="cur' + (hitN === cur.n ? ' hit' : '') + (fresh ? ' enter' : '') + '" data-n="' + cur.n + '"><div class="top"><div class="no">' + cur.n + '</div><div class="nm">' + esc(cur.name) + '</div></div>' +
     '<div class="cnt">' + cur.done + ' <small>من ' + cur.qty + '</small></div>' +
     '<div class="acts"><button class="btn ghost" data-a="type">' + ICO_KEY + 'اكتب العدد</button><button class="btn danger" data-a="na">' + ICO_NA + 'غير متوفر</button></div></div>'
     : '<div class="alldone">كل الأصناف خلصت ✓<br><span style="font-size:14px">دوس «تم التحضير» وصوّر البرنيكة</span></div>';
@@ -883,10 +890,11 @@ function renderPrep(hitN) {
     return '<div class="it ' + cls + (it.done > 0 && it.done < it.qty ? ' part' : '') + '" data-n="' + it.n + '">' +
       '<div class="no">' + it.n + '</div><div class="nm">' + esc(it.name) + (it.manual ? '<small>اتكتب بالإيد</small>' : '') + '</div><div class="q">' + q + '</div></div>';
   };
-  $('ilist').innerHTML = (pending.length ? '<div class="lh">اللي بعده</div>' + pending.map(it => row(it, '')).join('') : '') +
-    na.map(it => row(it, 'na')).join('') +
-    (done.length ? '<button class="dh" data-a="showdone">' + ICO_OK + 'اتحضّروا (' + done.length + ') ' + (st.showDone ? '- إخفاء' : '- عرض') + '</button>' +
-      (st.showDone ? done.map(it => row(it, 'done')).join('') : '') : '');
+  // 3 أصناف بس: الحالي تحت، واللي بعده واللي بعده فوقه - أول ما الحالي يخلص يختفي والباقي ينزل
+  const next = pending.slice(0, 2).reverse();
+  $('ilist').innerHTML = next.map((it, i) => row(it, i === next.length - 1 ? 'nx1' : 'nx2')).join('');
+  $('doneBtn').textContent = 'اتحضّروا (' + (done.length + na.length) + ')';
+  $('doneBtn').classList.toggle('hidden', !(done.length + na.length));
   const left = pending.length + (cur ? 1 : 0);
   $('pHint').textContent = left ? 'فاضل ' + left + (left === 1 ? ' صنف' : ' أصناف') : 'كل الأصناف خلصت ✓';
   // أول ما يبدأ صنف جديد: الموبايل يقول اسمه والمطلوب منه
@@ -904,13 +912,24 @@ $('curBox').addEventListener('click', e => {
 });
 $('ilist').addEventListener('click', e => {
   const b = e.target.closest('[data-a]'), r = e.target.closest('.it');
-  if (b && b.dataset.a === 'showdone') { st.showDone = !st.showDone; return renderPrep(); }
   if (!r) return;
   const it = st.items.find(x => x.n === Number(r.dataset.n)); if (!it) return;
   if (b && b.dataset.a === 'type') return typeQty(it);
   if (b && b.dataset.a === 'na') return setNa(it, true);
   itemMenu(it);
 });
+$('doneBtn').onclick = () => {
+  const list = st.items.filter(it => it.na || it.done >= it.qty);
+  const bg = sheet('<h3>اللي اتحضّر (' + list.length + ')</h3><div class="sub">دوس على صنف لو عايز تعدّله أو تصفّره</div>' +
+    list.map(it => '<div class="it ' + (it.na ? 'na' : 'done') + '" data-n="' + it.n + '" style="background:' + (it.na ? 'var(--bad-l)' : 'var(--ok-l)') + '"><div class="no">' + it.n + '</div><div class="nm">' + esc(it.name) + '</div><div class="q">' +
+      (it.na ? 'غير متوفر' : it.done + ' من ' + it.qty) + '</div></div>').join('') + '<button class="btn ghost block" data-x="1">قفل</button>');
+  bg.addEventListener('click', e => {
+    if (e.target.closest('[data-x]')) return bg.remove();
+    const r = e.target.closest('.it'); if (!r) return;
+    const it = st.items.find(x => x.n === Number(r.dataset.n)); if (!it) return;
+    bg.remove(); itemMenu(it);
+  });
+};
 function itemMenu(it) {
   const bg = sheet('<h3>' + esc(it.name) + '</h3><div class="sub">المطلوب ' + it.qty + ' · المحضّر ' + it.done + (it.na ? ' · متعلم عليه غير متوفر' : '') + '</div>' +
     '<button class="btn block" data-m="type">' + ICO_KEY + 'اكتب العدد</button>' +
@@ -994,15 +1013,11 @@ function loadZx() {
   });
 }
 // الكاميرا شغالة في خلفية شاشة التحضير - تتقفل وتتفتح من زرار الكاميرا
-st.camOn = ls('wh_cam') !== '0';
-$('camToggle').onclick = () => {
-  st.camOn = !stream;
-  ls('wh_cam', st.camOn ? '1' : '0');
-  if (st.camOn) camStart(); else { camStop(); }
-};
+st.camOn = true;
+$('last').onclick = () => { if (!stream && !$('prep').classList.contains('hidden')) camStart(); };
 async function camStart() {
   if (stream) return;
-  $('prep').classList.remove('nocam'); $('camToggle').classList.remove('off');
+  $('prep').classList.remove('nocam');
   const vid = $('vid');
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
@@ -1036,7 +1051,7 @@ async function camStart() {
     }
   } catch (err) {
     camStop();
-    toast(/Permission|NotAllowed|denied/i.test(String(err && (err.name || err.message))) ? 'لازم تسمح للتطبيق يستخدم الكاميرا' : 'الكاميرا مش شغالة - جرّب تاني', 'bad');
+    setLast('bad', /Permission|NotAllowed|denied/i.test(String(err && (err.name || err.message))) ? 'لازم تسمح للتطبيق يستخدم الكاميرا' : 'الكاميرا مش شغالة', 'دوس هنا علشان تشغّلها تاني', '');
   }
 }
 function camStop() {
@@ -1044,7 +1059,7 @@ function camStop() {
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
   track = null;
   const v = $('vid'); if (v) v.srcObject = null;
-  $('prep').classList.add('nocam'); $('camToggle').classList.add('off');
+  $('prep').classList.add('nocam');
 }
 async function setZoom(on) {
   const z = st.zoomCaps; if (!track || !z) return;
