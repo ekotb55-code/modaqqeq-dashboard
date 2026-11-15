@@ -1637,6 +1637,7 @@ function posRender() {
       const k = l.n;
       h += '<div class="pricebox" style="display:block">' +
         '<div><b>' + esc(l.name) + '</b> <span class="new-item">🆕 ' + esc(l.barcode) + '</span> • ' + num(l.qty) + ' × ' + money(l.price) + '</div>' +
+        (l.badCode ? '<div style="color:#B3261E;font-weight:700;margin-top:4px">⚠️ الباركود بايظ (اتحول في الإكسل وآخر أرقامه ضاعت) - دوّرنا بالاسم كمان وما لقيناهوش. مينفعش يتكوّد بالباركود ده: لو الصنف موجود في البرنامج باسم تاني، خلّي الفرع يحدّث الأصناف ويسجله تاني</div>' : '') +
         '<div class="grid2" style="margin-top:6px"><div><small>اسم الصنف في البرنامج</small><input class="pin" id="pn' + k + '" value="' + esc(l.name) + '"></div>' +
         '<div><small>سعر البيع</small><input class="pin" id="ps' + k + '" dir="ltr" inputmode="decimal" value="' + (l.newSale !== null && l.newSale !== undefined ? l.newSale : '') + '" placeholder="سعر الشراء ' + money(l.price) + '"></div>' +
         '<div><small>الوحدة</small><select id="pu' + k + '" style="width:100%;padding:8px">' + posOpts(r.units, ((r.units || []).find(u => /قطع/.test(u.name)) || {}).id) + '</select></div>' +
@@ -1644,6 +1645,8 @@ function posRender() {
         '<button class="btn green" style="margin-top:8px" ' + (posBusy ? 'disabled' : '') + ' onclick="posItem(' + k + ')">✅ موافقة وتكويد في البرنامج</button></div>';
     });
   }
+  const byName = L.filter(l => l.found && l.byName && !l.coded);
+  if (byName.length) h += '<div class="revbox" style="background:#FFF8E1">' + byName.map(l => '🔎 اتلاقى بالاسم (الباركود ما لقاهوش): ' + esc(l.name) + ' ← في البرنامج: <b>' + esc(l.posName) + '</b>').join('<br>') + '</div>';
   const coded = L.filter(l => l.coded);
   if (coded.length) h += '<div class="revbox ok">' + coded.map(l => '✅ اتكوّد: ' + esc(l.coded.name) + ' (سعر البيع ' + money(l.coded.sale) + ') - ' + esc(l.coded.by)).join('<br>') + '</div>';
   if (prices.length) {
