@@ -282,6 +282,18 @@
   .b-done { background: #E2F5E6; color: var(--green); }
   .b-rej { background: #FDE2E2; color: #C62828; }
   .b-qa { background: #EDE7F6; color: #5B3CC4; }
+  .b-sr { background: #FFF3CD; color: #8A5300; }
+  .srbox { background: #FFF8E1; border: 2px solid #F3C969; border-radius: 14px; padding: 12px 14px; margin: 10px 0; line-height: 1.8; }
+  .srbox.wait { background: #EEF5FF; border-color: #A9CBF2; }
+  .srbox.ok { background: #E8F7EC; border-color: #9ED8AE; }
+  .srbox ul { margin: 6px 0; padding-inline-start: 20px; }
+  .srbox textarea { width: 100%; min-height: 54px; margin: 6px 0; }
+  tr.flag td { background: #FFF1F1; }
+  .flagwhy { color: #B3261E; font-size: 12px; font-weight: 700; margin-top: 2px; }
+  .tablebox .rvc { display: none; }
+  .tablebox.linked .rvc { display: table-cell; }
+  .rvb { border: 1.5px solid #9CC4EC; background: #fff; color: #0F5FA8; border-radius: 10px; padding: 4px 10px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: inherit; }
+  .rvb.on { background: #1A8A3E; border-color: #1A8A3E; color: #fff; }
   .card.st-qa, .bcard.st-qa { border-inline-start-color: #6C4BD8; }
   .s11 { background: linear-gradient(135deg, #7E57C2, #4527A0); }
   .sysbox { border: 2px solid #1479D3; border-radius: 16px; padding: 10px 14px 14px; margin: 12px 0; background: #F4F9FF; }
@@ -809,6 +821,60 @@ function workMs(a, b) {
 function inWork(t) { const h = new Date(t).getHours(); return h >= OFF_TO || h < OFF_FROM; }
 function mins(a, b) { return workMs(a, b) / 60000; }
 function pending(v) { return v.status === ST_NEW || v.status === ST_WORK || !v.status; }
+// ---------- مراجعة الفرع للأسعار ----------
+// الوقت اللي الفاتورة قعدته عند الفرع يراجع أسعارها مش محسوب على الدعم: بنأخّر بداية العداد بيه
+function t0(v) {
+  const p = v && v.shopRev && !v.shopRev.open ? Number(v.shopRev.pausedMs) || 0 : 0;
+  return p && v.createdAt ? new Date(new Date(v.createdAt).getTime() + p).toISOString() : v.createdAt;
+}
+const SR_PCT = 25; // سعر الشراء زاد 25% أو أكتر عن آخر مرة = تنبيه
+function srOpen(v) { return !!(v && v.status === ST_REJ && v.shopRev && v.shopRev.open); }
+// الفرع رد (عدّلها وبعتها تاني، أو قال دخّلها زي ما هي): يبقى مسموح تدخّلها
+function srAnswered(v) { return !!(v && v.shopRev && !v.shopRev.open && v.shopRev.reply); }
+function vbadge(v) { return srOpen(v) ? '<span class="badge b-sr">👀 مستنية الفرع يراجع الأسعار</span>' : badge(v.status); }
+// الأصناف اللي أسعارها مش منطقية: {n: [{s: مختصر للجدول, l: بالتفصيل}]}
+function srFlags(L) {
+  const out = {}, pl = {};
+  if (pos && cur && pos.id === cur.invoice.id && pos.lines) pos.lines.forEach(x => { pl[x.n] = x; });
+  (L || []).forEach(l => {
+    const why = [], buy = Number(l.piecePrice) || 0;
+    if (l.oldPrice > 0 && buy >= l.oldPrice * (1 + SR_PCT / 100)) {
+      const pc = Math.round((buy / l.oldPrice - 1) * 100);
+      why.push({ s: 'الشراء زاد ' + pc + '%', l: 'سعر الشراء زاد ' + pc + '% عن آخر مرة (كان ' + money(l.oldPrice) + ' وبقى ' + money(buy) + ')' });
+    }
+    const p = pl[l.n] || {};
+    const sale = l.newSale !== null && l.newSale !== undefined ? Number(l.newSale)
+      : p.posSale !== null && p.posSale !== undefined && p.posSale !== '' ? Number(p.posSale)
+      : l.oldSale !== null && l.oldSale !== undefined ? Number(l.oldSale) : null;
+    if (sale !== null && sale > 0 && buy > 0 && sale < buy) {
+      why.push({ s: 'البيع أقل من الشراء', l: 'سعر البيع (' + money(sale) + ') أقل من سعر الشراء (' + money(buy) + ')' });
+    }
+    if (why.length) out[l.n] = why;
+  });
+  return out;
+}
+// زرار "راجعت" لكل صنف (المحلات المربوطة ببرنامج البيع): بيتحفظ على الجهاز ده
+let revOk = {};
+try { revOk = JSON.parse(localStorage.getItem('mdq-revok') || '{}') || {}; } catch (e) { revOk = {}; }
+function revSave() {
+  const keep = {}; Object.keys(revOk).slice(-60).forEach(k => { keep[k] = revOk[k]; }); revOk = keep;
+  try { localStorage.setItem('mdq-revok', JSON.stringify(revOk)); } catch (e) {}
+}
+function linked() { return !!(pos && cur && pos.id === cur.invoice.id && pos.enabled); }
+function revLeft() { const m = (cur && revOk[cur.invoice.id]) || {}; return (cur ? cur.lines : []).filter(l => !m[l.n]).length; }
+function revTog(n) {
+  const id = cur.invoice.id, m = revOk[id] = revOk[id] || {};
+  if (m[n]) delete m[n]; else m[n] = 1;
+  revSave(); renderLines(); if (pos && pos.id === id) posRender();
+}
+// سبب منع الإدخال (لو فيه): أسعار مش منطقية والفرع ما ردّش، أو أصناف لسه ما اتراجعتش
+function srBlockMsg() {
+  if (!cur) return '';
+  const fl = srFlags(cur.lines), nf = Object.keys(fl).length;
+  if (nf && !srAnswered(cur.invoice)) return 'فيه ' + nf + ' صنف أسعارهم مش منطقية - رجّعها للفرع يراجعها الأول';
+  if (linked() && revLeft()) return 'راجع الأصناف كلها الأول (فاضل ' + revLeft() + ' صنف) - دوس "راجعت" جنب كل صنف';
+  return '';
+}
 function clock(ms) { const s = Math.max(0, Math.floor(ms / 1000)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); }
 function durTxt(m) { m = Math.round(m); return m < 60 ? m + ' د' : Math.floor(m / 60) + ' س ' + (m % 60) + ' د'; }
 
@@ -816,13 +882,13 @@ function durTxt(m) { m = Math.round(m); return m < 60 ? m + ' د' : Math.floor(m
 function timerHtml(v) {
   if (!v.createdAt) return '';
   if (v.status === ST_DONE && v.doneAt) {
-    const m = mins(v.createdAt, v.doneAt);
+    const m = mins(t0(v), v.doneAt);
     const c = m <= WARN_MIN ? 'green' : m <= SLA_MIN ? 'yellow' : 'red';
     return '<span class="timer t-done-' + c + '">✓ ' + durTxt(m) + '</span>';
   }
   if (!pending(v)) return '';
-  const t = timerState(v.createdAt);
-  return '<span class="timer ' + t.cls + '" data-t="' + esc(v.createdAt) + '">' + t.txt + '</span>';
+  const t = timerState(t0(v));
+  return '<span class="timer ' + t.cls + '" data-t="' + esc(t0(v)) + '">' + t.txt + '</span>';
 }
 // العداد بيحسب وقت الشغل بس، وبرة المواعيد بيقف
 function timerState(created) {
@@ -979,7 +1045,7 @@ function pendingAlert() {
   const nNew = list.filter(v => v.status !== ST_WORK).length, nWork = list.length - nNew;
   const t = '⏳ ' + list.length + (list.length === 1 ? ' فاتورة مستنية' : ' فواتير مستنية') + ' الإدخال';
   const b = (nNew ? nNew + ' لسه محدش استلمها' : '') + (nNew && nWork ? ' • ' : '') + (nWork ? nWork + ' بيتدخلوا' : '') + '\n' +
-    list.slice(0, 4).map(v => v.store + ' - ' + v.supplier + ' (' + durTxt(mins(v.createdAt, now())) + ')').join('\n');
+    list.slice(0, 4).map(v => v.store + ' - ' + v.supplier + ' (' + durTxt(mins(t0(v), now())) + ')').join('\n');
   alarm(8); notify(t, b, list[0].id, 'pending');
   toast(t);
 }
@@ -1130,8 +1196,8 @@ const CARD_TABS = [
   { k: ST_QA, c: 's11', t: '🔍 قسم الجودة', stage: 3, f: v => v.status === ST_QA },
   { k: ST_DONE, c: 's3', t: '✅ تم الإدخال', stage: 4, f: v => v.status === ST_DONE },
   // فلاتر تانية (كروت صغيرة) - التاسكات أول واحدة علشان تبان على طول
-  { k: 'tasks', c: 's14', t: '📋 التاسكات وطلبات الجرد', f: () => false },
-  { k: 'late', c: 's4', t: '⚠️ متأخرة', f: v => (pending(v) && mins(v.createdAt, now()) > SLA_MIN) || qaLate(v) },
+  { k: 'tasks', c: 's14', t: '📋 التاسكات وطلبات الجرد', f: v => srOpen(v) },
+  { k: 'late', c: 's4', t: '⚠️ متأخرة', f: v => (pending(v) && mins(t0(v), now()) > SLA_MIN) || qaLate(v) },
   { k: 'urge', c: 's7', t: '🔥 الفرع مستعجلها', f: v => pending(v) && v.urgeCount, hideEmpty: true },
   { k: ST_REJ, c: 's6', t: '↩️ مرفوضة عند الفرع', f: v => v.status === ST_REJ },
   { k: 'review', c: 's5', t: '👀 مستنية مراجعة الفرع', f: v => v.status === ST_DONE && !v.reviewedBy && new Date(v.doneAt) >= new Date(now() - 3 * 86400000) },
@@ -1194,12 +1260,13 @@ function renderList() {
     '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</span>' + timerHtml(v) + '</div>' +
     '<div class="sub"><span class="lbl">مورد:</span> ' + esc(v.supplier || 'غير محدد') + '</div>' +
     '<div class="meta">' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
-    '<div class="meta">' + badge(v.status) + ' ' + v.count + ' صنف • <span class="money">' + money(v.total) + ' ج.م</span>' +
+    '<div class="meta">' + vbadge(v) + ' ' + v.count + ' صنف • <span class="money">' + money(v.total) + ' ج.م</span>' +
     (v.receivedBy ? ' • 👤 ' + esc(v.receivedBy) : '') + (v.systemNo ? ' • #' + esc(v.systemNo) : '') +
-    (v.rejectCount && v.status !== ST_REJ ? ' • ↩️ اتبعتت تاني' : '') +
+    (v.rejectCount && v.status !== ST_REJ ? (v.shopRev && v.shopRev.reply === 'asis' ? ' • ✅ الفرع أكّد الأسعار' : ' • ↩️ اتبعتت تاني') : '') +
     (v.status === ST_QA ? ' • 🔍 دخّلها ' + esc(v.doneBy) + ' من ' + durTxt(mins(v.doneAt, now())) + (qaLate(v) ? ' ⚠️' : '') : '') +
     (v.status === ST_WORK && v.qaRejects ? ' • <b style="color:#C62828">↩️ رجعت من الجودة</b>' : '') + '</div>' +
-    (v.status === ST_REJ ? '<div class="meta" style="color:#C62828">❌ ' + esc(v.rejectReason) + '</div>' : '') +
+    (srOpen(v) ? '<div class="meta" style="color:#8A5300">⏸ التايمر واقف - الفرع بيراجع أسعار ' + ((v.shopRev.items || []).length || '') + ' صنف</div>'
+      : v.status === ST_REJ ? '<div class="meta" style="color:#C62828">❌ ' + esc(v.rejectReason) + '</div>' : '') +
     (v.status === ST_DONE ? '<div class="meta">' + revTag(v) + '</div>' : '') + '</div>'
   ).join('') : '<div class="empty">مفيش فواتير هنا 🎉</div>';
 }
@@ -1252,7 +1319,7 @@ function stars(n) { return n ? '<span class="stars">' + '★'.repeat(n) + '<i>' 
 function tkTimer(v) {
   if (v.status === TK_SOLVED || v.status === TK_CLOSED) {
     if (!v.solvedAt) return '';
-    const m = mins(v.createdAt, v.solvedAt);
+    const m = mins(t0(v), v.solvedAt);
     return '<span class="timer t-done-' + (m <= v.resolveMin ? 'green' : 'red') + '">✓ ' + durTxt(m) + '</span>';
   }
   if (!tkDue(v)) return '<span class="timer t-off">📅 ' + dt(v.scheduledAt) + '</span>';
@@ -1340,7 +1407,7 @@ function renderTk() {
   h += '<div class="info">' + i('المحل', v.store + ((Number(v.storePrio) || 1) > 1 ? ' ' + '⭐'.repeat(v.storePrio - 1) : '')) + i('اللي طلب', v.user) + i('وقت الطلب', dt(v.createdAt)) +
     (v.scheduledAt ? i('الميعاد', dt(v.scheduledAt)) : '') + i('مدة الحل', durTxt(v.resolveMin)) +
     (v.assigneeName ? i('المسؤول', v.assigneeName + (v.pickedAt ? ' - استلمها ' + dt(v.pickedAt) : '')) : '') +
-    (v.solvedAt ? i('اتحلت', dt(v.solvedAt) + ' (' + durTxt(mins(v.createdAt, v.solvedAt)) + ')') : '') +
+    (v.solvedAt ? i('اتحلت', dt(v.solvedAt) + ' (' + durTxt(mins(t0(v), v.solvedAt)) + ')') : '') +
     (v.rating ? i('تقييم الفرع', '★'.repeat(v.rating) + (v.ratingNote ? ' - ' + v.ratingNote : '')) : '') + '</div>';
   if (v.desc) h += '<div class="pane" style="min-height:0;background:#F7FAFE;margin-bottom:10px"><b>المشكلة:</b><br>' + tkDescHtml(v.desc) + '</div>';
   if (v.photos.length) h += '<div class="tkpics">' + v.photos.map(f => '<img data-tkimg="' + esc(f) + '" onclick="chatImgFull(this)" alt="">').join('') + '</div>';
@@ -1501,7 +1568,7 @@ function renderDetail() {
   const v = cur.invoice, L = cur.lines;
   const canWork = (v.status === ST_NEW || v.status === ST_WORK || !v.status) && !isQA();
   let h = '<button class="btn ghost back" onclick="closeInv()">→ رجوع للقايمة</button>';
-  h += '<div class="dhead"><h2>' + esc(v.supplier) + '</h2>' + badge(v.status) + timerHtml(v) + '<span class="sp"></span>' +
+  h += '<div class="dhead"><h2>' + esc(v.supplier) + '</h2>' + vbadge(v) + timerHtml(v) + '<span class="sp"></span>' +
     (v.groupUrl ? '<a class="wabtn" href="' + esc(v.groupUrl) + '" target="_blank" rel="noopener">💬 جروب الفرع</a>' : '') +
     (v.systemUrl ? '<a class="sysbtn" href="' + esc(v.systemUrl) + '" target="_blank" rel="noopener">🔗 افتح سيستم ' + esc(v.store) + '</a>' : '') + '</div>';
   h += '<div class="info">' +
@@ -1523,7 +1590,9 @@ function renderDetail() {
   h += '<div class="pricebox">' + (v.priceUps ? '<span class="up">📈 ' + v.priceUps + ' صنف سعره زاد</span>' : '') +
     (v.priceDowns ? '<span class="down">📉 ' + v.priceDowns + ' صنف سعره نقص</span>' : '') +
     '<button class="btn soft" onclick="reportPdf()">📄 تقرير الزيادة والنقص (PDF)</button></div>';
-  if (v.status === ST_REJ) {
+  if (srOpen(v) || srAnswered(v)) {
+    // مراجعة الأسعار عند الفرع: صندوقها بيترسم في renderLines (srBox)
+  } else if (v.status === ST_REJ) {
     h += '<div class="rejbox"><b>❌ الفاتورة مرفوضة ورجعت للفرع</b><br>السبب: <b>' + esc(v.rejectReason) + '</b><br>' +
       'رجّعها ' + esc(v.rejectedBy) + ' - ' + dt(v.rejectedAt) + '<br>مستنية الفرع يعدّلها ويبعتها تاني</div>';
   } else if (v.rejectCount) {
@@ -1540,15 +1609,7 @@ function renderDetail() {
   h += '<div class="compare"><div class="viewer"><div class="vstage" id="vstage"><img id="vimg" alt=""></div>' +
     '<div class="vtools"><button onclick="zoom(1.25)">＋</button><button onclick="zoom(.8)">－</button><button onclick="rot()">⟳</button><button onclick="fit()">ملء</button><button onclick="full()">⛶</button><span class="pg" id="pg"></span></div>' +
     '<div class="thumbs" id="thumbs"></div></div><div>';
-  const pDiff = l => l.oldPrice ? l.piecePrice - l.oldPrice : 0;
-  h += '<div class="tablebox"><table><thead><tr><th>م</th><th>اسم الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>سعر البيع</th></tr></thead><tbody>' +
-    L.map(l => '<tr' + (l.newSale !== null ? ' class="pchg"' : '') + '><td>' + l.n + '</td><td>' + esc(l.name) + (l.isNew ? ' <span class="new-item">🆕 جديد ' + esc(l.barcode) + '</span>' : '') +
-      (l.unit === 'كرتونة' ? '<div style="color:var(--muted);font-size:12px">' + num(l.qty) + ' كرتونة × ' + esc(l.cartonSize) + '</div>' : '') +
-      '</td><td class="num">' + num(l.pieces) + '</td><td class="num">' + money(l.piecePrice) +
-      (Math.abs(pDiff(l)) >= 0.01 ? '<div class="' + (pDiff(l) > 0 ? 'up' : 'down') + '">' + (pDiff(l) > 0 ? '▲' : '▼') + ' كان ' + money(l.oldPrice) + '</div>' : '') +
-      '</td><td class="num">' + money(l.total) + '</td><td class="num">' +
-      (l.newSale !== null ? '<span class="sale">🏷 ' + money(l.oldSale) + ' ← ' + money(l.newSale) + '</span>' : (l.oldSale !== null ? money(l.oldSale) : '')) + '</td></tr>').join('') +
-    '<tr class="total-row"><td></td><td>الإجمالي</td><td></td><td></td><td class="num">' + money(v.total) + '</td><td></td></tr></tbody></table></div>';
+  h += '<div id="srBox"></div><div id="linesBox"></div>';
   h += '<div class="actions"><button class="btn ghost" onclick="excel(\'xlsx\')">⬇️ إكسل</button>' +
     '<button class="btn ghost" onclick="excel(\'xls\')">⬇️ إكسل 2003 (xls)</button>' +
     (v.priceChanges ? '<button class="btn" style="background:linear-gradient(135deg,#6C4BD8,#4B2FB5)" onclick="pricesExcel()">🏷 إكسل أسعار البيع المعدلة (' + v.priceChanges + ')</button>' : '') +
@@ -1579,9 +1640,67 @@ function renderDetail() {
   }
   h += '</div></div>';
   $('detailPane').innerHTML = h;
+  renderLines();
   openChat(v.store, v.id, 'chatBox', 'فاتورة ' + v.supplier);
   initViewer();
   if (canWork) { renderShots(); bindDrop(); posLoad(v.id); } else if (v.status === ST_DONE) buildMerged();
+}
+
+// جدول الأصناف: التنبيهات (أسعار مش منطقية) + زرار "راجعت" في المحلات المربوطة
+function renderLines() {
+  const box = $('linesBox');
+  if (!box || !cur) return;
+  const v = cur.invoice, L = cur.lines, fl = srFlags(L), lk = linked(), rv = revOk[v.id] || {};
+  const canWork = (v.status === ST_NEW || v.status === ST_WORK || !v.status) && !isQA();
+  const pDiff = l => l.oldPrice ? l.piecePrice - l.oldPrice : 0;
+  box.innerHTML = '<div class="tablebox' + (lk && canWork ? ' linked' : '') + '"><table><thead><tr><th>م</th><th>اسم الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>سعر البيع</th><th class="rvc">مراجعة</th></tr></thead><tbody>' +
+    L.map(l => '<tr class="' + (fl[l.n] ? 'flag' : l.newSale !== null ? 'pchg' : '') + '"><td>' + l.n + '</td><td>' + esc(l.name) + (l.isNew ? ' <span class="new-item">🆕 جديد ' + esc(l.barcode) + '</span>' : '') +
+      (l.unit === 'كرتونة' ? '<div style="color:var(--muted);font-size:12px">' + num(l.qty) + ' كرتونة × ' + esc(l.cartonSize) + '</div>' : '') +
+      (fl[l.n] ? '<div class="flagwhy">⚠️ ' + fl[l.n].map(w => esc(w.s)).join(' • ') + '</div>' : '') +
+      '</td><td class="num">' + num(l.pieces) + '</td><td class="num">' + money(l.piecePrice) +
+      (Math.abs(pDiff(l)) >= 0.01 ? '<div class="' + (pDiff(l) > 0 ? 'up' : 'down') + '">' + (pDiff(l) > 0 ? '▲' : '▼') + ' كان ' + money(l.oldPrice) + '</div>' : '') +
+      '</td><td class="num">' + money(l.total) + '</td><td class="num">' +
+      (l.newSale !== null ? '<span class="sale">🏷 ' + money(l.oldSale) + ' ← ' + money(l.newSale) + '</span>' : (l.oldSale !== null ? money(l.oldSale) : '')) + '</td>' +
+      '<td class="rvc"><button class="rvb' + (rv[l.n] ? ' on' : '') + '" onclick="revTog(' + l.n + ')">' + (rv[l.n] ? '✓ راجعت' : 'راجعت') + '</button></td></tr>').join('') +
+    '<tr class="total-row"><td></td><td>الإجمالي</td><td></td><td></td><td class="num">' + money(v.total) + '</td><td></td><td class="rvc">' + (L.length - revLeft()) + '/' + L.length + '</td></tr></tbody></table></div>';
+  srRender(fl, canWork);
+}
+function srRender(fl, canWork) {
+  const box = $('srBox');
+  if (!box || !cur) return;
+  const v = cur.invoice, s = v.shopRev || {}, n = Object.keys(fl).length;
+  const li = arr => '<ul>' + arr.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+  let h = '';
+  if (srOpen(v)) {
+    h = '<div class="srbox wait"><b>⏸ الفاتورة عند الفرع بيراجع أسعارها - التايمر واقف</b><br>رجّعها ' + esc(s.by) + ' - ' + dt(s.at) +
+      (s.reason ? '<br>ملاحظتك: ' + esc(s.reason) : '') + li((s.items || []).map(x => x.name + ': ' + x.why)) +
+      '<small>الفرع بيوصله إشعار كل 10 دقايق، ومش هيقدر يبعت فاتورة جديدة لحد ما يرد: يا يعدّلها ويبعتها تاني، يا يقول "دخّلها زي ما هي".</small></div>';
+  } else if (srAnswered(v)) {
+    h = s.reply === 'asis'
+      ? '<div class="srbox ok"><b>✅ الفرع راجع الأسعار وقال: دخّلها زي ما هي</b><br>' + esc(s.replyBy) + ' - ' + dt(s.replyAt) + li((s.items || []).map(x => x.name + ': ' + x.why)) + '</div>'
+      : '<div class="srbox ok"><b>✏️ الفرع راجع الأسعار وعدّل الفاتورة وبعتها تاني</b><br>' + esc(s.replyBy) + ' - ' + dt(s.replyAt) + '</div>';
+  } else if (n && canWork) {
+    h = '<div class="srbox"><b>⚠️ فيه ' + n + ' صنف أسعارهم مش منطقية - لازم الفرع يراجعهم قبل ما تدخّل الفاتورة</b>' +
+      li(cur.lines.filter(l => fl[l.n]).map(l => l.name + ': ' + fl[l.n].map(w => w.l).join(' • '))) +
+      '<textarea id="srNote" placeholder="ملاحظة للفرع (اختياري)"></textarea><div class="err" id="srErr"></div>' +
+      '<button class="btn" id="srBtn" style="background:linear-gradient(135deg,#E0A100,#B86E00)" onclick="srSend()">↩️ رجّعها للفرع يراجع الأسعار</button>' +
+      '<br><small>التايمر هيقف لحد ما الفرع يرد، والفرع هيوصله إشعار كل 10 دقايق.</small></div>';
+  }
+  box.innerHTML = h;
+}
+async function srSend() {
+  const v = cur.invoice, fl = srFlags(cur.lines), b = $('srBtn'), err = $('srErr');
+  const items = cur.lines.filter(l => fl[l.n]).map(l => ({ n: l.n, name: l.name, why: fl[l.n].map(w => w.l).join(' • ') }));
+  const reason = ($('srNote') || {}).value ? $('srNote').value.trim() : '';
+  if (!confirm('ترجّع فاتورة ' + v.supplier + ' لفرع ' + v.store + ' يراجع أسعار ' + items.length + ' صنف؟')) return;
+  b.disabled = true; b.innerHTML = '<span class="spin"></span>';
+  try {
+    cur = await api('dShopReview', { token, id: v.id, reason, items }, true);
+    toast('الفاتورة رجعت للفرع يراجع الأسعار ⏸'); renderDetail(); loadList(true);
+  } catch (e) {
+    err.textContent = /غير معروف/.test(msg(e)) ? 'السكريبت لسه ما اتحدّثش - كلّم المدير' : msg(e);
+    b.disabled = false; b.textContent = '↩️ رجّعها للفرع يراجع الأسعار';
+  }
 }
 
 // ---------- رفع الفاتورة على برنامج البيع (للفروع المتفعّل ليها "رفع المشتريات") ----------
@@ -1602,7 +1721,7 @@ async function posLoad(id, refresh) {
     if (!cur || cur.invoice.id !== id) return;
     if (!r.enabled) { posOff[id] = 1; box.classList.add('hidden'); return; }
     pos = Object.assign(pos && pos.id === id ? pos : {}, r, { id });
-    posRender();
+    posRender(); renderLines();
   } catch (e) {
     // السكريبت لسه ما اتحدّثش (العملية مش معروفة): نخبي الجزء ده
     if (/مفتاح غلط|غير معروف/.test(msg(e))) { posOff[id] = 1; box.classList.add('hidden'); return; }
@@ -1666,11 +1785,12 @@ function posRender() {
         '<button class="btn soft" style="color:#B3261E" ' + (posBusy ? 'disabled' : '') + ' onclick="posPrice(' + k + ',\'reject\')">رفض</button></div></div>';
     });
   }
-  const ready = !news.length && !r.priceCount && r.state.supplierId;
+  const blk = srBlockMsg();
+  const ready = !news.length && !r.priceCount && r.state.supplierId && !blk;
   h += '<div class="err" id="posErr"></div>' +
     '<button class="btn" style="width:100%;padding:13px;font-size:17px;margin-top:10px;background:linear-gradient(135deg,#1479D3,#0B3D6E)" ' + (ready && !posBusy ? '' : 'disabled') + ' onclick="posPush()">' +
     (posBusy ? '<span class="spin"></span> استنى...' : '🚀 تأكيد ورفع الفاتورة على البرنامج (آجل)') + '</button>' +
-    (ready ? '' : '<small style="color:var(--muted)">' + (!r.state.supplierId ? 'اختار المورد الأول' : news.length ? 'وافق على الأصناف الجديدة الأول' : 'رد على أسعار البيع الأول') + '</small>') +
+    (ready ? '' : '<small style="color:var(--muted)">' + (blk ? blk : !r.state.supplierId ? 'اختار المورد الأول' : news.length ? 'وافق على الأصناف الجديدة الأول' : 'رد على أسعار البيع الأول') + '</small>') +
     '<div style="margin-top:6px"><button class="btn ghost" style="font-size:12px" ' + (posBusy ? 'disabled' : '') + ' onclick="posLoad(pos.id,true)">🔄 دوّر على الأصناف في البرنامج تاني</button></div>';
   box.innerHTML = h;
 }
@@ -1701,6 +1821,7 @@ async function posPrice(n, action) {
   try { await posRun('dPosPrice', { n, action, value }); } catch (e) {}
 }
 async function posPush() {
+  if (srBlockMsg()) return toast(srBlockMsg());
   const sup = (pos.suppliers || []).find(o => o.id === pos.state.supplierId);
   const tot = pos.lines.reduce((s, l) => s + (Number(l.total) || 0), 0);
   if (!confirm('هتترفع فاتورة شراء آجل على البرنامج:\nالمورد: ' + (sup ? sup.name : '') + '\n' + pos.lines.length + ' صنف • الإجمالي ' + money(tot) + '\n\nموافق؟')) return;
@@ -1848,6 +1969,7 @@ async function done() {
   const err = $('doneErr'), b = $('doneBtn');
   const sys = $('sysNo').value.trim(), bal = $('bal').value.trim();
   err.textContent = '';
+  if (srBlockMsg()) return err.textContent = srBlockMsg();
   if (!shots.length) return err.textContent = 'ارفع سكرين واحد على الأقل من السيستم';
   if (!sys) return err.textContent = 'اكتب رقم الفاتورة في السيستم';
   if (!bal) return err.textContent = 'اكتب رصيد المورد على السيستم';
@@ -2018,8 +2140,8 @@ async function makeReport(kind) {
     try { SR = await api('dStoreReport', { token, store: st, from: from.toISOString(), to: to.toISOString() }); } catch (e) { srErr = msg(e); }
   }
   const total = done.reduce((s, v) => s + v.total, 0);
-  const avg = done.length ? done.reduce((s, v) => s + mins(v.createdAt, v.doneAt), 0) / done.length : 0;
-  const ontime = done.length ? done.filter(v => mins(v.createdAt, v.doneAt) <= SLA_MIN).length / done.length : 0;
+  const avg = done.length ? done.reduce((s, v) => s + mins(t0(v), v.doneAt), 0) / done.length : 0;
+  const ontime = done.length ? done.filter(v => mins(t0(v), v.doneAt) <= SLA_MIN).length / done.length : 0;
   const pch = done.reduce((s, v) => s + (v.priceChanges || 0), 0);
   const d2 = x => new Date(x).toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric', year: 'numeric' });
   const logo = new URL('logo_wide.png', location.href).href;
@@ -2184,7 +2306,7 @@ async function makeReport(kind) {
     // ---------- تقرير الأداء: الفواتير
     (isPrice ? '' : '<div class="sec"><h2>🧾 الفواتير</h2><table class="t2"><thead><tr><th>#</th><th>تاريخ الإدخال</th><th>المورد</th><th>رقم فاتورة المورد</th><th>رقم السيستم</th><th>أصناف</th><th>الإجمالي</th><th>رصيد المورد</th><th>أدخلها</th><th>المدة</th></tr></thead><tbody>' +
     (done.length ? done.map((v, k) => '<tr' + (isPrice ? ' class="inv"' : '') + '><td>' + (k + 1) + '</td><td>' + dt(v.doneAt) + '</td><td>' + esc(v.supplier) + '</td><td>' + esc(v.number || '-') + '</td><td>' + esc(v.systemNo) +
-      '</td><td class="num">' + v.count + '</td><td class="num">' + money(v.total) + '</td><td class="num">' + esc(v.balance) + '</td><td>' + esc(v.doneBy) + '</td><td>' + durTxt(mins(v.createdAt, v.doneAt)) + '</td></tr>' + itemsHtml(v)).join('')
+      '</td><td class="num">' + v.count + '</td><td class="num">' + money(v.total) + '</td><td class="num">' + esc(v.balance) + '</td><td>' + esc(v.doneBy) + '</td><td>' + durTxt(mins(t0(v), v.doneAt)) + '</td></tr>' + itemsHtml(v)).join('')
       : '<tr><td colspan="10" style="text-align:center;padding:20px">مفيش فواتير دخلت في الفترة دي</td></tr>') +
     (done.length ? '<tr><td></td><td colspan="5"><b>الإجمالي</b></td><td class="num"><b>' + money(total) + '</b></td><td colspan="3"></td></tr>' : '') + '</tbody></table></div>') +
     (isPrice ? '' : supHtml) +
@@ -2945,16 +3067,16 @@ function invEvents(v) {
     const m = line.match(/^(.*) - (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/);
     ev.push({ t: m ? m[2] + 'T' + m[3] + ':00' : v.urgedAt, i: '🔥', x: 'استعجال من ' + (m ? m[1] : line), local: !!m });
   });
-  if (v.receivedAt) ev.push({ t: v.receivedAt, i: '📥', x: 'استلمها ' + v.receivedBy + ' (بعد ' + durTxt(mins(v.createdAt, v.receivedAt)) + ')' });
+  if (v.receivedAt) ev.push({ t: v.receivedAt, i: '📥', x: 'استلمها ' + v.receivedBy + ' (بعد ' + durTxt(mins(t0(v), v.receivedAt)) + ')' });
   if (v.rejectedAt) ev.push({ t: v.rejectedAt, i: '❌', x: 'رفضها ' + v.rejectedBy + ': ' + v.rejectReason, cls: 'note' });
   const ql = qaLogList(v);
   if (ql.length) {
     ql.forEach(x => {
       if (x.type === 'للجودة') ev.push({ t: x.at, i: '📤', x: 'دخّلها ' + x.name + ' وبعتها للجودة' });
       else if (x.type === 'رجوع') ev.push({ t: x.at, i: '↩️', x: 'الجودة (' + x.name + ') رجّعتها: ' + x.note, cls: 'note' });
-      else if (x.type === 'اعتماد') ev.push({ t: x.at, i: '✅', x: 'اعتمدتها الجودة (' + x.name + ') - دخلت السيستم #' + v.systemNo + ' (بعد ' + durTxt(mins(v.createdAt, x.at)) + ')' });
+      else if (x.type === 'اعتماد') ev.push({ t: x.at, i: '✅', x: 'اعتمدتها الجودة (' + x.name + ') - دخلت السيستم #' + v.systemNo + ' (بعد ' + durTxt(mins(t0(v), x.at)) + ')' });
     });
-  } else if (v.doneAt) ev.push({ t: v.doneAt, i: '✅', x: 'دخلت السيستم #' + v.systemNo + ' - ' + v.doneBy + ' (بعد ' + durTxt(mins(v.createdAt, v.doneAt)) + ')' });
+  } else if (v.doneAt) ev.push({ t: v.doneAt, i: '✅', x: 'دخلت السيستم #' + v.systemNo + ' - ' + v.doneBy + ' (بعد ' + durTxt(mins(t0(v), v.doneAt)) + ')' });
   if (v.reviewedAt) ev.push({ t: v.reviewedAt, i: v.reviewNotes ? '📝' : '👀', x: 'راجعها الفرع: ' + v.reviewedBy + (v.reviewNotes ? ' - ' + v.reviewNotes : ''), cls: v.reviewNotes ? 'note' : '' });
   ev.forEach(e => { e.ms = e.local ? new Date(e.t).getTime() : new Date(e.t).getTime(); });
   return ev.sort((a, b) => a.ms - b.ms);
@@ -2995,7 +3117,7 @@ function renderBoard() {
   $('board').innerHTML = order.map(n => {
     const B = by[n];
     const vs = B.inv.slice().sort((a, b) => (pending(b) ? 1 : 0) - (pending(a) ? 1 : 0) || last(b) - last(a));
-    const pend = vs.filter(pending), late = pend.filter(v => mins(v.createdAt, now()) > SLA_MIN).length;
+    const pend = vs.filter(pending), late = pend.filter(v => mins(t0(v), now()) > SLA_MIN).length;
     const today = new Date(now()); today.setHours(0, 0, 0, 0);
     const doneToday = all.filter(v => v.store === n && v.status === ST_DONE && new Date(v.doneAt) >= today).length;
     const rej = vs.filter(v => v.status === ST_REJ).length, rev = vs.filter(v => v.status === ST_DONE && !v.reviewedBy).length;
@@ -3032,10 +3154,10 @@ function bTap(el, ev, fn) {
   fn();
 }
 function invBoardCard(v) {
-  const isLate = pending(v) && mins(v.createdAt, now()) > SLA_MIN;
+  const isLate = pending(v) && mins(t0(v), now()) > SLA_MIN;
   return '<div class="bcard ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : '') + (isLate ? ' late' : '') +
     (v.status === ST_QA ? ' st-qa' : '') + '" onclick="bTap(this,event,()=>{page(\'inv\');tab=\'الكل\';openInv(\'' + v.id + '\')})">' +
-    '<div class="bt"><b><span class="kind">🧾</span>' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥' + (v.urgeCount > 1 ? '×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</b>' + badge(v.status) + '</div>' +
+    '<div class="bt"><b><span class="kind">🧾</span>' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥' + (v.urgeCount > 1 ? '×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</b>' + vbadge(v) + '</div>' +
     '<div class="bm">' + v.count + ' صنف • <b>' + money(v.total) + ' ج.م</b>' + (pending(v) ? ' • ' + timerHtml(v) : ' • ' + tm(v.doneAt || v.createdAt)) + '</div>' +
     '<div class="bx">' + (v.priceUps || v.priceDowns ? '<div class="bm">' + (v.priceUps ? '📈 ' + v.priceUps + ' زيادة سعر ' : '') + (v.priceDowns ? '📉 ' + v.priceDowns + ' نقص سعر' : '') + '</div>' : '') +
     '<ul class="tl">' + invEvents(v).map(e => '<li class="' + (e.cls || '') + '"><span>' + e.i + '</span><span>' + esc(e.x) + '</span><span class="tm">' + tm(e.t) + '</span></li>').join('') + '</ul></div></div>';
@@ -3043,7 +3165,7 @@ function invBoardCard(v) {
 function tkBoardCard(v) {
   const ev = [{ t: v.createdAt, i: '🆕', x: 'طلبها ' + v.user }];
   if (v.pickedAt) ev.push({ t: v.pickedAt, i: '✋', x: 'استلمها ' + (v.assigneeName || 'الدعم') });
-  if (v.solvedAt) ev.push({ t: v.solvedAt, i: '✅', x: 'اتحلت (بعد ' + durTxt(mins(v.createdAt, v.solvedAt)) + ')' });
+  if (v.solvedAt) ev.push({ t: v.solvedAt, i: '✅', x: 'اتحلت (بعد ' + durTxt(mins(t0(v), v.solvedAt)) + ')' });
   if (v.rating) ev.push({ t: v.solvedAt, i: '⭐', x: 'تقييم الفرع: ' + v.rating + ' من 5' });
   return '<div class="bcard k-tk' + (v.priority === TK_URGENT && tkOpen(v) ? ' urg' : '') + (tkLate(v) ? ' late' : '') + '" onclick="bTap(this,event,()=>openTk(\'' + esc(v.id) + '\'))">' +
     '<div class="bt"><b><span class="kind">🛠️</span>' + esc(v.title) + '</b>' + tkBadge(v) + '</div>' +
@@ -3122,7 +3244,7 @@ function taskInTab(k, v) {
   if (k !== 'tasks') return false;
   return v.kind === 'task' ? v.status === TASK_OPEN : ['مستني الدعم', 'مستني الفرع', 'متثبت', 'شغال'].indexOf(v.status) !== -1;
 }
-function taskRank(v) { return v.kind === 'jr' ? (jrOpenSup(v) ? 0 : 3) : taskLate(v) ? 1 : taskDue(v) ? 2 : 4; }
+function taskRank(v) { return !v.kind ? 0 : v.kind === 'jr' ? (jrOpenSup(v) ? 0 : 3) : taskLate(v) ? 1 : taskDue(v) ? 2 : 4; }
 function taskCard(v, board) {
   const done = v.status !== TASK_OPEN, late = taskLate(v), future = !done && !taskDue(v);
   const st = done ? '<span class="badge b-done">' + (v.status === 'اتلغت' ? 'اتلغت' : '✓ اتعملت') + '</span>' : late ? '<span class="badge" style="background:#EDE7F6;color:#4527A0">⏰ متأخرة</span>' : future ? '<span class="badge b-new">📅 ' + tm(v.due) + '</span>' : '<span class="badge" style="background:#EDE7F6;color:#4527A0">مفتوحة</span>';
@@ -4118,14 +4240,14 @@ function drawPerf_() {
   let h = '<div class="perf-head"><h2>🏆 أداء الدعم: الفواتير والتذاكر والتاسكات</h2><select onchange="perfRange=this.value;renderPerf()">' +
     [['today', 'النهارده'], ['week', 'آخر 7 أيام'], ['month', 'آخر 30 يوم'], ['all', 'الكل']].map(([k, t]) => '<option value="' + k + '"' + (perfRange === k ? ' selected' : '') + '>' + t + '</option>').join('') +
     '</select></div>';
-  const tot = done.length, avgAll = tot ? done.reduce((s, v) => s + mins(v.createdAt, v.doneAt), 0) / tot : 0;
-  const onAll = tot ? done.filter(v => mins(v.createdAt, v.doneAt) <= SLA_MIN).length / tot : 0;
+  const tot = done.length, avgAll = tot ? done.reduce((s, v) => s + mins(t0(v), v.doneAt), 0) / tot : 0;
+  const onAll = tot ? done.filter(v => mins(t0(v), v.doneAt) <= SLA_MIN).length / tot : 0;
   const totRet = list.reduce((s, p) => s + p.ret, 0);
   const totK = list.reduce((s, p) => s + (p.tsk ? p.tsk.n : 0), 0), totKo = list.reduce((s, p) => s + (p.tsk ? p.tsk.ontime : 0), 0);
   h += '<div class="stats"><div class="stat s3"><small>فواتير دخلت</small><b>' + tot + '</b></div>' +
     '<div class="stat s2"><small>متوسط الوقت</small><b>' + durTxt(avgAll) + '</b></div>' +
     '<div class="stat s1"><small>في الميعاد (≤ ' + SLA_MIN + ' د)</small><b>' + Math.round(onAll * 100) + '%</b></div>' +
-    '<div class="stat s4"><small>متأخرة دلوقتي</small><b>' + all.filter(v => pending(v) && mins(v.createdAt, now()) > SLA_MIN).length + '</b></div>' +
+    '<div class="stat s4"><small>متأخرة دلوقتي</small><b>' + all.filter(v => pending(v) && mins(t0(v), now()) > SLA_MIN).length + '</b></div>' +
     '<div class="stat s7"><small>↩️ رجوع من الجودة</small><b>' + totRet + '</b></div>' +
     '<div class="stat s5"><small>📋 تاسكات اتعملت</small><b>' + (TS ? totK + (totK ? ' <small style="font-size:13px">(' + Math.round(totKo / totK * 100) + '% في الميعاد)</small>' : '') : '-') + '</b></div>' +
     '<div class="stat s10"><small>💬 متوسط الرد على الشات</small><b>' + (reps.length ? durTxt(reps.reduce((a, x) => a + mins(x.asked, x.at), 0) / reps.length) : '-') + '</b></div></div>';
@@ -4221,7 +4343,7 @@ function drawPerf_() {
   all.filter(v => new Date(v.createdAt) >= start).forEach(v => {
     const s = byStore[v.store] = byStore[v.store] || { n: 0, done: 0, mins: 0, total: 0 };
     s.n++; s.total += v.total;
-    if (v.status === ST_DONE) { s.done++; s.mins += mins(v.createdAt, v.doneAt); }
+    if (v.status === ST_DONE) { s.done++; s.mins += mins(t0(v), v.doneAt); }
   });
   const sl = Object.entries(byStore).sort((a, c) => c[1].n - a[1].n);
   if (sl.length) h += '<div class="pane stores-perf"><h3 style="margin-top:0;color:var(--navy)">🏪 الفروع</h3><table><thead><tr><th>الفرع</th><th>فواتير</th><th>دخلت</th><th>متوسط وقت الإدخال</th><th>قيمة الفواتير</th></tr></thead><tbody>' +
