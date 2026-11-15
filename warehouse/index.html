@@ -32,7 +32,7 @@
   .lg .txt { font-size: 12px; font-weight: 800; color: var(--blue); border: 1.5px dashed var(--blue); border-radius: 10px; padding: 2px 8px; }
 
   /* الدخول */
-  #login { align-items: center; justify-content: center; padding: 24px; }
+  #login .pane { max-width: 560px; width: 100%; margin: 0 auto; }
   .card { background: var(--card); border-radius: 18px; padding: 24px 20px; box-shadow: 0 8px 30px rgba(10,92,173,.10); width: 100%; max-width: 400px; }
   .logos { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
   .logos .lg { width: 130px; height: 64px; }
@@ -50,6 +50,22 @@
   .btn.danger { background: #fff; color: var(--bad); border: 1.5px solid var(--bad); }
   .btn.sm { min-height: 40px; padding: 6px 12px; border-radius: 12px; font-size: 13px; }
   .err { color: var(--red); font-size: 13px; min-height: 20px; margin-top: 8px; text-align: center; }
+
+  /* اختيار الاسم */
+  .people { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+  .pp { background: #fff; border: 1.5px solid var(--line); border-radius: 16px; padding: 12px 6px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; min-height: 120px; }
+  .pp:active { background: var(--blue-l); }
+  .pp .nm { font-size: 13px; font-weight: 800; text-align: center; line-height: 1.4; word-break: break-word; }
+  .pp .fp { font-size: 10px; color: var(--ok); font-weight: 800; }
+  .av { width: 64px; height: 64px; border-radius: 50%; flex: none; overflow: hidden; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 26px; font-weight: 800; background: var(--blue); }
+  .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .av.big { width: 96px; height: 96px; font-size: 38px; margin: 0 auto 8px; }
+  .av.sm { width: 36px; height: 36px; font-size: 15px; }
+  .lsheet { text-align: center; }
+  .lsheet input { text-align: center; font-size: 22px; letter-spacing: 2px; }
+  .fpbtn { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 6px auto 4px; border: 0; background: transparent; color: var(--ok); font-weight: 800; cursor: pointer; }
+  .fpbtn svg { width: 56px; height: 56px; }
+  .hr { border: 0; border-top: 1.5px solid var(--line); margin: 14px 0; }
 
   /* الرئيسية */
   .hero { background: var(--blue); color: #fff; padding: 12px 14px; }
@@ -235,16 +251,13 @@
 
 <!-- الدخول -->
 <section id="login" class="scr hidden">
-  <div class="card">
-    <div class="logos"><div class="lg lgAS"></div><div class="lg"><img src="/modaqqeq-dashboard/logo_wide.png" alt="مدقق"></div></div>
-    <h1>تحضير طلبيات المخزن</h1>
-    <form id="loginForm" autocomplete="on">
-      <div class="field"><label for="lEmail">الاسم أو الإيميل</label><input id="lEmail" autocomplete="username" required></div>
-      <div class="field"><label for="lPass">كلمة السر</label><input id="lPass" type="password" autocomplete="current-password" required></div>
-      <button class="btn block" id="lBtn" type="submit">دخول</button>
-      <div class="err" id="lErr"></div>
-    </form>
-    <button class="btn ghost block" id="installBtn2" type="button" style="margin-top:8px">تثبيت التطبيق على الموبايل</button>
+  <div class="topbar"><div class="lg lgAS"></div><div class="t">تحضير طلبيات المخزن</div><div class="lg"><img src="/modaqqeq-dashboard/logo_wide.png" alt="مدقق"></div></div>
+  <div class="pane">
+    <div class="note" style="text-align:center;margin:4px 0 10px;font-weight:700">اختار اسمك</div>
+    <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <input id="pq" type="search" placeholder="ابحث باسمك" aria-label="ابحث باسمك"></label>
+    <div class="people" id="people"><div class="empty" style="grid-column:1/-1"><div class="spin"></div>بنجيب الأسماء...</div></div>
+    <button class="btn ghost block" id="installBtn2" type="button" style="margin-top:14px">تثبيت التطبيق على الموبايل</button>
   </div>
 </section>
 
@@ -256,7 +269,7 @@
       <div class="who"><span id="hello"></span><b id="hTitle">الطلبيات</b></div>
       <button class="ib" id="btnRefresh" aria-label="تحديث"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
       <button class="ib" id="installBtn" aria-label="تثبيت التطبيق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M12 7v7M9 11l3 3 3-3"/></svg></button>
-      <button class="ib" id="btnOut" aria-label="خروج"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M8 7l-5 5 5 5"/><path d="M3 12h12"/></svg></button>
+      <button class="ib" id="btnMe" aria-label="حسابي" style="padding:0;overflow:hidden"></button>
     </div>
     <div class="stats"><div><b id="sAll">-</b><span>طلبية مفتوحة</span></div><div><b class="g" id="sDone">-</b><span>اتحضّرت</span></div><div><b id="sLeft">-</b><span>فاضلة</span></div></div>
   </div>
@@ -392,6 +405,8 @@
 </section>
 
 <div id="toast" class="hidden"></div>
+<input type="file" id="meCam" accept="image/*" capture="user" class="hidden">
+<input type="file" id="meGal" accept="image/*" class="hidden">
 
 <script>
 // ضع هنا رابط السيرفر بعد النشر (تطبيق ويب ← ‎/exec)
@@ -408,7 +423,7 @@ const ICO_OK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stro
 const ICO_CAM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 
 const $ = id => document.getElementById(id);
-const st = { user: null, orders: [], tab: '', filter: '', store: '', order: null, items: [], codes: {}, last: { code: '', at: 0 },
+const st = { people: [], user: null, orders: [], tab: '', filter: '', store: '', order: null, items: [], codes: {}, last: { code: '', at: 0 },
   dirty: false, saveT: null, saving: false, take: false, queue: Promise.resolve(), photos: [], appr: null };
 
 // ---------- أدوات ----------
@@ -433,7 +448,7 @@ async function api(action, data) {
   const j = await res.json();
   if (!j.ok) {
     const err = new Error(j.error || 'حصلت مشكلة');
-    if (/كلمة السر غلط|موقوف|مالوش صلاحية على تطبيق تحضير المخزن/.test(j.error || '')) err.auth = true;
+    if (/كلمة السر غلط|موقوف|مالوش صلاحية على تطبيق تحضير المخزن|اختار اسمك/.test(j.error || '')) err.auth = true;
     throw err;
   }
   return j;
@@ -480,19 +495,110 @@ async function loadLogo() {
   } catch (e) {}
 }
 
-// ---------- الدخول ----------
-$('loginForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  $('lErr').textContent = '';
-  $('lBtn').disabled = true; $('lBtn').textContent = 'بيدخل...';
-  ls('wh_email', $('lEmail').value.trim()); ls('wh_pass', $('lPass').value.trim());
-  try { afterLogin(await api('whLogin', {})); }
-  catch (err) { ls('wh_pass', null); $('lErr').textContent = arErr(err); }
-  finally { $('lBtn').disabled = false; $('lBtn').textContent = 'دخول'; }
-});
-function showLogin() { show('login'); $('lEmail').value = ls('wh_email') || ''; }
+// ---------- الدخول: قايمة الأسماء + كلمة السر أو البصمة ----------
+const FP_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3a8 8 0 0 1-1.2 4.2"/><path d="M8.5 7.5A5 5 0 0 1 17 11v1.5a12 12 0 0 1-.6 3.8"/><path d="M5.5 9.5A7 7 0 0 1 19 11"/><path d="M7 12a5 5 0 0 0 0 .5 10 10 0 0 1-1.3 4.8"/><path d="M14 13.5a14 14 0 0 1-1.5 6"/><path d="M4 6.5A9.5 9.5 0 0 1 12 2a9.5 9.5 0 0 1 8.5 5.2"/></svg>';
+function avatar(name, photo, cls) {
+  const colors = ['#0A5CAD', '#15803D', '#C2410C', '#6D28D9', '#0E7490', '#A16207', '#BE185D', '#334155'];
+  let h = 0; String(name).split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; });
+  const first = String(name || '؟').trim().charAt(0);
+  return '<div class="av ' + (cls || '') + '" style="background:' + colors[h % colors.length] + '">' +
+    (photo ? '<img src="' + esc(photo) + '" alt="" onerror="this.remove()">' : '') + (photo ? '' : esc(first)) + '</div>';
+}
+function bioKey(name) { return 'wh_bio_' + key(name); }
+function bioOf(name) { try { return JSON.parse(ls(bioKey(name)) || 'null'); } catch (e) { return null; } }
+async function bioAvailable() {
+  try { return !!(window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch (e) { return false; }
+}
+const b64 = buf => btoa(String.fromCharCode.apply(null, new Uint8Array(buf)));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function bioEnroll(name, pass) {
+  const cred = await navigator.credentials.create({ publicKey: {
+    challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: 'تحضير المخزن - مدقق' },
+    user: { id: crypto.getRandomValues(new Uint8Array(16)), name: name, displayName: name },
+    pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+    authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' }, timeout: 60000
+  } });
+  ls(bioKey(name), JSON.stringify({ id: b64(cred.rawId), p: pass }));
+}
+// البصمة بتأكّد إن صاحب الموبايل هو اللي بيفتح، وبعدها بندخل بكلمة السر المحفوظة على الموبايل ده
+async function bioCheck(name) {
+  const b = bioOf(name); if (!b) throw new Error('البصمة مش متفعلة على الموبايل ده');
+  await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)),
+    allowCredentials: [{ type: 'public-key', id: unb64(b.id) }], userVerification: 'required', timeout: 60000 } });
+  return b.p;
+}
+function bioErr(e) { return e && e.name === 'NotAllowedError' ? 'البصمة اتلغت أو ما اتعرفتش - جرّب تاني أو اكتب كلمة السر' : 'البصمة مش شغالة على الموبايل ده - اكتب كلمة السر'; }
+
+async function loadPeople() {
+  try { st.people = JSON.parse(ls('wh_people') || '[]'); } catch (e) { st.people = []; }
+  if (st.people.length) renderPeople();
+  try {
+    const r = await api('whPeople', {});
+    st.people = r.people || [];
+    ls('wh_people', JSON.stringify(st.people));
+    renderPeople();
+  } catch (err) {
+    if (!st.people.length) $('people').innerHTML = '<div class="empty" style="grid-column:1/-1">' + esc(arErr(err)) + '<br><br><button class="btn ghost" onclick="loadPeople()">جرّب تاني</button></div>';
+  }
+}
+function renderPeople() {
+  const q = key($('pq').value);
+  const list = (st.people || []).filter(p => !q || key(p.name).indexOf(q) >= 0);
+  $('people').innerHTML = list.length ? list.map(p => '<button class="pp" data-name="' + esc(p.name) + '">' + avatar(p.name, p.photo) +
+    '<span class="nm">' + esc(p.name) + '</span>' + (bioOf(p.name) ? '<span class="fp">بالبصمة</span>' : '') + '</button>').join('')
+    : '<div class="empty" style="grid-column:1/-1">' + (q ? 'مفيش اسم كده' : 'لسه مفيش موظفين متسجلين - كلم المدير') + '</div>';
+}
+$('pq').addEventListener('input', renderPeople);
+$('people').addEventListener('click', e => { const b = e.target.closest('.pp'); if (b) loginSheet(b.dataset.name); });
+function loginSheet(name) {
+  const p = (st.people || []).find(x => x.name === name) || { name: name };
+  const bio = bioOf(name);
+  const bg = sheet('<div class="lsheet">' + avatar(name, p.photo, 'big') + '<h3>' + esc(name) + '</h3>' +
+    (bio ? '<button class="fpbtn" id="lFp">' + FP_ICO + 'ادخل بالبصمة</button><div class="note">أو اكتب كلمة السر</div>' : '') +
+    '<div class="field" style="margin-top:10px"><input id="lPass" type="password" autocomplete="current-password" placeholder="كلمة السر" aria-label="كلمة السر"></div>' +
+    '<button class="btn block" id="lBtn">دخول</button><div class="err" id="lErr"></div></div>');
+  const go = async (pass, viaBio) => {
+    $('lErr').textContent = ''; $('lBtn').disabled = true; $('lBtn').textContent = 'بيدخل...';
+    try {
+      ls('wh_email', name); ls('wh_pass', pass);
+      const u = await api('whLogin', {});
+      bg.remove();
+      afterLogin(u);
+      if (!viaBio && !bioOf(name) && await bioAvailable() && ls('wh_bio_no_' + key(name)) !== '1') {
+        setTimeout(() => offerBio(name, pass), 500);
+      } else if (bio && !viaBio && bio.p !== pass) ls(bioKey(name), JSON.stringify({ id: bio.id, p: pass }));
+    } catch (err) {
+      ls('wh_pass', null);
+      $('lErr').textContent = arErr(err);
+      if (viaBio && /كلمة السر/.test(err.message)) { ls(bioKey(name), null); $('lErr').textContent = 'كلمة السر اتغيرت - اكتب الجديدة'; }
+    } finally { if ($('lBtn')) { $('lBtn').disabled = false; $('lBtn').textContent = 'دخول'; } }
+  };
+  $('lBtn').onclick = () => { const v = $('lPass').value.trim(); if (!v) return $('lErr').textContent = 'اكتب كلمة السر'; go(v, false); };
+  $('lPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('lBtn').click(); });
+  if (bio) {
+    const fp = async () => { try { go(await bioCheck(name), true); } catch (e) { $('lErr').textContent = bioErr(e); } };
+    $('lFp').onclick = fp;
+    fp();
+  } else setTimeout(() => $('lPass').focus(), 80);
+}
+function offerBio(name, pass) {
+  const bg = sheet('<div class="lsheet"><div class="fpbtn" style="cursor:default">' + FP_ICO + '</div><h3>تدخل بالبصمة المرة الجاية؟</h3>' +
+    '<div class="sub">بدل ما تكتب كلمة السر كل مرة - على الموبايل ده بس</div>' +
+    '<button class="btn ok block" id="bYes">أيوه فعّل البصمة</button><button class="btn ghost block" id="bNo">لأ، شكراً</button></div>');
+  bg.querySelector('#bYes').onclick = async () => {
+    try { await bioEnroll(name, pass); bg.remove(); toast('البصمة اتفعلت ✓', 'ok'); }
+    catch (e) { bg.remove(); toast(bioErr(e), 'bad'); }
+  };
+  bg.querySelector('#bNo').onclick = () => { ls('wh_bio_no_' + key(name), '1'); bg.remove(); };
+}
+function showLogin() { show('login'); $('pq').value = ''; loadPeople(); }
+function paintMe() {
+  const u = st.user || {};
+  $('btnMe').innerHTML = avatar(u.name || '', u.photo || '', 'sm');
+}
 function afterLogin(u) {
   st.user = u; ls('wh_user', JSON.stringify(u));
+  paintMe();
   $('hello').textContent = 'أهلاً، ' + (u.name || '');
   const tabs = [];
   if (u.prep) tabs.push(['prep', 'التحضير']);
@@ -506,6 +612,72 @@ function afterLogin(u) {
   show('home');
   loadOrders();
 }
+
+// ---------- حسابي: الصورة وكلمة السر والبصمة والخروج ----------
+$('btnMe').onclick = async () => {
+  const u = st.user || {};
+  const bio = bioOf(u.name), canBio = await bioAvailable();
+  const bg = sheet('<div class="lsheet"><button id="meAv" style="border:0;background:none;cursor:pointer" aria-label="تغيير الصورة">' + avatar(u.name, u.photo, 'big') + '</button>' +
+    '<h3>' + esc(u.name) + '</h3><div style="display:flex;gap:8px;justify-content:center;margin:6px 0">' +
+    '<button class="btn sm ghost" id="meC">صوّر نفسك</button><button class="btn sm ghost" id="meG">صورة من المعرض</button></div>' +
+    '<hr class="hr"><h3>تغيير كلمة السر</h3>' +
+    '<div class="field"><input id="pOld" type="password" placeholder="كلمة السر الحالية" aria-label="كلمة السر الحالية"></div>' +
+    '<div class="field"><input id="pNew" type="password" placeholder="كلمة السر الجديدة" aria-label="كلمة السر الجديدة"></div>' +
+    '<div class="field"><input id="pNew2" type="password" placeholder="اكتب الجديدة تاني" aria-label="تأكيد كلمة السر الجديدة"></div>' +
+    '<button class="btn block" id="pSave">حفظ كلمة السر</button><div class="err" id="pErr"></div>' +
+    (canBio ? '<hr class="hr"><button class="btn ' + (bio ? 'danger' : 'ok') + ' block" id="meBio">' + (bio ? 'إلغاء الدخول بالبصمة' : 'تفعيل الدخول بالبصمة') + '</button>' : '') +
+    '<hr class="hr"><button class="btn danger block" id="meOut">خروج من التطبيق</button></div>');
+  bg.querySelector('#meC').onclick = () => { $('meCam').value = ''; $('meCam').click(); };
+  bg.querySelector('#meG').onclick = () => { $('meGal').value = ''; $('meGal').click(); };
+  bg.querySelector('#meAv').onclick = () => { $('meGal').value = ''; $('meGal').click(); };
+  bg.querySelector('#pSave').onclick = async () => {
+    const o = $('pOld').value.trim(), n = $('pNew').value.trim();
+    $('pErr').textContent = '';
+    if (!o || !n) return $('pErr').textContent = 'اكتب كلمة السر الحالية والجديدة';
+    if (n !== $('pNew2').value.trim()) return $('pErr').textContent = 'الجديدة مش زي اللي كتبتها تاني';
+    try {
+      await api('whPass', { password: o, newPass: n });
+      ls('wh_pass', n);
+      const b = bioOf(u.name); if (b) ls(bioKey(u.name), JSON.stringify({ id: b.id, p: n }));
+      bg.remove(); toast('كلمة السر اتغيرت ✓', 'ok');
+    } catch (err) { $('pErr').textContent = arErr(err); }
+  };
+  const bb = bg.querySelector('#meBio');
+  if (bb) bb.onclick = async () => {
+    if (bio) { ls(bioKey(u.name), null); bg.remove(); return toast('الدخول بالبصمة اتلغى على الموبايل ده', 'ok'); }
+    try { await bioEnroll(u.name, ls('wh_pass') || ''); ls('wh_bio_no_' + key(u.name), null); bg.remove(); toast('البصمة اتفعلت ✓', 'ok'); }
+    catch (e) { toast(bioErr(e), 'bad'); }
+  };
+  bg.querySelector('#meOut').onclick = () => {
+    bg.remove();
+    ['wh_pass', 'wh_user'].forEach(k => ls(k, null));
+    st.user = null; showLogin();
+  };
+};
+async function setMyPhoto(e) {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  document.querySelectorAll('.sheet-bg').forEach(x => x.remove());
+  toast('بيرفع الصورة...');
+  try {
+    const data = await squareShot(f, 360);
+    const r = await api('whMyPhoto', { image: data });
+    st.user.photo = r.photo; ls('wh_user', JSON.stringify(st.user)); paintMe();
+    ls('wh_people', null);
+    toast('الصورة اتحفظت ✓', 'ok');
+  } catch (err) { toast(arErr(err), 'bad'); }
+}
+$('meCam').addEventListener('change', setMyPhoto);
+$('meGal').addEventListener('change', setMyPhoto);
+async function squareShot(file, size) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error('الصورة مش واضحة - اختار صورة تانية')); i.src = url; });
+    const m = Math.min(img.width, img.height);
+    const c = document.createElement('canvas'); c.width = size; c.height = size;
+    c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, size, size);
+    return c.toDataURL('image/jpeg', 0.8);
+  } finally { URL.revokeObjectURL(url); }
+}
 $('tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) setTab(b.dataset.t); });
 function setTab(t) {
   st.tab = t; ls('wh_tab', t);
@@ -518,11 +690,6 @@ function setTab(t) {
   if (t === 'inv' && !$('dFrom').value) { const d = new Date().toISOString().slice(0, 10); $('dFrom').value = d; $('dTo').value = d; }
   renderOrders();
 }
-$('btnOut').onclick = () => {
-  if (!confirm('عايز تخرج من التطبيق؟')) return;
-  ['wh_pass', 'wh_user'].forEach(k => ls(k, null));
-  st.user = null; showLogin();
-};
 $('btnRefresh').onclick = () => loadOrders();
 
 // ---------- قايمة الطلبيات ----------
@@ -1192,7 +1359,7 @@ window.addEventListener('beforeunload', () => { if (st.dirty) doSave(); });
   const u = ls('wh_user');
   if (u && ls('wh_pass')) {
     try { afterLogin(JSON.parse(u)); } catch (e) { showLogin(); }
-    api('whLogin', {}).then(r => { st.user = r; ls('wh_user', JSON.stringify(r)); })
+    api('whLogin', {}).then(r => { st.user = r; ls('wh_user', JSON.stringify(r)); paintMe(); })
       .catch(err => { if (err.auth) { toast(arErr(err), 'bad'); ls('wh_pass', null); showLogin(); } });
   } else showLogin();
 })();
