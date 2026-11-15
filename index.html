@@ -3230,6 +3230,8 @@ function pushCmpHtml(p) {
     '<tr><th style="text-align:start"></th><th>الجرد</th><th>البرنامج</th><th>الفرق</th></tr>' +
     row('عدد الأصناف (اللي ليها كمية)', c.sheet.n, c.pos.n, num) + row('إجمالي الكميات', c.sheet.qty, c.pos.qty, num) +
     row('إجمالي القيمة بسعر الشراء', c.sheet.value, c.pos.value, money) + '</table>';
+  if (p.srvN) h += '<div style="margin-top:8px;background:#FFF8E1;border-radius:10px;padding:6px 10px">🧹 <b>' + p.srvN + ' صنف «خدمة» اتجردوا بالغلط</b> - الخدمة ما بتتجردش، فاترفعوا صفر في البرنامج ومش داخلين في المقارنة:<br><small>' +
+    esc((p.srvList || []).join('، ')) + '</small></div>';
   const R = p.report || [];
   if (R.length) {
     h += '<div style="margin-top:8px"><b>📋 الأصناف اللي فيها فرق: ' + num(p.reportN || R.length) + '</b> <small>(الأكبر تأثير الأول)</small>' +
