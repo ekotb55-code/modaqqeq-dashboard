@@ -138,7 +138,7 @@
   /* ---------- الجولة الإرشادية ---------- */
   #tourMask { position: fixed; inset: 0; z-index: 60; }
   #tourHole { position: fixed; border-radius: 14px; box-shadow: 0 0 0 9999px rgba(8,25,45,.68); transition: all .25s ease; pointer-events: none; z-index: 61; outline: 3px solid #FFD54F; }
-  #tourTip { position: fixed; z-index: 62; background: #fff; border-radius: 16px; padding: 16px 18px; width: min(380px, calc(100vw - 32px)); box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+  #tourTip { position: fixed; z-index: 62; background: #fff; border-radius: 16px; padding: 16px 18px; width: min(380px, calc(100vw - 32px)); box-shadow: 0 10px 40px rgba(0,0,0,.3); max-height: calc(100vh - 24px); overflow-y: auto; }
   #tourTip h4 { margin: 0 0 6px; color: var(--navy); font-size: 18px; }
   #tourTip p { margin: 0 0 12px; line-height: 1.8; white-space: pre-line; }
   #tourTip .tb { display: flex; gap: 8px; align-items: center; }
@@ -2162,7 +2162,7 @@ function ordBadge(s) {
 function ordRender() {
   if (!ordData) return;
   const D = ordData;
-  const cards = D.sched.map(s => {
+  const cards = D.sched.map((s, ci) => {
     const L = s.last;
     let body = '<div style="color:var(--muted);font-size:13px">لسه ما اتعملش ولا طلب</div>';
     if (L) {
@@ -2176,20 +2176,21 @@ function ordRender() {
         (L['الحالة'] === 'تم' ? (L['راجعه'] ? '<div style="margin-top:6px;font-size:12.5px;color:var(--green)">✔ راجعه ' + esc(L['راجعه']) + ' - ' + ordTime(L['وقت المراجعة']) + '</div>'
           : '<button class="btn green" style="margin-top:8px;padding:6px 14px;font-size:13px" onclick="ordReview(\'' + esc(L['المعرف']) + '\')">✔ اتراجع</button>') : '');
     }
-    return '<div class="pane" style="min-height:0;padding:14px;border-inline-start:5px solid ' + (!s.active ? '#B0B8C4' : L && L['الحالة'] === 'فشل' ? 'var(--red)' : L && L['الحالة'] === 'تم' ? 'var(--green)' : 'var(--blue)') + '">' +
+    return '<div class="pane' + (ci === 0 ? '" id="ordCard0' : '') + '" style="min-height:0;padding:14px;border-inline-start:5px solid ' + (!s.active ? '#B0B8C4' : L && L['الحالة'] === 'فشل' ? 'var(--red)' : L && L['الحالة'] === 'تم' ? 'var(--green)' : 'var(--blue)') + '">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0;color:var(--navy)">🏪 ' + esc(s.branch) + '</h3>' +
-      '<label style="font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ' + (s.active ? 'checked' : '') + ' onchange="ordToggle(\'' + esc(s.branch) + '\',this.checked)"> شغال</label></div>' +
-      '<div style="font-size:13px;color:var(--muted);margin:4px 0 10px">📅 ' + esc(s.days) + ' - ' + esc(s.time) + ' &nbsp;•&nbsp; بيان ' + esc(s.stat) + '<br>' +
-      (s.active ? '⏭️ الجاي: <b style="color:var(--text)">' + ordTime(s.next) + '</b>' : '⏸️ متوقف') + '</div>' + body +
-      '<div style="margin-top:10px"><button class="btn ghost" style="padding:6px 12px;font-size:13px" onclick="ordRunNow(\'' + esc(s.branch) + '\')">▶ اعمله دلوقتي</button></div></div>';
+      '<label class="ordSw" style="font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ' + (s.active ? 'checked' : '') + ' onchange="ordToggle(\'' + esc(s.branch) + '\',this.checked)"> شغال</label></div>' +
+      '<div class="ordSch" style="font-size:13px;color:var(--muted);margin:4px 0 10px">📅 ' + esc(s.days) + ' - ' + esc(s.time) + ' &nbsp;•&nbsp; بيان ' + esc(s.stat) + '<br>' +
+      (s.active ? '<span class="ordNext">⏭️ الجاي: <b style="color:var(--text)">' + ordTime(s.next) + '</b></span>' : '<span class="ordNext">⏸️ متوقف</span>') + '</div><div class="ordLast">' + body + '</div>' +
+      '<div style="margin-top:10px"><button class="btn ghost ordRun" style="padding:6px 12px;font-size:13px" onclick="ordRunNow(\'' + esc(s.branch) + '\')">▶ اعمله دلوقتي</button></div></div>';
   }).join('');
   const rows = D.log.map(r => '<tr><td>' + esc(r['الفرع']) + '</td><td>' + esc(r['الموعد']) + '</td><td>' + esc(r['النوع']) + '</td><td>' + ordBadge(r['الحالة']) + '</td><td>' + esc(r['رقم الطلب']) + '</td><td>' + (r['عدد الأصناف'] ? num(r['عدد الأصناف']) : '') + '</td><td>' + (r['الإجمالي'] ? money(r['الإجمالي']) : '') + '</td><td style="font-size:12px;color:var(--muted)">' + esc(r['ملاحظة']) + '</td><td>' + esc(r['راجعه']) + '</td></tr>').join('');
   $('pageOrd').innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px"><div><h2 style="margin:0;color:var(--navy)">🔁 الطلبات الدورية من الموزع الرئيسي</h2>' +
     '<div style="color:var(--muted);font-size:13px;margin-top:4px">بتتعمل لوحدها في مواعيدها: نوع الفاتورة «الكل» والبيان الإحصائي بتاع الفرع، والأصناف المؤرشفة بتتشال، وبعدين بتتبعت. بعد 10 دقايق بنتأكد إن الطلب اتسجل.</div></div>' +
-    '<button class="btn soft" style="padding:8px 14px" onclick="ordLoad()">🔄 تحديث</button></div>' +
-    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px">' + cards + '</div>' +
-    '<div class="pane" style="margin-top:14px;min-height:0"><h3 style="margin-top:0;color:var(--navy)">📜 السجل</h3>' +
+    '<div style="display:flex;gap:8px"><button class="btn soft" id="ordHelp" style="padding:8px 14px" onclick="ordTour(true)">؟ شرح الصفحة</button><button class="btn soft" id="ordRefresh" style="padding:8px 14px" onclick="ordLoad()">🔄 تحديث</button></div></div>' +
+    '<div id="ordGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px">' + cards + '</div>' +
+    '<div class="pane" id="ordLog" style="margin-top:14px;min-height:0"><h3 style="margin-top:0;color:var(--navy)">📜 السجل</h3>' +
     (rows ? '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px" class="ordlog"><tr><th>الفرع</th><th>الموعد</th><th>النوع</th><th>الحالة</th><th>رقم الطلب</th><th>الأصناف</th><th>الإجمالي</th><th>ملاحظة</th><th>راجعه</th></tr>' + rows + '</table></div>' : '<div class="empty" style="padding:20px">لسه مافيش طلبات</div>') + '</div>';
+  if (!ordTourAuto && !ls('ordTour1')) { ordTourAuto = true; setTimeout(() => ordTour(false), 700); }
 }
 async function ordRunNow(branch) {
   if (!confirm('هيتعمل دلوقتي طلب جديد لـ ' + branch + ' ويتبعت للموزع الرئيسي على طول.\nمتأكد؟')) return;
@@ -2719,6 +2720,7 @@ function tourSteps() {
     { el: '#navStores', t: 'المحلات 🏪', b: 'لوحة زي تريلو: عمود لكل محل وكل فاتورة كارت بالأحداث بتاعتها بالترتيب. ومنها تفتح شات الفرع العام.' },
     { el: '#navPerf', t: 'الأداء 🏆', b: 'سرعة الاستلام والإدخال لكل موظف، تقييم الجودة، ونسبة الفواتير اللي عدّت من أول مرة.' },
     { el: '#navRep', t: 'تقارير الفروع 📊', b: 'تقرير PDF لأي فرع في أي فترة.' },
+    { el: '#navOrd', t: 'الطلبات الدورية 🔁', b: 'طلبات الموزع الرئيسي اللي بتتعمل لوحدها للفروع في مواعيدها، وتتابع منها اتعملت ولا لأ.\nأول ما تفتحها هتلاقي ليها جولة شرح لوحدها.' },
     { el: '#navTeam', t: 'دردشة الفريق 💬', b: 'زي واتساب بين فريق الدعم والجودة: جروب للفريق كله ورسايل خاصة.\nاكتب @ وبعدها اسم زميلك علشان تعمل له منشن (هيوصله تنبيه)، وتقدر تبعت صور وفيديو وملفات ورسالة صوتية 🎤، وترد على أي رسالة ↩️.' },
     { el: '#bellBtn', t: 'الإشعارات والصوت 🔔', b: 'فعّلها مرة واحدة: هيرن مع كل فاتورة جديدة أو استعجال، وكل 5 دقايق طول ما فيه فواتير مستنية.' },
     { el: '#who', t: 'صورتك 🙂', b: 'دوس على اسمك علشان تحط صورتك - بتظهر جنب رسايلك في الشات.' },
@@ -2727,8 +2729,11 @@ function tourSteps() {
   return st;
 }
 let tourI = 0, tourL = [];
+let tourKey = 'dashTour1';
 function startTour(force) {
+  if ($('pageOrd') && !$('pageOrd').classList.contains('hidden')) return ordTour(force);
   if (!force && ls('dashTour1')) return;
+  tourKey = 'dashTour1';
   if (!$('pageInv') || $('app').classList.contains('hidden')) return;
   page('inv');
   tourL = tourSteps(); tourI = 0;
@@ -2779,9 +2784,66 @@ function tourPos() {
   Object.assign(tip.style, { left: x + 'px', top: y + 'px' });
 }
 function endTour() {
-  ls('dashTour1', '1');
+  ls(tourKey, '1');
   ['tourMask', 'tourHole', 'tourTip'].forEach(id => { const e = $(id); if (e) e.remove(); });
   window.removeEventListener('resize', tourPos);
+}
+
+// ---------- جولة صفحة الطلبات الدورية ----------
+let ordTourAuto = false;
+const ORD_STATES_HTML = '<div class="flowmap">' +
+  '<div>' + ordBadge('مستني') + ' الميعاد جه أو حد داس «اعمله دلوقتي» والطلب في الطابور - هيبدأ خلال 10 دقايق بالكتير</div>' +
+  '<div>' + ordBadge('شغال') + ' دخل السيستم وبيحمّل الأصناف وبيبعت الطلب دلوقتي (بياخد من دقيقة لـ 3)</div>' +
+  '<div>' + ordBadge('اتبعت - بيتأكد') + ' داس إرسال، وبعد 10 دقايق هيدوّر على الطلب في «قايمة الطلبات» ويجيب رقمه</div>' +
+  '<div>' + ordBadge('تم') + ' لقى الطلب في السيستم وسجّل رقمه وعدد أصنافه وإجماليه ✔</div>' +
+  '<div>' + ordBadge('فشل') + ' حصلت مشكلة - السبب مكتوب تحتها بالأحمر</div></div>';
+const ORD_FAIL_HTML = '<div class="flowmap">' +
+  '<div>1️⃣ اقرا الملاحظة الحمرا اللي تحت الحالة</div>' +
+  '<div>2️⃣ لو مكتوب «الدخول فشل» ← الباسورد أو الرابط اتغيّر: صلّحه في شيت دليل الموظفين تاب «ربط برامج البيع»</div>' +
+  '<div>3️⃣ لو مكتوب «مش متأكد إنه اتبعت» أو «ما لقيناش الطلب» ← <b>ادخل السيستم الأول</b>: المخزن ← قايمة الطلبات، وشوف فيه طلب بتاريخ النهارده ولا لأ</div>' +
+  '<div>4️⃣ لو الطلب موجود ← <b>متعملوش تاني</b> علشان مايتكررش، وبلّغ المسؤول</div>' +
+  '<div>5️⃣ لو مش موجود ← دوس «▶ اعمله دلوقتي»</div>' +
+  '<div>ℹ️ لو السيستم وقع لحظياً، الطلب بيتعاد لوحده لحد 3 محاولات قبل ما يكتبه فشل</div></div>';
+const ORD_REVIEW_HTML = '<div class="flowmap">' +
+  '<div>🔍 افتح الطلب في السيستم بالرقم اللي في الكارت</div>' +
+  '<div>📦 عدد الأصناف والإجمالي قريبين من الطلبات اللي قبله للفرع ده؟ (قارن من السجل تحت)</div>' +
+  '<div>⚠️ فيه صنف كميته كبيرة بشكل غريب (مثلاً كرتونة بدل قطعة)؟</div>' +
+  '<div>🗃️ فيه صنف اسمه بيبدأ بـ «ييي» (مؤرشف) طالع بكمية؟ المفروض ما يحصلش</div>' +
+  '<div>✅ كله تمام ← دوس «✔ اتراجع» في الكارت</div></div>';
+const ORD_COLS_HTML = '<div class="flowmap">' +
+  '<div><b>الفرع</b>: الفرع اللي اتعمله الطلب</div>' +
+  '<div><b>الموعد</b>: الميعاد اللي الطلب اتعمل علشانه (أو «يدوي» ووقته)</div>' +
+  '<div><b>النوع</b>: «تلقائي» = في ميعاده، «يدوي - الاسم» = حد داس اعمله دلوقتي</div>' +
+  '<div><b>الحالة</b> و<b>رقم الطلب</b>: زي الكارت بالظبط</div>' +
+  '<div><b>الأصناف</b> و<b>الإجمالي</b>: عدد الأصناف اللي ليها كمية وإجمالي سعر الشراء</div>' +
+  '<div><b>ملاحظة</b>: سبب الفشل، أو عدد الأصناف المؤرشفة اللي اتشالت</div>' +
+  '<div><b>راجعه</b>: اسم اللي داس «اتراجع»</div></div>';
+function ordTourSteps() {
+  return [
+    { t: 'أهلاً ' + me + ' 👋', b: 'دي جولة صفحة «الطلبات الدورية».\nالصفحة دي بتتابع الطلبات اللي بنعملها من «الموزع الرئيسي» لفروع أبو سمرة بشكل دوري.\nالطلب ده بيتعمل لوحده من غير ما حد يدخل السيستم: بيدخل على الفرع، يفتح «المخزن ← طلب جديد من الموزع الرئيسي»، يختار نوع الفاتورة والبيان، ويدوس «إرسال».\nكمل معايا خطوة خطوة 👇' },
+    { t: 'المواعيد 📅', b: '• فرع مايو، المرج، ارض الجمعية، عزبة 1، التبين، فرع الحوامدية، مكي:\n   كل سبت وتلات الساعة 11 بالليل - بيان إحصائي عن شهر.\n• ابوتيج:\n   كل تلات الساعة 11 بالليل - بيان إحصائي عن شهرين.\n• كلهم نوع الفاتورة «الكل».\nالسيستم بيصحى كل 10 دقايق، فالطلب ممكن يبدأ من 11:00 لحد 11:10 تقريباً. ولو اتأخر لأي سبب بيلحقه طول ما لسه مافاتش 6 ساعات على ميعاده.' },
+    { t: 'إيه اللي بيتبعت بالظبط؟ 📦', b: 'الكميات اللي السيستم نفسه بيقترحها في خانة «المطلوب» لما تختار البيان الإحصائي (شهر أو شهرين) - زي ما هي من غير تعديل.\nالأصناف المؤرشفة (اللي اسمها بيبدأ بـ «ييي») بتتصفّر ومش بتظهر في الطلب خالص.\nوالأصناف اللي كميتها صفر مش بتتبعت.' },
+    { el: '#ordGrid', t: 'كروت الفروع 🏪', b: 'كل كارت = فرع.\nلون الشريط اللي على جنب الكارت:\n🔵 أزرق = شغال عادي ولسه مافيش نتيجة نهائية\n🟢 أخضر = آخر طلب تم\n🔴 أحمر = آخر طلب فشل ومحتاج تدخل\n⚪ رمادي = الفرع متوقف' },
+    { el: '#ordCard0 .ordSch', t: 'ميعاد الفرع ⏭️', b: 'هنا أيام الفرع وساعته ونوع البيان (شهر أو شهرين).\nوتحتها «الجاي» = إمتى الطلب الجاي هيتعمل بالظبط.\nلو مكتوب «⏸️ متوقف» يبقى الفرع مقفول ومش هيتعمله طلب.' },
+    { el: '#ordCard0 .ordSw', t: 'مفتاح «شغال» 🔘', b: 'شيل العلامة علشان توقف الطلبات الدورية للفرع ده (مثلاً الفرع مقفول للجرد، أو في أجازة، أو صاحبه قال مش عايز طلب الأسبوع ده).\nرجّع العلامة علشان يرجع يشتغل في مواعيده.\n⚠️ التوقيف بيوقف المواعيد التلقائية بس، و«اعمله دلوقتي» لسه شغال.' },
+    { el: '#ordCard0 .ordLast', t: 'آخر طلب للفرع 🧾', b: 'هنا حالة آخر طلب اتعمل للفرع، ووقت ما بدأ أو اتبعت.\nولما يتم بيظهر:\n🧾 رقم الطلب في السيستم\n📦 عدد الأصناف اللي ليها كمية\n💰 الإجمالي بسعر الشراء\nوتقدر تتأكد منهم في السيستم من: المخزن ← قايمة الطلبات.' },
+    { t: 'معنى كل حالة 🚦', b: 'الطلب بيعدّي على المراحل دي بالترتيب:', html: ORD_STATES_HTML },
+    { t: 'لو الحالة «فشل» ❌ تعمل إيه؟', b: 'امشي على الخطوات دي بالترتيب ومتستعجلش:', html: ORD_FAIL_HTML },
+    { el: '#ordCard0 .ordRun', t: 'زرار «▶ اعمله دلوقتي»', b: 'بيعمل طلب حقيقي للفرع ده ويبعته للموزع الرئيسي على طول (هيسألك متأكد ولا لأ الأول).\nاستخدمه لما:\n• طلب فشل واتأكدت إنه مش موجود في السيستم\n• الفرع محتاج طلب برة مواعيده\nمش هيشتغل لو فيه طلب للفرع ده لسه «مستني» أو «شغال» أو «بيتأكد» - علشان الطلب مايتكررش.\nاسمك بيتسجل في السجل إنك اللي عملته.' },
+    { t: 'زرار «✔ اتراجع»', b: 'بيظهر في الكارت بعد ما الطلب يبقى «تم».\nمطلوب من الدعم يراجع كل طلب ويدوس عليه - اسمك ووقت المراجعة بيتسجلوا وبيظهروا مكانه بالأخضر.\nقبل ما تدوس، راجع الحاجات دي:', html: ORD_REVIEW_HTML },
+    { el: '#ordLog', t: 'السجل 📜', b: 'آخر 60 طلب لكل الفروع، الأحدث فوق.\nمعنى كل عمود:', html: ORD_COLS_HTML },
+    { el: '#ordRefresh', t: 'التحديث 🔄', b: 'الصفحة بتحدّث نفسها لوحدها كل 30 ثانية طول ما هي مفتوحة.\nوالزرار ده لو عايز تحدّث حالاً.\nكل ده متسجّل كمان في شيت «الطلبات الدورية - مدقق».' },
+    { el: '#ordHelp', t: 'خلصنا ✅', b: 'تقدر تعيد الجولة دي في أي وقت من زرار «؟ شرح الصفحة» هنا، أو من زرار ؟ اللي فوق وإنت في الصفحة دي.' }
+  ];
+}
+function ordTour(force) {
+  if (!force && ls('ordTour1')) return;
+  if ($('pageOrd').classList.contains('hidden') || $('app').classList.contains('hidden')) return;
+  tourKey = 'ordTour1';
+  tourL = ordTourSteps(); tourI = 0;
+  if (!$('tourMask')) document.body.insertAdjacentHTML('beforeend', '<div id="tourMask"></div><div id="tourHole"></div><div id="tourTip"></div>');
+  tourShow(0);
+  window.addEventListener('resize', tourPos);
 }
 
 
