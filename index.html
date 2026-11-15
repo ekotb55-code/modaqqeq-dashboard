@@ -224,6 +224,10 @@
   .bcard.wocard.on { border-inline-start-color: #2BB45A; }
   .bcard.wocard .bacts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
   .bcard.wocard .bacts .btn { padding: 5px 10px; font-size: 12.5px; }
+  .shr { border: 1.5px solid #CFE0F2; background: #fff; color: #1460A8; border-radius: 10px; padding: 3px 9px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .shr:hover { background: #EAF3FD; }
+  .card.goflash, .bcard.goflash { animation: goflash 1.2s 3; }
+  @keyframes goflash { 50% { box-shadow: 0 0 0 4px #1479D3; } }
   .bchat.wobtn { color: #9A5B00; margin-inline-start: 4px; }
   #navStores.woalarm { background: #FDECEC; color: #C62828; animation: woblink 1s infinite alternate; }
   .wotbl { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -972,7 +976,7 @@ function showApp() {
   renderWho();
   attBeat_();
   updateBell();
-  loadList().then(() => { const g = new URLSearchParams(location.search).get('go'); if (g) { try { noteGo(JSON.parse(g)); } catch (e) {} history.replaceState(null, '', location.pathname + '?app=1'); } });
+  loadList().then(() => { const g = new URLSearchParams(location.search).get('go'); if (g) { try { noteGo(goParse(g)); } catch (e) {} history.replaceState(null, '', location.pathname + '?app=1'); } });
   setInterval(() => loadList(true), 20000);
   isStart();
   woStart();
@@ -1454,7 +1458,7 @@ const TK_EV = { create: '🆕', pick: '✋', assign: '📌', comment: '💬', so
 function renderTk() {
   const v = curTk.ticket, T = curTk.type, mine = v.assigneeName === me, open = tkOpen(v), boss = myRole === 'مدير', qa = isQA();
   let h = '<button class="btn ghost back" onclick="closeInv()">→ رجوع للقايمة</button>';
-  h += '<div class="dhead"><h2>🛠️ ' + esc(v.title) + '</h2>' + (PRIO_TAG[v.priority] || '') + tkBadge(v) + tkTimer(Object.assign({ kind: 'tk' }, v)) + '<span class="sp"></span>' + '</div>';
+  h += '<div class="dhead"><h2>🛠️ ' + esc(v.title) + '</h2>' + (PRIO_TAG[v.priority] || '') + tkBadge(v) + tkTimer(Object.assign({ kind: 'tk' }, v)) + '<span class="sp"></span>' + shareBtn('tk', v.id, '🛠️ تذكرة: ' + v.title + ' - فرع ' + v.store) + '</div>';
   h += '<div class="info">' + i('المحل', v.store + ((Number(v.storePrio) || 1) > 1 ? ' ' + '⭐'.repeat(v.storePrio - 1) : '')) + i('اللي طلب', v.user) + i('وقت الطلب', dt(v.createdAt)) +
     (v.scheduledAt ? i('الميعاد', dt(v.scheduledAt)) : '') + i('مدة الحل', durTxt(v.resolveMin)) +
     (v.assigneeName ? i('المسؤول', v.assigneeName + (v.pickedAt ? ' - استلمها ' + dt(v.pickedAt) : '')) : '') +
@@ -1619,7 +1623,7 @@ function renderDetail() {
   const v = cur.invoice, L = cur.lines;
   const canWork = (v.status === ST_NEW || v.status === ST_WORK || !v.status) && !isQA();
   let h = '<button class="btn ghost back" onclick="closeInv()">→ رجوع للقايمة</button>';
-  h += '<div class="dhead"><h2>' + esc(v.supplier) + '</h2>' + vbadge(v) + timerHtml(v) + '<span class="sp"></span>' +
+  h += '<div class="dhead"><h2>' + esc(v.supplier) + '</h2>' + vbadge(v) + timerHtml(v) + '<span class="sp"></span>' + shareBtn('inv', v.id, '🧾 فاتورة ' + v.supplier + ' - فرع ' + v.store) +
     (v.groupUrl ? '<a class="wabtn" href="' + esc(v.groupUrl) + '" target="_blank" rel="noopener">💬 جروب الفرع</a>' : '') +
     (v.systemUrl ? '<a class="sysbtn" href="' + esc(v.systemUrl) + '" target="_blank" rel="noopener">🔗 افتح سيستم ' + esc(v.store) + '</a>' : '') + '</div>';
   h += '<div class="info">' +
@@ -2917,8 +2921,44 @@ function showNote(title, opts, go) {
   if (swReg && swReg.showNotification) return swReg.showNotification(title, opts).catch(() => {});
   try { const n = new Notification(title, opts); n.onclick = () => { window.focus(); noteGo(go || {}); n.close(); }; } catch (e) {}
 }
+// ---------- مشاركة فاتورة / تذكرة / تاسك / طلب جرد بلينك (بيفتح الداش بورد عليها على طول) ----------
+function goParse(g) {
+  g = String(g || '');
+  if (g.charAt(0) === '{') return JSON.parse(g);
+  const i = g.indexOf(':'), k = g.slice(0, i), id = g.slice(i + 1), o = {};
+  if (i > 0 && ['inv', 'tk', 'task', 'jr'].indexOf(k) !== -1 && id) o[k] = id;
+  return o;
+}
+function shareLink(kind, id) { return location.origin + location.pathname + '?go=' + kind + ':' + encodeURIComponent(id); }
+function shareBtn(kind, id, title) {
+  return '<button class="shr" title="شارك اللينك (واتساب مثلاً)" onclick="event.stopPropagation();shareIt(\'' + kind + '\',\'' + esc(id).replace(/'/g, "\\'") + '\',decodeURIComponent(\'' + encodeURIComponent(title).replace(/'/g, '%27') + '\'))">🔗 شير</button>';
+}
+async function shareIt(kind, id, title) {
+  const url = shareLink(kind, id);
+  // الموبايل: قايمة المشاركة (واتساب...) - الكمبيوتر: نسخ
+  if (navigator.share && noHover()) {
+    try { await navigator.share({ title: 'مدقق', text: title, url }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(title + '\n' + url); toast('اللينك اتنسخ ✅ الزقه في واتساب'); }
+  catch (e) { window.prompt('انسخ اللينك ده:', url); }
+}
+// التاسك وطلب الجرد مالهمش صفحة: بنفتح «التاسكات» ونفتح الكارت بتاعه
+function goCard(kind, id) {
+  page('inv');
+  const find = () => document.getElementById(kind + '-' + id);
+  pickTab('tasks');
+  let el = find();
+  if (!el) { pickTab('الكل'); el = find(); }
+  if (!el) return toast(kind === 'jr' ? 'طلب الجرد ده مش ظاهر - يمكن خلص أو اتلغى' : 'التاسك ده مش ظاهر - يمكن خلص');
+  el.classList.add('open', 'goflash');
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => el.classList.remove('goflash'), 4000);
+}
 function noteGo(go) {
   window.focus();
+  if (go.task) return goCard('task', go.task);
+  if (go.jr) return goCard('jr', go.jr);
   if (go.page) return page(go.page);
   if (go.team) { page('team'); if (go.team.indexOf('dm:') === 0 || go.team === 'all') setTimeout(() => openRoom(go.team), 600); return; }
   if (go.inv) { page('inv'); return openInv(go.inv); }
@@ -3445,14 +3485,14 @@ function taskCard(v, board) {
     '<div class="bm">' + (v.type === 'جرد' ? '📋 من طلب الجرد • ' : '') + 'اتعملت ' + tm(v.createdAt) + ' بواسطة ' + esc(v.createdBy) + '</div>' +
     (done ? '<div class="bm">✅ ' + esc(v.doneBy) + ' • ' + tm(v.doneAt) + (v.data && v.data.progTotal !== undefined ? ' • البرنامج ' + money(v.data.progTotal) + ' = الجرد ' + money(v.data.appTotal) : '') + '</div>' : '');
   if (!board) {
-    return '<div class="card fold" style="border-inline-start:5px solid #6C4BD8" onclick="if(!event.target.closest(\'button\'))this.classList.toggle(\'open\')">' +
+    return '<div class="card fold" id="task-' + esc(v.id) + '" style="border-inline-start:5px solid #6C4BD8" onclick="if(!event.target.closest(\'button\'))this.classList.toggle(\'open\')">' +
       '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + '</span>' + st + '</div>' +
-      '<div class="sub"><span class="lbl">تاسك:</span> 📋 ' + esc(v.title) + '</div><div class="xbody"><div class="meta">الميعاد ' + dt(v.due) + '</div>' + body + btn + '</div></div>';
+      '<div class="sub"><span class="lbl">تاسك:</span> 📋 ' + esc(v.title) + '</div><div class="xbody"><div class="meta">الميعاد ' + dt(v.due) + ' ' + shareBtn('task', v.id, '📋 تاسك: ' + v.title + ' - فرع ' + v.store) + '</div>' + body + btn + '</div></div>';
   }
   return '<div class="bcard k-task' + (done ? ' done' : '') + (late ? ' late' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
     '<div class="bt"><b><span class="kind">📋</span>' + esc(v.title) + (v.to ? ' <small style="color:#4527A0">' + esc(taskToLabel(v.to)) + '</small>' : '') + '</b>' + st + '</div>' +
     '<div class="bm">' + (done ? esc(v.doneBy) + ' • ' + tm(v.doneAt) : 'الميعاد ' + tm(v.due)) + '</div>' + btn +
-    '<div class="bx">' + body + '</div></div>';
+    '<div class="bx">' + body + '<div style="margin-top:6px">' + shareBtn('task', v.id, '📋 تاسك: ' + v.title + ' - فرع ' + v.store) + '</div></div></div>';
 }
 async function taskDone(id) {
   const v = tasks.find(x => x.id === id); if (!v) return;
@@ -3667,9 +3707,9 @@ function jrCard(v, board) {
   const stage = v.status === 'شغال' ? ['', 'التحضير', 'الفرع بيجرد', 'الفرع خلص - رفع الكميات والتقرير'][v.stage] || '' : '';
   const log = '<ul class="tl">' + (v.log || []).map(e => '<li><span>' + (e.side === 'فرع' ? '🏪' : '🎧') + '</span><span>' + esc(e.text) + (e.by ? ' - ' + esc(e.by) : '') + '</span><span class="tm">' + tm(e.at) + '</span></li>').join('') + '</ul>';
   if (!board) {
-    return '<div class="card fold" style="border-inline-start:5px solid #00897B" onclick="if(!event.target.closest(\'button\'))this.classList.toggle(\'open\')"><div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + '</span>' + st + '</div>' +
+    return '<div class="card fold" id="jr-' + esc(v.id) + '" style="border-inline-start:5px solid #00897B" onclick="if(!event.target.closest(\'button\'))this.classList.toggle(\'open\')"><div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + '</span>' + st + '</div>' +
       '<div class="sub"><span class="lbl">تاسك:</span> 📋 طلب جرد</div><div class="xbody">' +
-      '<div class="meta">الميعاد <b>' + dt(v.at) + '</b>' + (stage ? ' • ' + stage : '') + '</div>' +
+      '<div class="meta">الميعاد <b>' + dt(v.at) + '</b>' + (stage ? ' • ' + stage : '') + ' ' + shareBtn('jr', v.id, '📋 طلب جرد - فرع ' + v.store) + '</div>' +
       (v.notes ? '<div class="meta">' + esc(v.notes) + '</div>' : '') + acts + log + '</div></div>';
   }
   return '<div class="bcard k-jr' + (jrOpenSup(v) ? ' late' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
