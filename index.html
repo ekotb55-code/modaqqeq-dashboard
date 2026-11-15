@@ -3200,6 +3200,10 @@ function pushRender(r, store, cmp) {
         esc((p.dupList || []).concat(p.missList || []).join('، ')) + '</span>' : '') +
       (!ok && p.skippedValue ? '<br><small>الفرق ده فيه قيمة الأصناف اللي ما اترفعتش (' + money(p.skippedValue) + ')</small>' : '') +
       '</div>';
+    if (p.cmp) h += pushCmpHtml(p);
+    h += '<div class="bacts" style="margin-top:6px"><button class="btn soft" id="puRe">🔎 راجع تاني (من غير رفع)</button>' +
+      (p.report && p.report.length ? '<button class="btn soft" id="puCsv">⬇️ تقرير الفروق (إكسل)</button>' : '') + '</div>' +
+      '<small style="color:var(--muted)">«راجع تاني» بيقارن البرنامج بالجرد من جديد - استخدمه بعد ما تصلّح أسعار أو كميات في البرنامج.</small>';
     if ($('tP') && $('tP').value === '') { $('tP').value = prog; $('tA').value = p.sheetValue; if (cmp) cmp(); }
   }
   if (!busy && !sh.error) {
@@ -3209,7 +3213,43 @@ function pushRender(r, store, cmp) {
   }
   el.innerHTML = h;
   if ($('puGo')) $('puGo').onclick = () => pushGo(store, cmp, false);
+  if ($('puRe')) $('puRe').onclick = async () => {
+    $('puRe').disabled = true; $('puRe').textContent = '⏳ ...';
+    try { const x = await api('dPushRecheck', { token, store }, true); pushRender(x, store, cmp); toast('🔎 المراجعة هتبدأ خلال دقيقة'); }
+    catch (e) { toast(msg(e)); if ($('puRe')) { $('puRe').disabled = false; $('puRe').textContent = '🔎 راجع تاني (من غير رفع)'; } }
+  };
+  if ($('puCsv')) $('puCsv').onclick = () => pushCsv(store, r.push);
   if (busy) pushTimer = setTimeout(() => pushLoad(store, cmp), 6000);
+}
+// المقارنة: عدد الأصناف وإجمالي الكميات وإجمالي القيمة (الجرد قدام البرنامج) + أكبر الفروق
+function pushCmpHtml(p) {
+  const c = p.cmp, row = (t, a, b, f) => { const d = Math.round((b - a) * 100) / 100, ok = Math.abs(d) <= (f === money ? 1 : 0.001);
+    return '<tr><td>' + t + '</td><td><b>' + f(a) + '</b></td><td><b>' + f(b) + '</b></td><td style="color:' + (ok ? '#1A8A3E' : '#C62828') + ';font-weight:700">' + (ok ? '✅' : f(d)) + '</td></tr>'; };
+  let h = '<table style="width:100%;border-collapse:collapse;margin-top:8px;background:#fff;border-radius:10px;font-size:14px" class="tkitems">' +
+    '<tr><th style="text-align:start"></th><th>الجرد</th><th>البرنامج</th><th>الفرق</th></tr>' +
+    row('عدد الأصناف (اللي ليها كمية)', c.sheet.n, c.pos.n, num) + row('إجمالي الكميات', c.sheet.qty, c.pos.qty, num) +
+    row('إجمالي القيمة بسعر الشراء', c.sheet.value, c.pos.value, money) + '</table>';
+  const R = p.report || [];
+  if (R.length) {
+    h += '<div style="margin-top:8px"><b>📋 الأصناف اللي فيها فرق: ' + num(p.reportN || R.length) + '</b> <small>(الأكبر تأثير الأول)</small>' +
+      '<div style="max-height:260px;overflow:auto;background:#fff;border-radius:10px;margin-top:4px"><table style="width:100%;border-collapse:collapse;font-size:13px" class="tkitems">' +
+      '<tr><th style="text-align:start">الصنف</th><th>السبب</th><th>الجرد</th><th>البرنامج</th><th>التأثير</th></tr>' +
+      R.slice(0, 40).map(o => '<tr><td>' + esc(o.n) + '</td><td>' + esc(o.why) + '</td><td>' + num(o.sq) + (o.sp !== null ? ' × ' + money(o.sp) : '') + '</td><td>' +
+        (o.pq === null ? '-' : num(o.pq) + (o.pp !== null ? ' × ' + money(o.pp) : '')) + '</td><td style="color:' + (o.d < 0 ? '#C62828' : '#1565C0') + ';font-weight:700">' + money(o.d) + '</td></tr>').join('') +
+      '</table></div>' + ((p.reportN || 0) > R.length ? '<small>القايمة كاملة في تاب «_فروق رفع الجرد» في شيت الفرع</small>' : '') + '</div>';
+  } else h += '<div style="margin-top:6px;color:#1A8A3E;font-weight:700">✅ مفيش ولا صنف فيه فرق بين الجرد والبرنامج</div>';
+  return h;
+}
+// تقرير الفروق كملف يتفتح في الإكسل
+function pushCsv(store, p) {
+  const R = (p && p.report) || [], q = v => '"' + String(v === null || v === undefined ? '' : v).replace(/"/g, '""') + '"';
+  const lines = [['الفرع', 'اسم الصنف', 'السبب', 'كمية الجرد', 'سعر الشراء في الشيت', 'كمية البرنامج', 'سعر الشراء في البرنامج', 'تأثيره على الإجمالي']]
+    .concat(R.map(o => [store, o.n, o.why, o.sq, o.sp, o.pq, o.pp, o.d]));
+  if (p.cmp) lines.push([], ['', 'المقارنة', '', 'الجرد', '', 'البرنامج'], ['', 'عدد الأصناف', '', p.cmp.sheet.n, '', p.cmp.pos.n],
+    ['', 'إجمالي الكميات', '', p.cmp.sheet.qty, '', p.cmp.pos.qty], ['', 'إجمالي القيمة', '', p.cmp.sheet.value, '', p.cmp.pos.value]);
+  const blob = new Blob(['\ufeff' + lines.map(l => l.map(q).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'فروق رفع الجرد - ' + store + '.csv';
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 async function pushGo(store, cmp, force) {
   const pw = $('puPw') ? $('puPw').value : '';
