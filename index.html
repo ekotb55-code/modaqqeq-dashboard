@@ -336,6 +336,8 @@
   @keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(224,57,62,.15); } }
   .pane { background: var(--card); border-radius: 20px; padding: 18px; box-shadow: var(--shadow); min-height: 300px; }
   #pageShifts .pane { min-height: 0; margin-bottom: 12px; }
+  .ordlog th { text-align: start; color: var(--muted); font-weight: 700; padding: 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .ordlog td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
   .empty { color: var(--muted); text-align: center; padding: 50px 10px; }
   .dhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .dhead h2 { margin: 0; font-size: 22px; color: var(--navy); }
@@ -704,6 +706,7 @@
         <button id="navShifts" onclick="page('shifts')"><i>📅</i><span>الورديات</span><span class="nbadge hidden" id="shiftBadge"></span></button>
         <button id="navPerf" onclick="page('perf')"><i>🏆</i><span>أداء الدعم</span></button>
         <button id="navRep" onclick="page('rep')"><i>📊</i><span>تقارير الفروع</span></button>
+        <button id="navOrd" onclick="page('ord')"><i>🔁</i><span>الطلبات الدورية</span></button>
       </div>
       <span class="sp"></span>
       <span class="net good" id="netPill" onclick="netInfo()" title="سرعة النت"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><span id="netTxt">النت...</span></span>
@@ -757,6 +760,7 @@
     <div class="board" id="board"></div>
   </div>
   <div class="main hidden" id="pageRep"></div>
+  <div class="main hidden" id="pageOrd"></div>
   <div class="team-page hidden" id="pageTeam">
     <div class="tside" id="tSide"><div class="empty"><span class="spin"></span></div></div>
     <div class="tmain" id="tMain"><div class="empty">👈 اختار محادثة</div></div>
@@ -955,6 +959,9 @@ function page(p) {
   $('pageRep').classList.toggle('hidden', p !== 'rep');
   $('navRep').classList.toggle('on', p === 'rep');
   if (p === 'rep') renderRepForm();
+  $('pageOrd').classList.toggle('hidden', p !== 'ord');
+  $('navOrd').classList.toggle('on', p === 'ord');
+  if (p === 'ord') ordLoad(); else ordStop();
   $('pageInv').classList.toggle('hidden', p !== 'inv');
   $('pagePerf').classList.toggle('hidden', p !== 'perf');
   $('pageStores').classList.toggle('hidden', p !== 'stores');
@@ -2109,6 +2116,81 @@ async function copyCap() {
 }
 
 // ---------- تقارير الفروع (للطباعة / PDF) ----------
+// ---------- الطلبات الدورية (طلب جديد من الموزع الرئيسي تلقائي) ----------
+// سكريبت لوحده: "الطلبات الدورية - مدقق" على ekotb55
+const ORD_API = 'https://script.google.com/macros/s/AKfycbxFf1W5_mwI4Vmna5gSQymgeH_Wkz1UcgjTGOSotya7gdGmrgWKliAea5dIj2bWNC0/exec';
+let ordData = null, ordTimer = null;
+async function ordApi(action, data) {
+  const res = await fetch(ORD_API + '?action=' + action, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ token, name: me }, data || {})) });
+  const j = await res.json();
+  if (!j.ok) {
+    if ((j.error || '').indexOf('انتهت الجلسة') !== -1) { toast(j.error); setTimeout(logout, 1500); }
+    throw new Error(j.error || 'خطأ');
+  }
+  return j;
+}
+function ordStop() { clearInterval(ordTimer); ordTimer = null; }
+async function ordLoad(quiet) {
+  if (!quiet && !ordData) $('pageOrd').innerHTML = '<div class="pane"><div class="empty"><span class="spin"></span></div></div>';
+  try { ordData = await ordApi('status'); ordRender(); }
+  catch (e) { if (!quiet) $('pageOrd').innerHTML = '<div class="pane"><div class="empty">' + esc(msg(e)) + '</div></div>'; }
+  if (!ordTimer) ordTimer = setInterval(() => { if ($('pageOrd').classList.contains('hidden')) ordStop(); else ordLoad(true); }, 30000);
+}
+// "2026-11-17 23:00:00" (بتوقيت مصر) -> نص عربي
+function ordTime(s) {
+  if (!s) return '';
+  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?/);
+  if (!m) return esc(s);
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4] || 0), Number(m[5] || 0));
+  return d.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'numeric' }) + (m[4] ? ' ' + d.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' }) : '');
+}
+function ordBadge(s) {
+  const c = s === 'تم' ? 'b-done' : s === 'فشل' ? 'b-rej' : (s === 'شغال' || String(s).indexOf('اتبعت') === 0) ? 'b-work' : 'b-new';
+  const ic = s === 'تم' ? '✅ ' : s === 'فشل' ? '❌ ' : s === 'شغال' ? '⏳ ' : String(s).indexOf('اتبعت') === 0 ? '📤 ' : '🕒 ';
+  return '<span class="badge ' + c + '">' + ic + esc(s || 'مستني') + '</span>';
+}
+function ordRender() {
+  if (!ordData) return;
+  const D = ordData;
+  const cards = D.sched.map(s => {
+    const L = s.last;
+    let body = '<div style="color:var(--muted);font-size:13px">لسه ما اتعملش ولا طلب</div>';
+    if (L) {
+      body = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' + ordBadge(L['الحالة']) +
+        '<span style="font-size:13px;color:var(--muted)">' + (L['اتبعت'] ? 'اتبعت ' + ordTime(L['اتبعت']) : L['بدأ'] ? 'بدأ ' + ordTime(L['بدأ']) : 'موعد ' + esc(L['الموعد'])) + '</span></div>' +
+        (L['رقم الطلب'] || L['عدد الأصناف'] ? '<div style="margin-top:6px;font-size:14px">' +
+          (L['رقم الطلب'] ? '🧾 طلب رقم <b>' + esc(L['رقم الطلب']) + '</b> &nbsp;' : '') +
+          (L['عدد الأصناف'] ? '📦 <b>' + num(L['عدد الأصناف']) + '</b> صنف &nbsp;' : '') +
+          (L['الإجمالي'] ? '💰 <b>' + money(L['الإجمالي']) + '</b> جنيه' : '') + '</div>' : '') +
+        (L['ملاحظة'] ? '<div style="margin-top:5px;font-size:12.5px;color:' + (L['الحالة'] === 'فشل' ? '#C62828' : 'var(--muted)') + '">' + esc(L['ملاحظة']) + '</div>' : '') +
+        (L['الحالة'] === 'تم' ? (L['راجعه'] ? '<div style="margin-top:6px;font-size:12.5px;color:var(--green)">✔ راجعه ' + esc(L['راجعه']) + ' - ' + ordTime(L['وقت المراجعة']) + '</div>'
+          : '<button class="btn green" style="margin-top:8px;padding:6px 14px;font-size:13px" onclick="ordReview(\'' + esc(L['المعرف']) + '\')">✔ اتراجع</button>') : '');
+    }
+    return '<div class="pane" style="min-height:0;padding:14px;border-inline-start:5px solid ' + (!s.active ? '#B0B8C4' : L && L['الحالة'] === 'فشل' ? 'var(--red)' : L && L['الحالة'] === 'تم' ? 'var(--green)' : 'var(--blue)') + '">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0;color:var(--navy)">🏪 ' + esc(s.branch) + '</h3>' +
+      '<label style="font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ' + (s.active ? 'checked' : '') + ' onchange="ordToggle(\'' + esc(s.branch) + '\',this.checked)"> شغال</label></div>' +
+      '<div style="font-size:13px;color:var(--muted);margin:4px 0 10px">📅 ' + esc(s.days) + ' - ' + esc(s.time) + ' &nbsp;•&nbsp; بيان ' + esc(s.stat) + '<br>' +
+      (s.active ? '⏭️ الجاي: <b style="color:var(--text)">' + ordTime(s.next) + '</b>' : '⏸️ متوقف') + '</div>' + body +
+      '<div style="margin-top:10px"><button class="btn ghost" style="padding:6px 12px;font-size:13px" onclick="ordRunNow(\'' + esc(s.branch) + '\')">▶ اعمله دلوقتي</button></div></div>';
+  }).join('');
+  const rows = D.log.map(r => '<tr><td>' + esc(r['الفرع']) + '</td><td>' + esc(r['الموعد']) + '</td><td>' + esc(r['النوع']) + '</td><td>' + ordBadge(r['الحالة']) + '</td><td>' + esc(r['رقم الطلب']) + '</td><td>' + (r['عدد الأصناف'] ? num(r['عدد الأصناف']) : '') + '</td><td>' + (r['الإجمالي'] ? money(r['الإجمالي']) : '') + '</td><td style="font-size:12px;color:var(--muted)">' + esc(r['ملاحظة']) + '</td><td>' + esc(r['راجعه']) + '</td></tr>').join('');
+  $('pageOrd').innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px"><div><h2 style="margin:0;color:var(--navy)">🔁 الطلبات الدورية من الموزع الرئيسي</h2>' +
+    '<div style="color:var(--muted);font-size:13px;margin-top:4px">بتتعمل لوحدها في مواعيدها: نوع الفاتورة «الكل» والبيان الإحصائي بتاع الفرع، والأصناف المؤرشفة بتتشال، وبعدين بتتبعت. بعد 10 دقايق بنتأكد إن الطلب اتسجل.</div></div>' +
+    '<button class="btn soft" style="padding:8px 14px" onclick="ordLoad()">🔄 تحديث</button></div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px">' + cards + '</div>' +
+    '<div class="pane" style="margin-top:14px;min-height:0"><h3 style="margin-top:0;color:var(--navy)">📜 السجل</h3>' +
+    (rows ? '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px" class="ordlog"><tr><th>الفرع</th><th>الموعد</th><th>النوع</th><th>الحالة</th><th>رقم الطلب</th><th>الأصناف</th><th>الإجمالي</th><th>ملاحظة</th><th>راجعه</th></tr>' + rows + '</table></div>' : '<div class="empty" style="padding:20px">لسه مافيش طلبات</div>') + '</div>';
+}
+async function ordRunNow(branch) {
+  if (!confirm('هيتعمل دلوقتي طلب جديد لـ ' + branch + ' ويتبعت للموزع الرئيسي على طول.\nمتأكد؟')) return;
+  try { ordData = await ordApi('runNow', { branch }); ordRender(); toast('اتسجل - هيبدأ خلال دقيقة ⏳'); } catch (e) { toast(msg(e)); }
+}
+async function ordReview(id) {
+  try { ordData = await ordApi('review', { id }); ordRender(); toast('اتسجل إنه اتراجع ✅'); } catch (e) { toast(msg(e)); }
+}
+async function ordToggle(branch, active) {
+  try { ordData = await ordApi('toggle', { branch, active }); ordRender(); toast(active ? 'الفرع رجع يشتغل في مواعيده ✅' : 'الفرع وقف ⏸️'); } catch (e) { toast(msg(e)); ordRender(); }
+}
 function isoDay(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function renderRepForm() {
   if ($('repStore')) return;
