@@ -3102,6 +3102,11 @@ function tkDescHtml(desc) {
   return '<table style="width:100%;border-collapse:collapse;margin:6px 0" class="tkitems"><tr><th style="text-align:start">' + (items[0].indexOf('👤') !== -1 ? 'الموظف' : 'الصنف') + '</th><th style="text-align:start">التفاصيل والمطلوب</th></tr>' +
     items.map(row).join('') + '</table>' + (other.length ? esc(other.join('\n')).replace(/\n/g, '<br>') : '');
 }
+// زرار الرفع على البرنامج في كارت طلب الجرد (لما تاسك "ارفع الكميات المتجردة" تبقى مفتوحة)
+function jrUploadBtn(v) {
+  const t = (tasks || []).find(x => x.jr === v.id && x.step === 'upload' && x.status === TASK_OPEN);
+  return t ? '<button class="btn" onclick="event.stopPropagation();taskDone(\'' + esc(t.id) + '\')">📤 ارفع على البرنامج</button>' : '';
+}
 function taskInTab(k, v) {
   if (k === 'الكل') return true;
   // التاسكات المفتوحة اللي جه ميعادها بتظهر في "جديدة" مع الفواتير، والمتأخرة في "متأخرة"
@@ -3114,7 +3119,7 @@ function taskRank(v) { return v.kind === 'jr' ? (jrOpenSup(v) ? 0 : 3) : taskLat
 function taskCard(v, board) {
   const done = v.status !== TASK_OPEN, late = taskLate(v), future = !done && !taskDue(v);
   const st = done ? '<span class="badge b-done">' + (v.status === 'اتلغت' ? 'اتلغت' : '✓ اتعملت') + '</span>' : late ? '<span class="badge" style="background:#EDE7F6;color:#4527A0">⏰ متأخرة</span>' : future ? '<span class="badge b-new">📅 ' + tm(v.due) + '</span>' : '<span class="badge" style="background:#EDE7F6;color:#4527A0">مفتوحة</span>';
-  const btn = done ? '' : '<div class="bacts"><button class="btn" onclick="taskDone(\'' + esc(v.id) + '\')">✓ اتعملت</button>' +
+  const btn = done ? '' : '<div class="bacts"><button class="btn" onclick="taskDone(\'' + esc(v.id) + '\')">' + (v.step === 'upload' ? '📤 ارفع على البرنامج وطابق' : '✓ اتعملت') + '</button>' +
     (myRole === 'مدير' ? '<button class="btn soft" onclick="taskCancel(\'' + esc(v.id) + '\')">إلغاء</button>' : '') + '</div>';
   const body = (v.details ? '<div class="bdesc">' + esc(v.details) + '</div>' : '') +
     (v.to ? '<div class="bm" style="color:#4527A0;font-weight:700">لـ ' + esc(taskToLabel(v.to)) + ' بس</div>' : '') +
@@ -3290,7 +3295,7 @@ function jrCard(v, board) {
   const acts = v.status === 'مستني الدعم'
     ? '<div class="bacts"><button class="btn" onclick="jrDecide(\'' + esc(v.id) + '\',true)">✅ موافق</button><button class="btn soft" onclick="jrOther(\'' + esc(v.id) + '\')">🔁 ميعاد تاني</button>' +
       (myRole === 'مدير' ? '<button class="btn soft" onclick="jrCancel(\'' + esc(v.id) + '\')">إلغاء</button>' : '') + '</div>'
-    : v.status === 'شغال' || v.status === 'متثبت' ? '<div class="bacts"><button class="btn soft" onclick="jrLive(\'' + esc(v.id) + '\',this)">📡 حالة الجرد دلوقتي</button>' +
+    : v.status === 'شغال' || v.status === 'متثبت' ? '<div class="bacts">' + jrUploadBtn(v) + '<button class="btn soft" onclick="jrLive(\'' + esc(v.id) + '\',this)">📡 حالة الجرد دلوقتي</button>' +
       (myRole === 'مدير' ? '<button class="btn soft" onclick="jrCancel(\'' + esc(v.id) + '\')">إلغاء</button>' : '') + '</div>' : '';
   const stage = v.status === 'شغال' ? ['', 'التحضير', 'الفرع بيجرد', 'الفرع خلص - رفع الكميات والتقرير'][v.stage] || '' : '';
   const log = '<ul class="tl">' + (v.log || []).map(e => '<li><span>' + (e.side === 'فرع' ? '🏪' : '🎧') + '</span><span>' + esc(e.text) + (e.by ? ' - ' + esc(e.by) : '') + '</span><span class="tm">' + tm(e.at) + '</span></li>').join('') + '</ul>';
