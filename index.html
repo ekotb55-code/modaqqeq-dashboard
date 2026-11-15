@@ -774,7 +774,7 @@ async function api(action, data, post) {
   return j;
 }
 const $ = id => document.getElementById(id);
-function msg(e) { return (e && e.message) ? e.message : String(e); }
+function msg(e) { const m = (e && e.message) ? e.message : String(e); return /Failed to fetch|NetworkError|Load failed|network/i.test(m) ? 'النت فصل أو السيرفر ما ردّش - حاول تاني كمان شوية' : m; }
 function toast(t) { const el = $('toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.add('hidden'), 3800); }
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function money(v) { return Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -3164,7 +3164,11 @@ async function pushLoad(store, cmp) {
   clearTimeout(pushTimer);
   if (!$('pushBox')) return;
   try { const r = await api('dPushStatus', { token, store }, true); if ($('pushBox')) pushRender(r, store, cmp); }
-  catch (e) { if ($('pushBox')) $('pushBox').innerHTML = '<span style="color:#C62828">' + esc(msg(e)) + '</span>'; }
+  catch (e) {
+    // النت فصل لحظة أو السيرفر مشغول بالرفع: نحاول تاني لوحدنا
+    if ($('pushBox')) $('pushBox').innerHTML = '<span style="color:#8A6100">⏳ ' + esc(msg(e)) + ' - هنحاول تاني لوحدنا...</span>';
+    pushTimer = setTimeout(() => pushLoad(store, cmp), 8000);
+  }
 }
 function pushRender(r, store, cmp) {
   const el = $('pushBox'); if (!el) return;
