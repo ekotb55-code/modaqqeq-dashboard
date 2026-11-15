@@ -3132,7 +3132,9 @@ function taskCard(v, board) {
 async function taskDone(id) {
   const v = tasks.find(x => x.id === id); if (!v) return;
   if (v.step === 'upload') {
-    dlg('<h3>📤 ' + esc(v.store) + ': مطابقة الإجمالي</h3><p style="color:var(--muted);margin-top:0">اكتب إجمالي الكميات بعد ما رفعتها على البرنامج، وإجمالي تطبيق الجرد. لازم يبقوا زي بعض.</p>' +
+    dlg('<h3>📤 ' + esc(v.store) + ': رفع الكميات ومطابقة الإجمالي</h3>' +
+      '<div id="pushBox" style="background:#EEF5FF;border:1px solid #CFE0F7;border-radius:12px;padding:10px 12px;margin-bottom:10px;line-height:1.8">⏳ بنشوف حالة الرفع...</div>' +
+      '<p style="color:var(--muted);margin-top:0">اكتب إجمالي الكميات بعد ما رفعتها على البرنامج، وإجمالي تطبيق الجرد. لازم يبقوا زي بعض.</p>' +
       '<label class="fl">إجمالي البرنامج</label><input id="tP" type="number" step="0.01" inputmode="decimal">' +
       '<label class="fl" style="margin-top:8px">إجمالي تطبيق الجرد</label><input id="tA" type="number" step="0.01" inputmode="decimal">' +
       '<div id="tCmp" style="margin-top:8px;font-weight:700"></div>' +
@@ -3140,12 +3142,74 @@ async function taskDone(id) {
     const cmp = () => { const a = Number($('tP').value), b = Number($('tA').value); if ($('tP').value === '' || $('tA').value === '') { $('tCmp').textContent = ''; return; }
       const d = Math.round((a - b) * 100) / 100; $('tCmp').innerHTML = Math.abs(d) <= 1 ? '<span style="color:#1A8A3E">✅ مطابق</span>' : '<span style="color:#C62828">❌ فيه فرق ' + money(d) + ' ج.م</span>'; };
     $('tP').oninput = cmp; $('tA').oninput = cmp;
+    pushLoad(v.store, cmp);
     $('dlgOk').onclick = async () => {
       try { const r = await api('dTaskDone', { token, id, data: { progTotal: $('tP').value, appTotal: $('tA').value } }, true); closeDlg(); taskApply(r); toast('✅ اتعملت'); } catch (e) { toast(msg(e)); }
     };
     return;
   }
   try { const r = await api('dTaskDone', { token, id }, true); taskApply(r); toast('✅ اتعملت' + (v.type === 'جرد' ? ' - الخطوة اللي بعدها هتظهر لوحدها' : '')); } catch (e) { toast(msg(e)); }
+}
+// ===== رفع كمية الجرد أوتوماتيك (السكريبت بيرفع على البرنامج ويقرا الموقف المالى) =====
+let pushTimer = null;
+async function pushLoad(store, cmp) {
+  clearTimeout(pushTimer);
+  if (!$('pushBox')) return;
+  try { const r = await api('dPushStatus', { token, store }, true); if ($('pushBox')) pushRender(r, store, cmp); }
+  catch (e) { if ($('pushBox')) $('pushBox').innerHTML = '<span style="color:#C62828">' + esc(msg(e)) + '</span>'; }
+}
+function pushRender(r, store, cmp) {
+  const el = $('pushBox'); if (!el) return;
+  if (!r.linked) { el.innerHTML = 'الفرع ده مش مربوط ببرنامج البيع - ارفع الكميات بالإيد واكتب الإجمالي تحت.'; return; }
+  const p = r.push || {}, sh = r.sheet || {}, st = p.state || '';
+  const busy = ['queued', 'running', 'verify'].indexOf(st) !== -1;
+  let h = '<b>⚙️ الرفع الأوتوماتيك</b><br>';
+  h += sh.error ? '<span style="color:#C62828">' + esc(sh.error) + '</span><br>'
+    : '📋 الشيت: <b>' + num(sh.counted) + '</b> صنف اتجرد • هيترفع <b>' + num(sh.items) + '</b> صنف ليهم كمية • إجمالي الجرد <b>' + money(sh.value) + '</b> ج.م<br>';
+  if (r.mark && r.mark.on && r.mark.state !== 'done') h += '<span style="color:#C62828">⚠️ علامة الجرد (9999 ← 0) لسه ما خلصتش للفرع ده - الأصناف اللي ما اتجردتش هتفضل بكميتها القديمة</span><br>';
+  (r.devs || []).forEach(d => {
+    h += d.pending > 0 ? '<span style="color:#C62828">📱 ' + esc(d.user || 'موظف') + ': ' + d.pending + ' صنف لسه على الموبايل وما وصلش الشيت</span><br>'
+      : '<span style="color:#8A6100">📱 ' + esc(d.user || 'موظف') + ': اترفع كله بس ما داسش «خلصت»</span><br>';
+  });
+  if (st === 'queued') h += '<b style="color:#1565C0">🕐 اتأكد - هيبدأ خلال دقيقة</b>';
+  if (st === 'running') h += '<b style="color:#1565C0">⚙️ بيرفع: دفعة ' + (p.chunk || 0) + ' من ' + (p.chunks || 0) + ' • ' + num(p.ok || 0) + ' من ' + num(p.total || 0) + ' صنف</b>';
+  if (st === 'verify') h += '<b style="color:#1565C0">🔎 خلص الرفع - بيراجع الكميات على البرنامج ويقرا الموقف المالى...</b>';
+  if (st === 'error') h += '<span style="color:#C62828">❌ الرفع فشل: ' + esc(p.error || '') + '</span><br>';
+  if (st === 'done') {
+    const prog = p.fin !== null && p.fin !== undefined ? p.fin : p.posValue, ok = Math.abs(p.diff || 0) <= 1;
+    h += '<div style="background:#fff;border-radius:10px;padding:8px 10px;margin-top:4px">' +
+      '✅ اترفع ' + num(p.ok || 0) + ' صنف • ' + dt(p.done) + (p.by ? ' • أكّده ' + esc(p.by) : '') + '<br>' +
+      'الموقف المالى (المخزون بسعر الشراء): ' + (p.finBefore !== null && p.finBefore !== undefined ? money(p.finBefore) + ' ← ' : '') + '<b>' + money(prog) + '</b>' +
+      (p.fin === null || p.fin === undefined ? ' <small>(محسوب من ملف الأصناف - مقدرناش نقرا الموقف المالى)</small>' : '') + '<br>' +
+      'إجمالي الجرد في الشيت: <b>' + money(p.sheetValue) + '</b><br>' +
+      '<b style="color:' + (ok ? '#1A8A3E' : '#C62828') + '">' + (ok ? '✅ مطابق' : '❌ الفرق ' + money(p.diff) + ' ج.م') + '</b>' +
+      (p.wrong ? '<br><span style="color:#C62828">' + p.wrong + ' صنف اترفع غلط: ' + esc((p.wrongList || []).join('، ')) + '</span>' : '') +
+      (p.skipped ? '<br><span style="color:#8A6100">' + p.skipped + ' صنف ما اترفعش (بقيمة ' + money(p.skippedValue) + ') - اعملهم بالإيد: ' +
+        esc((p.dupList || []).concat(p.missList || []).join('، ')) + '</span>' : '') +
+      (!ok && p.skippedValue ? '<br><small>الفرق ده فيه قيمة الأصناف اللي ما اترفعتش (' + money(p.skippedValue) + ')</small>' : '') +
+      '</div>';
+    if ($('tP') && $('tP').value === '') { $('tP').value = prog; $('tA').value = p.sheetValue; if (cmp) cmp(); }
+  }
+  if (!busy && !sh.error) {
+    h += '<div style="margin-top:8px"><label class="fl">كلمة السر بتاعتك (علشان تأكّد الرفع)</label><input type="password" id="puPw" autocomplete="current-password" style="width:100%">' +
+      '<button class="btn" id="puGo" style="margin-top:6px;width:100%">📤 ' + (st === 'done' ? 'ارفع تاني' : 'ارفع الكميات على البرنامج أوتوماتيك') + '</button>' +
+      '<small style="color:var(--muted)">بياخد نسخة بكميات البرنامج الأول، ويرفع الأصناف اللي ليها كمية بس، وبعدين يقارن الموقف المالى بإجمالي الجرد.</small></div>';
+  }
+  el.innerHTML = h;
+  if ($('puGo')) $('puGo').onclick = () => pushGo(store, cmp, false);
+  if (busy) pushTimer = setTimeout(() => pushLoad(store, cmp), 6000);
+}
+async function pushGo(store, cmp, force) {
+  const pw = $('puPw') ? $('puPw').value : '';
+  if (!pw.trim()) return toast('اكتب كلمة السر بتاعتك');
+  $('puGo').disabled = true; $('puGo').textContent = '⏳ ...';
+  try { const r = await api('dPushGo', { token, store, password: pw, force }, true); pushRender(r, store, cmp); toast('✅ اتأكد - الرفع هيبدأ خلال دقيقة'); }
+  catch (e) {
+    const m = msg(e);
+    if (!force && /موبايل لسه|علامة الجرد/.test(m) && confirm(m + '\n\nترفع برضه دلوقتي؟')) return pushGo(store, cmp, true);
+    if ($('puGo')) { $('puGo').disabled = false; $('puGo').textContent = '📤 ارفع الكميات على البرنامج أوتوماتيك'; }
+    toast(m);
+  }
 }
 async function taskCancel(id) {
   const v = tasks.find(x => x.id === id); if (!v) return;
