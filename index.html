@@ -209,6 +209,20 @@
   .bcard.k-mk { border-inline-start-color: #6C4BD8; background: #F5F1FF; }
   .mkbox { background: #F5F1FF; border: 1.5px solid #D8CCFA; border-radius: 16px; padding: 10px 12px; margin-bottom: 10px; }
   .mkbox h4 { margin: 0 0 6px; color: #4B2FB0; font-size: 15px; }
+  /* عروض أبو سمرة الأسبوعية */
+  .wobox { background: #FFF8E8; border: 1.5px solid #F2D49B; border-radius: 16px; padding: 10px 12px; margin-bottom: 10px; }
+  .wobox h4 { margin: 0 0 4px; color: #9A5B00; font-size: 15px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .wobox .wot { font-size: 13.5px; line-height: 1.7; }
+  .wobox .bacts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .wobox.on { background: #EEF9F0; border-color: #A8DDB4; }
+  .wobox.on h4 { color: #1A7A36; }
+  .wobox.miss { background: #FDECEC; border: 2.5px solid #E53935; animation: woblink 1s infinite alternate; }
+  .wobox.miss h4 { color: #C62828; font-size: 16px; }
+  @keyframes woblink { from { box-shadow: 0 0 0 0 #E5393500; } to { box-shadow: 0 0 0 6px #E5393555; } }
+  .wotbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .wotbl th, .wotbl td { border-bottom: 1px solid var(--line); padding: 6px; text-align: right; vertical-align: top; }
+  .wotbl td.bad { color: #C62828; font-weight: 700; }
+  .wotbl td.ok { color: #1A7A36; font-weight: 700; }
   .mkrow { background: #fff; border-radius: 12px; padding: 8px 10px; margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
   .mkrow .mkt { flex: 1 1 220px; font-size: 13.5px; line-height: 1.6; }
   .bacts .btn { padding: 5px 10px; font-size: 12.5px; }
@@ -733,6 +747,7 @@
     <div class="stats" id="stats"></div>
     <div class="wrap" id="wrap">
       <div id="listPane">
+        <div id="woBox"></div>
         <div id="markBox"></div>
         <div id="devBox"></div>
         <div class="tabs" id="tabs"></div>
@@ -954,6 +969,7 @@ function showApp() {
   loadList().then(() => { const g = new URLSearchParams(location.search).get('go'); if (g) { try { noteGo(JSON.parse(g)); } catch (e) {} history.replaceState(null, '', location.pathname + '?app=1'); } });
   setInterval(() => loadList(true), 20000);
   isStart();
+  woStart();
   if ('Notification' in window && Notification.permission === 'granted') setupPush();
 }
 function page(p) {
@@ -3925,6 +3941,131 @@ async function isNow() {
     isPaint();
     toast(isState.error ? '⚠️ ' + isState.error : '✅ الأصناف اتحدّثت');
   } catch (e) { toast(msg(e)); isLoad(); }
+}
+
+// ---------- 🏷️ عروض أبو سمرة الأسبوعية (تاسك دوري) ----------
+// الجمعة 5 الفجر الأصناف بتتنقل لتصنيف العروض في المخزن الرئيسي، والاتنين 1 بالليل بترجع لتصنيفها
+let wo = null, woBusy = false;
+const WO_OK = ['في العروض ✓', 'اترجع ✓', 'مستني التفعيل'];
+function woStart() {
+  woLoad();
+  setInterval(woLoad, 2 * 60000);
+  // مفيش ملف في وقت العروض: إنذار بالصوت كل 30 ثانية لحد ما حد يرد
+  setInterval(() => { if (wo && wo.missing && !isQA() && !document.hidden) alarm(4); }, 30000);
+}
+async function woLoad() {
+  try { wo = await api('dWo', { token }); woRender(); } catch (e) { /* السكريبت لسه ما اتحدّثش */ }
+}
+function woWhen(iso) { return iso ? isDay_(iso) + ' ' + isClock_(iso) : ''; }
+function woRender() {
+  const el = $('woBox'); if (!el) return;
+  if (!wo || isQA()) { el.innerHTML = ''; return; }
+  const m = wo.meta || {}, rows = wo.rows || [];
+  const bad = rows.filter(r => WO_OK.indexOf(r.st) === -1).length;
+  const btn = (t, f, cls) => '<button class="btn ' + (cls || 'soft') + '"' + (woBusy ? ' disabled' : '') + ' onclick="' + f + '">' + t + '</button>';
+  const up = btn('⬆️ ارفع ملف العروض', "$('woFile').click()", m.state === 'active' ? 'soft' : '');
+  let cls = '', h = '', acts = '';
+  if (wo.missing) {
+    cls = ' miss';
+    h = '<h4>🚨 عروض أبو سمرة: مفيش ملف عروض الأسبوع ده!</h4><div class="wot">المفروض العروض تتفعّل من الجمعة 5 الفجر. ارفع ملف العروض دلوقتي (هيتفعّل على طول)، أو دوس «مفيش عروض الأسبوع ده» علشان الإنذار يقف.</div>';
+    acts = up + btn('🚫 مفيش عروض الأسبوع ده', 'woNone()', 'red');
+  } else if (m.state === 'active') {
+    cls = ' on';
+    const n = rows.filter(r => r.st === 'في العروض ✓').length;
+    h = '<h4>🏷️ عروض أبو سمرة شغالة ✅</h4><div class="wot"><b>' + n + '</b> صنف في «' + esc(wo.cat) + '» • اتفعّلت ' + esc(woWhen(m.activatedAt)) + (m.activatedBy ? ' (' + esc(m.activatedBy) + ')' : '') +
+      '<br>هتتلغي لوحدها ' + esc(woWhen(m.endAt)) + '</div>';
+    acts = btn('⏹ الغي دلوقتي', 'woCancel()', 'red') + btn('📋 الأصناف اللي في العروض', 'woList()');
+  } else if (m.state === 'pending') {
+    h = '<h4>🏷️ عروض أبو سمرة: الملف جاهز ⏳</h4><div class="wot">«' + esc(m.file || 'ملف العروض') + '» • <b>' + (m.count || rows.length) + '</b> صنف • رفعه ' + esc(m.by || '') + ' ' + esc(woWhen(m.at)) +
+      '<br>هيتفعّل لوحده ' + esc(woWhen(wo.week && wo.week.start)) + '</div>';
+    acts = btn('▶️ فعّل دلوقتي', 'woActivate()', '') + up + btn('📋 الأصناف اللي في العروض', 'woList()');
+  } else {
+    const l = m.last;
+    h = '<h4>🏷️ عروض أبو سمرة</h4><div class="wot">' +
+      (m.state === 'manual' ? 'ℹ️ عروض الأسبوع ده اتعملت بإيدك قبل السكريبت - السكريبت مش عارف تصنيفاتها الأصلية، رجّعها من «📋 الأصناف اللي في العروض» أو بإيدك زي كل أسبوع<br>'
+        : m.state === 'skipped' || (m.noOffers && wo.week && m.noOffers === wo.week.key) ? '🚫 مفيش عروض الأسبوع ده (' + esc(m.noOffersBy || '') + ')<br>' : '') +
+      (l ? 'آخر عملية: ' + esc(l.what) + ' ' + esc(woWhen(l.at)) + ' - ' + l.ok + ' صنف' + (l.bad ? ' • ' + l.bad + ' فيهم مشكلة' : '') + '<br>' : '') +
+      'ارفع ملف عروض الأسبوع الجاي - هيتفعّل الجمعة 5 الفجر</div>';
+    acts = up + btn('📋 الأصناف اللي في العروض', 'woList()');
+  }
+  if (rows.length) acts += btn('📄 تقرير الأصناف' + (bad ? ' (⚠️ ' + bad + ')' : ''), 'woReport()', bad ? 'red' : 'ghost');
+  if (m.error) h += '<div class="wot" style="color:#C62828">⚠️ ' + esc(m.error) + '</div>';
+  if (m.sync && !m.sync.ok) h += '<div class="wot" style="color:#8A5300">🔄 تحديث الفروع ما بدأش (' + esc(m.sync.error || '') + ') - هيتجرّب تاني لوحده</div>';
+  if (!wo.triggers) h += '<div class="wot" style="color:#C62828">⚠️ المواعيد التلقائية مش متظبطة - كلّم المدير</div>';
+  el.innerHTML = '<div class="wobox' + cls + '">' + h + '<div class="bacts">' + acts + '</div>' +
+    '<input type="file" id="woFile" class="hidden" accept=".xlsx,.xls,.csv" onchange="woPick(this.files[0]);this.value=\'\'"></div>';
+}
+async function woRun(action, data, okMsg) {
+  woBusy = true; woRender();
+  try { wo = await api(action, Object.assign({ token }, data || {}), true); if (okMsg) toast(okMsg); }
+  catch (e) { toast(/غير معروف/.test(msg(e)) ? 'السكريبت لسه ما اتحدّثش - كلّم المدير' : msg(e)); }
+  woBusy = false; woRender();
+}
+// قراءة ملف الإكسل: أول عمود اسم الصنف (والتاني لو كلام = التصنيف الأصلي)
+async function woPick(f) {
+  if (!f) return;
+  let rows;
+  try {
+    const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
+    rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+  } catch (e) { return toast('مش قادر أقرا الملف ده - اتأكد إنه ملف إكسل'); }
+  const items = [], seen = {};
+  rows.forEach((r, i) => {
+    const n = String(r[0] || '').replace(/\s+/g, ' ').trim();
+    if (!n || seen[n]) return;
+    if (i === 0 && /^(اسم الصنف|الصنف|الاسم|اسم)$/.test(n)) return; // صف العناوين
+    seen[n] = 1;
+    const c = String(r[1] || '').replace(/\s+/g, ' ').trim();
+    items.push({ name: n, cat: c && isNaN(Number(c.replace(/,/g, ''))) ? c : '' });
+  });
+  if (!items.length) return toast('الملف مفيهوش أسماء أصناف في أول عمود');
+  const inWin = wo && wo.week && wo.week.inWin;
+  if (!confirm('ملف العروض: ' + f.name + '\n' + items.length + ' صنف، أولهم:\n• ' + items.slice(0, 5).map(x => x.name).join('\n• ') +
+    '\n\n' + (inWin ? 'إحنا في وقت العروض دلوقتي - هيتفعّل على طول بعد الرفع.' : 'هيتفعّل لوحده الجمعة 5 الفجر.') + '\nنرفعه؟')) return;
+  await woRun('dWoUpload', { file: f.name, items }, inWin ? 'الملف اترفع والعروض بتتفعّل ✅' : 'الملف اترفع ✅ هيتفعّل الجمعة 5 الفجر');
+}
+function woActivate() {
+  if (!confirm('هتتنقل أصناف ملف العروض لتصنيف «' + (wo ? wo.cat : '') + '» في المخزن الرئيسي دلوقتي، وبعدها تحديث الفروع.\nوهتتلغي لوحدها الاتنين 1 بالليل. نفعّل؟')) return;
+  woRun('dWoActivate', {}, 'العروض اتفعّلت ✅');
+}
+function woCancel() {
+  if (!confirm('كل أصناف العروض هترجع لتصنيفها الأصلي دلوقتي، وبعدها تحديث الفروع. نلغي؟')) return;
+  woRun('dWoCancel', {}, 'العروض اتلغت ✅');
+}
+function woNone() {
+  if (!confirm('متأكد إن مفيش عروض الأسبوع ده؟ الإنذار هيقف.')) return;
+  woRun('dWoNone', {}, 'تمام - مفيش عروض الأسبوع ده');
+}
+function woReport() {
+  const rows = (wo && wo.rows) || [];
+  const order = r => WO_OK.indexOf(r.st) === -1 ? 0 : 1;
+  dlg('<h3>📄 تقرير أصناف العروض</h3><div style="max-height:60vh;overflow:auto"><table class="wotbl"><tr><th>الصنف</th><th>الحالة</th><th>التصنيف الأصلي</th><th>ملاحظة</th></tr>' +
+    rows.slice().sort((a, b) => order(a) - order(b)).map(r => '<tr><td>' + esc(r.name) + '</td><td class="' + (WO_OK.indexOf(r.st) === -1 ? 'bad' : 'ok') + '">' + esc(r.st) + '</td><td>' + esc(r.orig) + '</td><td>' + esc(r.note) + '</td></tr>').join('') +
+    '</table></div><div class="acts"><button class="btn ghost" onclick="closeDlg()">قفل</button></div>');
+}
+let woL = null;
+async function woList() {
+  dlg('<h3>📋 الأصناف اللي في «' + esc(wo ? wo.cat : 'العروض') + '» دلوقتي</h3><div id="woListBox"><div class="empty"><span class="spin"></span> بندخل على المخزن الرئيسي... (ممكن تاخد نص دقيقة)</div></div>');
+  try { woL = await api('dWoList', { token }, true); woListRender(); }
+  catch (e) { if ($('woListBox')) $('woListBox').innerHTML = '<div class="err">' + esc(msg(e)) + '</div>'; }
+}
+function woListRender() {
+  const box = $('woListBox'); if (!box || !woL) return;
+  const opts = '<option value="">- اختار التصنيف -</option>' + woL.cats.map(c => '<option>' + esc(c) + '</option>').join('');
+  box.innerHTML = '<p style="margin:0 0 8px;color:var(--muted)">' + woL.items.length + ' صنف. أي صنف تقدر ترجّعه لتصنيفه لوحده (وبعدها تحديث الفروع).</p>' +
+    '<div style="max-height:60vh;overflow:auto"><table class="wotbl"><tr><th>الصنف</th><th>يرجع لـ</th><th></th></tr>' +
+    woL.items.map((x, i) => '<tr><td>' + esc(x.name) + (x.dup ? ' <small style="color:#C62828">(متكرر)</small>' : '') + '</td><td>' +
+      (x.orig ? '<b>' + esc(x.orig) + '</b>' : '<select id="woC' + i + '">' + opts + '</select>') + '</td><td>' +
+      '<button class="btn soft" onclick="woBack(' + i + ',this)">↩️ رجّعه</button></td></tr>').join('') +
+    '</table></div><div class="acts"><button class="btn ghost" onclick="closeDlg()">قفل</button></div>';
+}
+async function woBack(i, b) {
+  const x = woL.items[i], cat = x.orig || ($('woC' + i) || {}).value;
+  if (!cat) return toast('اختار التصنيف اللي الصنف يرجعله');
+  if (!confirm('«' + x.name + '» هيرجع لتصنيف «' + cat + '». موافق؟')) return;
+  b.disabled = true; b.innerHTML = '<span class="spin"></span>';
+  try { woL = await api('dWoItemBack', { token, name: x.name, cat }, true); woListRender(); toast('الصنف رجع لـ«' + cat + '» ✅'); woLoad(); }
+  catch (e) { toast(msg(e)); b.disabled = false; b.textContent = '↩️ رجّعه'; }
 }
 
 function dlg(html) { closeDlg(); document.body.insertAdjacentHTML('beforeend', '<div id="dlg" onclick="if(event.target===this)closeDlg()"><div class="box">' + html + '</div></div>'); }
