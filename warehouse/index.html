@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>تحضير المخزن - مدقق</title>
-<meta name="theme-color" content="#0A5CAD">
+<meta name="theme-color" content="#0F5BA8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="تحضير المخزن">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="/modaqqeq-dashboard/icon-192.png">
-<link rel="apple-touch-icon" href="/modaqqeq-dashboard/apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap">
 <style>
@@ -50,6 +50,24 @@
   .btn.danger { background: #fff; color: var(--bad); border: 1.5px solid var(--bad); }
   .btn.sm { min-height: 40px; padding: 6px 12px; border-radius: 12px; font-size: 13px; }
   .err { color: var(--red); font-size: 13px; min-height: 20px; margin-top: 8px; text-align: center; }
+
+  /* الانترو */
+  #intro { position: fixed; inset: 0; z-index: 200; background: radial-gradient(circle at 50% 38%, #1C86E0 0%, #0F5BA8 45%, #072F5A 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #fff; transition: opacity .45s, visibility .45s; }
+  #intro.out { opacity: 0; visibility: hidden; }
+  #intro .ibox { width: 150px; height: 150px; border-radius: 34px; overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,.35); animation: ipop .55s cubic-bezier(.2,1.4,.4,1) both; }
+  #intro .iico { width: 100%; height: 100%; display: block; }
+  #intro .iscan { animation: isweep 1s .35s ease-in-out both; }
+  #intro .icheck { transform-origin: 370px 150px; animation: icheck .45s 1.15s cubic-bezier(.2,1.6,.4,1) both; }
+  #intro .iname { font-size: 28px; font-weight: 800; margin-top: 14px; animation: iup .5s .5s both; }
+  #intro .isub { font-size: 14px; opacity: .85; animation: iup .5s .65s both; }
+  #intro .ilogos { display: flex; align-items: center; gap: 10px; margin-top: 26px; background: #fff; border-radius: 16px; padding: 8px 14px; animation: iup .5s .85s both; }
+  #intro .ilogos .lg { width: 90px; height: 40px; }
+  #intro .ix { color: var(--mute); font-weight: 800; }
+  @keyframes ipop { from { transform: scale(.4) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes isweep { 0% { transform: translateY(-120px); opacity: 0; } 15% { opacity: 1; } 60% { transform: translateY(110px); } 100% { transform: translateY(0); } }
+  @keyframes icheck { from { transform: scale(0); } to { transform: scale(1); } }
+  @keyframes iup { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { #intro * { animation: none !important; } }
 
   /* اختيار الاسم */
   .people { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
@@ -268,6 +286,46 @@
 </style>
 </head>
 <body>
+<!-- الانترو -->
+<div id="intro">
+  <div class="ibox"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="iico" aria-hidden="true">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1479D3"/><stop offset="1" stop-color="#083A6E"/>
+    </linearGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#F6B93B"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="256" cy="268" r="170" fill="#ffffff" opacity=".07"/>
+  <!-- الكرتونة -->
+  <g transform="translate(256 270)">
+    <path d="M-118 -44 L0 -100 L118 -44 L0 12 Z" fill="url(#top)"/>
+    <path d="M-118 -44 L0 12 L0 132 L-118 76 Z" fill="#E8A317"/>
+    <path d="M118 -44 L0 12 L0 132 L118 76 Z" fill="#C98510"/>
+    <path d="M-59 -72 L59 -16 L59 10 L-59 -46 Z" fill="#ffffff" opacity=".35"/>
+    <!-- ملصق الباركود -->
+    <g transform="matrix(1 .475 0 1 -100 -8)">
+      <rect x="0" y="0" width="84" height="58" rx="6" fill="#fff"/>
+      <g fill="#0B2545">
+        <rect x="9" y="9" width="4" height="40"/><rect x="16" y="9" width="2" height="40"/><rect x="21" y="9" width="6" height="40"/>
+        <rect x="30" y="9" width="2" height="40"/><rect x="35" y="9" width="4" height="40"/><rect x="42" y="9" width="2" height="40"/>
+        <rect x="47" y="9" width="6" height="40"/><rect x="56" y="9" width="2" height="40"/><rect x="61" y="9" width="4" height="40"/>
+        <rect x="68" y="9" width="2" height="40"/><rect x="72" y="9" width="3" height="40"/>
+      </g>
+    </g>
+  </g>
+  <!-- خط المسح -->
+  <g class="iscan"><rect x="96" y="286" width="320" height="10" rx="5" fill="#FF4D4D"/><rect x="96" y="280" width="320" height="22" rx="11" fill="#FF4D4D" opacity=".25"/></g>
+  <!-- علامة صح -->
+  <g class="icheck"><circle cx="370" cy="150" r="56" fill="#22C55E" stroke="#fff" stroke-width="10"/>
+  <path d="M344 151 l18 18 l34 -38" fill="none" stroke="#fff" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></g>
+</svg></div>
+  <div class="iname">تحضير المخزن</div>
+  <div class="isub">تحضير طلبيات الفروع بالباركود</div>
+  <div class="ilogos"><div class="lg lgAS"></div><span class="ix">×</span><div class="lg"><img src="/modaqqeq-dashboard/logo_wide.png" alt="مدقق"></div></div>
+</div>
 
 <!-- الدخول -->
 <section id="login" class="scr hidden">
@@ -1566,6 +1624,13 @@ $('installBtn2').onclick = doInstall;
 // ---------- البداية ----------
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 window.addEventListener('beforeunload', () => { if (st.dirty) doSave(); });
+// الانترو: بيظهر مع كل فتح للتطبيق ثانيتين تقريباً (دوسة تخفيه)
+(function intro() {
+  const el = $('intro'); if (!el) return;
+  const hide = () => { el.classList.add('out'); setTimeout(() => el.remove(), 500); };
+  el.addEventListener('click', hide);
+  setTimeout(hide, 2100);
+})();
 (function start() {
   paintLogos();
   paintVoice();
