@@ -84,6 +84,17 @@
   .isp { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; border: 1px solid #BFE5CB; background: #E7F6EC; color: #1E7D3A; white-space: nowrap; }
   .isp.run { background: #E6F0FB; color: #1460A8; border-color: #B9D3F0; }
   .isp.bad { background: #FDECEA; color: #B3261E; border-color: #F5C2BD; }
+  .isp.warn { background: #FFF6E0; color: #9A6700; border-color: #F5DD9C; }
+  /* عداد استهلاك جوجل */
+  .umbar { width: 44px; height: 6px; border-radius: 3px; background: rgba(0,0,0,.09); overflow: hidden; display: inline-block; }
+  .umbar i { display: block; height: 100%; width: var(--um, 0%); background: currentColor; border-radius: 3px; }
+  .umbig { height: 12px; border-radius: 6px; background: #EEF2F7; overflow: hidden; margin: 8px 0 4px; }
+  .umbig i { display: block; height: 100%; border-radius: 6px; }
+  .umrow { display: grid; grid-template-columns: 1fr auto 70px; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid #EEF2F7; font-size: 14px; }
+  .umrow .umbar { width: 70px; color: #1460A8; }
+  .umspark { display: flex; align-items: flex-end; gap: 2px; height: 54px; margin: 6px 0 2px; direction: ltr; }
+  .umspark i { flex: 1; background: #9FC3EA; border-radius: 2px 2px 0 0; min-height: 1px; }
+  .umnote { font-size: 12px; color: var(--muted); line-height: 1.7; }
   .isbox h3 { margin: 0 0 10px; }
   .isrow { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #EEF2F7; font-size: 14px; }
   .isrow b { white-space: nowrap; }
@@ -416,6 +427,7 @@
   .revbox { border-radius: 14px; padding: 12px 14px; margin: 10px 0; line-height: 1.8; font-weight: 600; }
   .revbox.ok { background: #E2F5E6; border: 2px solid #A7DDB4; color: #14532D; }
   .revbox.wait { background: #FFF8E1; border: 2px solid #F5D98B; color: #7A4D00; }
+  .revbox.bad { background: #FDECEA; border: 2px solid #F5C2BD; color: #8C1D18; }
   .revbox .note { display: block; background: #fff; border-radius: 10px; padding: 8px 10px; margin-top: 6px; color: #4B2FB5; font-weight: 800; }
   details.rejdet { margin-top: 12px; border: 2px solid #F5B5B7; border-radius: 16px; padding: 10px 14px; background: #FFF8F8; }
   details.rejdet summary { cursor: pointer; font-weight: 800; color: #C62828; }
@@ -742,6 +754,7 @@
       </div>
       <span class="sp"></span>
       <span class="net good" id="netPill" onclick="netInfo()" title="سرعة النت"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><span id="netTxt">النت...</span></span>
+      <span class="isp hidden" id="umPill" onclick="umDlg()" title="استهلاك جوجل لطلبات النت من السكريبت (آخر 24 ساعة)">🌐 <span class="umbar"><i></i></span> <span id="umTxt"></span></span>
       <span class="isp hidden" id="isPill" onclick="isDlg()" title="تحديث شيت أصناف المخزن من السيستم">📦 <span id="isTxt">الأصناف...</span></span>
       <button class="btn soft bell" id="bellBtn" onclick="enableAlerts()" title="الإشعارات والصوت">🔔</button>
       <button class="btn soft" onclick="loadList()" title="تحديث">⟳</button>
@@ -980,6 +993,7 @@ function showApp() {
   setInterval(() => loadList(true), 20000);
   isStart();
   woStart();
+  umStart();
   if ('Notification' in window && Notification.permission === 'granted') setupPush();
 }
 function page(p) {
@@ -3990,6 +4004,57 @@ async function isNow() {
     toast(isState.error ? '⚠️ ' + isState.error : '✅ الأصناف اتحدّثت');
   } catch (e) { toast(msg(e)); isLoad(); }
 }
+
+// ---------- 🌐 عداد استهلاك جوجل لطلبات النت (UrlFetch) ----------
+// جوجل بتسمح بعدد طلبات في اليوم لحساب السكريبت كله (20 ألف للجيميل العادي) - السكريبت بيعدّ بنفسه (UsageMeter.gs)
+let um = null;
+const UM_NAMES = {
+  BranchSync: '🔄 مزامنة فروع أبو سمرة', PosPurchase: '🧾 رفع المشتريات على البرنامج', WeeklyOffers: '🏷️ العروض الأسبوعية',
+  JardCentral: '📋 الجرد وعلامة الجرد', ItemImages: '🖼️ صور الأصناف', PosImages: '🖼️ صور الأصناف', ItemsSync: '📦 تحديث شيت الأصناف',
+  Invoices: '🔔 الفواتير والإشعارات', ShopReview: '👀 مراجعة الأسعار', PosLink: '🔗 ربط البرنامج', PosConfig: '🔗 ربط البرنامج',
+  RandomCount: '🎲 الجرد العشوائي', Receiving: '📥 استلام فواتير المخزن', Spot: '📍 Spot', UsageMeter: '🌐 العداد', 'تاني': '❔ حاجات تانية'
+};
+function umStart() { umLoad(); setInterval(umLoad, 5 * 60000); }
+async function umLoad() {
+  try { um = await api('dUsage', { token }); umPaint(); } catch (e) { /* السكريبت لسه ما اتحدّثش: العداد يفضل مستخبي */ }
+}
+function umPct() { return um && um.limit ? Math.round(um.used / um.limit * 100) : 0; }
+function umCls() { const p = umPct(); return um.blocked || p >= 90 ? 'bad' : p >= 70 ? 'warn' : ''; }
+function umN(n) { return Number(n || 0).toLocaleString('en-US'); }
+function umPaint() {
+  const p = $('umPill');
+  if (!p || !um) return;
+  const pc = umPct();
+  p.className = 'isp ' + umCls();
+  p.style.setProperty('--um', Math.min(100, pc) + '%');
+  $('umTxt').textContent = um.blocked ? 'جوجل وقفت' : pc + '%';
+  if ($('umBox')) $('umBox').innerHTML = umHtml();
+}
+function umHtml() {
+  if (!um) return '<div class="empty"><span class="spin"></span></div>';
+  const pc = umPct(), col = um.blocked || pc >= 90 ? '#D93025' : pc >= 70 ? '#E0A100' : '#1E8E3E';
+  let h = '<h3>🌐 استهلاك جوجل لطلبات النت</h3>' +
+    '<div class="isbig">' + umN(um.used) + ' <small style="font-size:14px;color:var(--muted)">من ' + umN(um.limit) + ' • ' + pc + '%</small></div>' +
+    '<div class="umbig"><i style="width:' + Math.min(100, pc) + '%;background:' + col + '"></i></div>' +
+    '<div class="umnote">آخر 24 ساعة • فاضل تقريباً <b>' + umN(Math.max(0, um.limit - um.used)) + '</b> طلب</div>';
+  if (um.blocked) {
+    h += '<div class="revbox bad" style="margin-top:10px">🚨 جوجل وقفت طلبات النت من ' + woWhen(um.blocked) + '<br>' +
+      'رفع المشتريات ومزامنة الفروع والعروض وصور الأصناف واقفين لحد ما الحد يرجع لوحده (بعد 24 ساعة من أول طلب في اليوم).</div>';
+  }
+  const by = Object.keys(um.by || {}).map(k => ({ k, n: um.by[k] })).sort((a, b) => b.n - a.n);
+  h += '<h4 style="margin:14px 0 4px">مين اللي بيصرف</h4>';
+  h += by.length ? by.map(x => '<div class="umrow"><span>' + esc(UM_NAMES[x.k] || x.k) + '</span><b>' + umN(x.n) + '</b>' +
+    '<span class="umbar" style="--um:' + (um.used ? Math.round(x.n / um.used * 100) : 0) + '%"><i></i></span></div>').join('')
+    : '<div class="umnote">لسه مفيش طلبات اتعدّت.</div>';
+  const mx = Math.max(1, ...(um.hours || []));
+  h += '<h4 style="margin:14px 0 0">كل ساعة (من 24 ساعة لدلوقتي)</h4><div class="umspark">' +
+    (um.hours || []).map(n => '<i style="height:' + Math.max(2, Math.round(n / mx * 100)) + '%" title="' + umN(n) + '"></i>').join('') + '</div>';
+  const fresh = um.since && Date.now() - new Date(um.since).getTime() < 24 * 3600000;
+  h += '<div class="umnote" style="margin-top:10px">العدّ تقريبي: بيعدّ طلبات سكريبت «دليل الموظفين» بس. أي سكريبت تاني شغال بنفس حساب جوجل بياكل من نفس الحد ومش ظاهر هنا.' +
+    (fresh ? '<br>العداد شغال من ' + woWhen(um.since) + ' - اللي اتصرف قبل كده مش محسوب.' : '') + '</div>';
+  return h;
+}
+function umDlg() { dlg('<div id="umBox">' + umHtml() + '</div>'); umLoad(); }
 
 // ---------- 🏷️ عروض أبو سمرة الأسبوعية (تاسك دوري) ----------
 // الجمعة 5 الفجر الأصناف بتتنقل لتصنيف العروض في المخزن الرئيسي، والاتنين 1 بالليل بترجع لتصنيفها
