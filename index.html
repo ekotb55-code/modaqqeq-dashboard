@@ -272,7 +272,9 @@
   .card.st-work { border-inline-start-color: var(--blue); }
   .card.st-done { border-inline-start-color: var(--green); }
   .card .top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-  .card .sup { font-weight: 800; font-size: 16px; }
+  .card .sup { font-weight: 800; font-size: 17px; }
+  .card .lbl { font-weight: 600; font-size: 13px; color: var(--muted); }
+  .card .sub { font-weight: 700; font-size: 14px; margin-top: 3px; }
   .card .meta { color: var(--muted); font-size: 13px; margin-top: 3px; }
   .badge { font-size: 12px; padding: 2px 10px; border-radius: 20px; font-weight: 700; white-space: nowrap; }
   .b-new { background: #FFF1DC; color: var(--orange); }
@@ -1189,8 +1191,9 @@ function renderList() {
   if (tab === 'tasks') list = list.slice().sort((a, b) => taskRank(a) - taskRank(b) || String(a.due || a.at).localeCompare(String(b.due || b.at)));
   $('list').innerHTML = list.length ? list.map(v => v.kind === 'task' ? taskCard(v, false) : v.kind === 'jr' ? jrCard(v, false) : v.kind === 'tk' ? tkCard(v) :
     '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : v.status === ST_QA ? 'st-qa' : '') + (v.urgeCount && pending(v) ? ' urged' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
-    '<div class="top"><span class="sup">' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</span>' + timerHtml(v) + '</div>' +
-    '<div class="meta">' + sdot(v.store) + esc(v.store) + ' • ' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
+    '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</span>' + timerHtml(v) + '</div>' +
+    '<div class="sub"><span class="lbl">مورد:</span> ' + esc(v.supplier || 'غير محدد') + '</div>' +
+    '<div class="meta">' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
     '<div class="meta">' + badge(v.status) + ' ' + v.count + ' صنف • <span class="money">' + money(v.total) + ' ج.م</span>' +
     (v.receivedBy ? ' • 👤 ' + esc(v.receivedBy) : '') + (v.systemNo ? ' • #' + esc(v.systemNo) : '') +
     (v.rejectCount && v.status !== ST_REJ ? ' • ↩️ اتبعتت تاني' : '') +
@@ -1275,9 +1278,10 @@ setInterval(() => {
 function tkCard(v) {
   const sel = curTk && curTk.ticket.id === v.id;
   return '<div class="card tkcard ' + (v.status === TK_WORK ? 'st-work' : v.status === TK_SOLVED || v.status === TK_CLOSED ? 'st-done' : '') + (tkUrgentWaiting(v) ? ' tk-urgent' : '') + (sel ? ' sel' : '') + '" onclick="openTk(\'' + esc(v.id) + '\')">' +
-    '<div class="top"><span class="sup">🛠️ ' + esc(v.title) + ' ' + (PRIO_TAG[v.priority] || '') + ((Number(storePrio[v.store]) || 1) > 1 ? ' <span class="tkp tkp-vip">' + '⭐'.repeat((Number(storePrio[v.store]) || 1) - 1) + ' عميل مهم</span>' : '') +
+    '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + ' ' + (PRIO_TAG[v.priority] || '') + ((Number(storePrio[v.store]) || 1) > 1 ? ' <span class="tkp tkp-vip">' + '⭐'.repeat((Number(storePrio[v.store]) || 1) - 1) + ' عميل مهم</span>' : '') +
     (v.lastSide === 'فرع' && v.comments && tkOpen(v) ? ' <span class="ctag">💬 الفرع رد</span>' : '') + '</span>' + tkTimer(v) + '</div>' +
-    '<div class="meta">' + sdot(v.store) + esc(v.store) + ' • ' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
+    '<div class="sub"><span class="lbl">تاسك:</span> 🛠️ ' + esc(v.title) + '</div>' +
+    '<div class="meta">' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
     (v.desc ? '<div class="meta" style="color:var(--text)">' + esc(v.desc) + '</div>' : '') +
     '<div class="meta">' + tkBadge(v) + (v.assigneeName ? ' • 👤 ' + esc(v.assigneeName) : '') + (v.photos ? ' • 📷 ' + v.photos : '') +
     (v.reopens ? ' • <b style="color:#C62828">↩️ اتفتحت تاني ×' + v.reopens + '</b>' : '') + (v.rating ? ' • ' + stars(v.rating) : '') + '</div></div>';
@@ -3130,7 +3134,8 @@ function taskCard(v, board) {
     (done ? '<div class="bm">✅ ' + esc(v.doneBy) + ' • ' + tm(v.doneAt) + (v.data && v.data.progTotal !== undefined ? ' • البرنامج ' + money(v.data.progTotal) + ' = الجرد ' + money(v.data.appTotal) : '') + '</div>' : '');
   if (!board) {
     return '<div class="card" style="border-inline-start:5px solid #6C4BD8" onclick="if(!event.target.closest(\'button\'))this.classList.toggle(\'sel\')">' +
-      '<div class="top"><span class="sup">📋 ' + esc(v.title) + '</span>' + st + '</div><div class="meta">' + sdot(v.store) + esc(v.store) + ' • الميعاد ' + dt(v.due) + '</div>' + body + btn + '</div>';
+      '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + '</span>' + st + '</div>' +
+      '<div class="sub"><span class="lbl">تاسك:</span> 📋 ' + esc(v.title) + '</div><div class="meta">الميعاد ' + dt(v.due) + '</div>' + body + btn + '</div>';
   }
   return '<div class="bcard k-task' + (done ? ' done' : '') + (late ? ' late' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
     '<div class="bt"><b><span class="kind">📋</span>' + esc(v.title) + (v.to ? ' <small style="color:#4527A0">' + esc(taskToLabel(v.to)) + '</small>' : '') + '</b>' + st + '</div>' +
@@ -3350,8 +3355,9 @@ function jrCard(v, board) {
   const stage = v.status === 'شغال' ? ['', 'التحضير', 'الفرع بيجرد', 'الفرع خلص - رفع الكميات والتقرير'][v.stage] || '' : '';
   const log = '<ul class="tl">' + (v.log || []).map(e => '<li><span>' + (e.side === 'فرع' ? '🏪' : '🎧') + '</span><span>' + esc(e.text) + (e.by ? ' - ' + esc(e.by) : '') + '</span><span class="tm">' + tm(e.at) + '</span></li>').join('') + '</ul>';
   if (!board) {
-    return '<div class="card" style="border-inline-start:5px solid #00897B"><div class="top"><span class="sup">📋 طلب جرد</span>' + st + '</div>' +
-      '<div class="meta">' + sdot(v.store) + esc(v.store) + ' • الميعاد <b>' + dt(v.at) + '</b>' + (stage ? ' • ' + stage : '') + '</div>' +
+    return '<div class="card" style="border-inline-start:5px solid #00897B"><div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + '</span>' + st + '</div>' +
+      '<div class="sub"><span class="lbl">تاسك:</span> 📋 طلب جرد</div>' +
+      '<div class="meta">الميعاد <b>' + dt(v.at) + '</b>' + (stage ? ' • ' + stage : '') + '</div>' +
       (v.notes ? '<div class="meta">' + esc(v.notes) + '</div>' : '') + acts + log + '</div>';
   }
   return '<div class="bcard k-jr' + (jrOpenSup(v) ? ' late' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
