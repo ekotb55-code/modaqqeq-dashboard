@@ -122,71 +122,67 @@
   .bar2 { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 8px; }
   .bar2 i { display: block; height: 100%; width: 0; background: var(--blue); transition: width .3s; }
 
-  /* شاشة التحضير */
-  #prep { height: 100vh; height: 100dvh; overflow: hidden; }
-  .pbar-h { background: var(--blue); color: #fff; padding: 10px 14px 12px; }
-  .pbar-h .row { display: flex; align-items: center; gap: 10px; }
-  .pbar-h .ttl { flex: 1; min-width: 0; }
-  .pbar-h .ttl b { display: block; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .pbar-h .ttl span { font-size: 12px; opacity: .9; }
-  .pill { background: #fff; color: var(--blue); border-radius: 999px; padding: 4px 12px; font-size: 14px; font-weight: 800; white-space: nowrap; }
-  .track { height: 8px; border-radius: 999px; background: rgba(255,255,255,.25); overflow: hidden; margin-top: 8px; }
-  .track i { display: block; height: 100%; background: var(--gold); border-radius: 999px; transition: width .3s; }
-  .camrow { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 2px; }
-  #scan { position: fixed; inset: 0; background: #000; z-index: 80; }
-  #scan video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-  #scan .sfr { position: absolute; left: 8%; right: 8%; top: 32%; height: 24%; border: 3px solid rgba(255,255,255,.95); border-radius: 18px; box-shadow: 0 0 0 9999px rgba(0,0,0,.35); pointer-events: none; transition: border-color .15s; }
-  #scan.ok .sfr { border-color: #4ADE80; } #scan.bad .sfr { border-color: #F87171; }
-  #scan .slaser { position: absolute; left: 12%; right: 12%; top: 44%; height: 2px; background: #FF4D4D; pointer-events: none; }
-  #scan .stop { position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 10px; right: 10px; display: flex; align-items: center; gap: 8px; }
-  #scan .sb { width: 48px; height: 48px; border-radius: 14px; border: 0; background: rgba(0,0,0,.5); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 800; flex: none; }
-  #scan .sb svg { width: 22px; height: 22px; }
-  #scan .sb.on { background: var(--gold); color: var(--ink); }
-  #scan .scur { flex: 1; min-width: 0; color: #fff; font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px #000; text-align: center; }
-  #scan .sres { position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 84px); background: rgba(255,255,255,.95); border-radius: 16px; padding: 12px 14px; text-align: center; min-height: 84px; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
-  #scan .sres .h { font-size: 15px; font-weight: 800; color: var(--ink); }
-  #scan .sres .nm { font-size: 15px; font-weight: 700; }
-  #scan .sres .sbig { font-size: 26px; font-weight: 800; }
-  #scan .sres.ok { background: #DCFCE7; } #scan .sres.ok .h, #scan .sres.ok .sbig { color: var(--ok); }
-  #scan .sres.bad { background: #FEE2E2; } #scan .sres.bad .h { color: var(--red); }
-  #scan .sbot { position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 14px); }
-  .side { display: flex; align-items: center; gap: 8px; }
-  .last { border-radius: 14px; padding: 6px 10px; font-size: 12px; background: #fff; border: 1.5px solid var(--line); flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 0; min-height: 52px; }
-  .last.ok { background: var(--ok-l); border-color: var(--ok); }
-  .last.bad { background: #FDECEC; border-color: var(--red); }
-  .last .h { font-weight: 800; }
-  .last.ok .h { color: var(--ok); }
-  .last.bad .h { color: var(--red); }
-  .last .nm { font-size: 13px; font-weight: 700; }
-  .savest { font-size: 11px; color: var(--mute); text-align: center; width: 64px; flex: none; }
-  .backnote { margin: 6px 12px 0; background: var(--bad-l); border-radius: 12px; padding: 8px 10px; font-size: 12.5px; color: #7C2D12; }
-  .lh { padding: 6px 14px 2px; font-size: 13px; font-weight: 800; color: #355070; }
-  .list { flex: 1; overflow-y: auto; padding: 0 12px 12px; -webkit-overflow-scrolling: touch; }
-  .it { background: #fff; border-radius: 14px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; min-height: 52px; margin: 6px 0; cursor: pointer; border: 2px solid transparent; }
-  .it .no { width: 30px; height: 30px; border-radius: 999px; background: var(--blue-l); color: var(--blue); font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex: none; }
+  /* شاشة التحضير: الكاميرا ورا كل حاجة */
+  #prep { height: 100vh; height: 100dvh; overflow: hidden; position: relative; background: #13263A; }
+  .bgcam { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+  .veil { position: absolute; inset: 0; z-index: 1; background: rgba(8,20,36,.42); backdrop-filter: blur(1.5px); -webkit-backdrop-filter: blur(1.5px); pointer-events: none; transition: background .2s; }
+  #prep.flash .veil { background: rgba(21,128,61,.45); }
+  #prep.flashbad .veil { background: rgba(185,28,28,.45); }
+  #prep.done .veil { background: rgba(21,128,61,.6); }
+  #prep.nocam .bgcam { display: none; }
+  #prep.nocam .veil { background: #EEF3F9; backdrop-filter: none; }
+  .ptop { position: relative; z-index: 2; background: rgba(255,255,255,.94); padding: calc(env(safe-area-inset-top) + 6px) 8px 0; }
+  .prow { display: flex; align-items: center; gap: 6px; padding-bottom: 6px; }
+  .pb { width: 36px; height: 36px; border-radius: 10px; border: 0; background: var(--blue-l); color: var(--blue); display: flex; align-items: center; justify-content: center; flex: none; cursor: pointer; }
+  .pb svg { width: 20px; height: 20px; }
+  .lg.sml { width: 54px; height: 30px; }
+  .lg.sml .txt { font-size: 10px; padding: 1px 4px; }
+  .pinfo { flex: 1; min-width: 0; text-align: center; line-height: 1.25; }
+  .pinfo b { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pinfo span { display: block; font-size: 11px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pill { background: var(--blue); color: #fff; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 800; white-space: nowrap; flex: none; }
+  .thin { height: 3px; background: var(--line); margin: 0 -8px; }
+  .thin i { display: block; height: 100%; background: var(--gold); transition: width .3s; }
+  .pbody { position: relative; z-index: 2; flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; -webkit-overflow-scrolling: touch; }
+  .backnote { background: rgba(255,244,236,.95); border-radius: 12px; padding: 8px 10px; font-size: 12.5px; color: #7C2D12; }
+  .last { border-radius: 14px; padding: 6px 12px; font-size: 13px; background: rgba(255,255,255,.88); display: flex; flex-direction: column; gap: 0; text-align: center; }
+  .last .h { font-weight: 800; font-size: 14px; }
+  .last .nm { font-weight: 700; }
+  .last.ok { background: rgba(220,252,231,.95); } .last.ok .h { color: var(--ok); }
+  .last.bad { background: rgba(254,226,226,.96); } .last.bad .h { color: var(--red); }
+  .cur { background: rgba(255,255,255,.9); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 6px 22px rgba(0,0,0,.25); }
+  .cur .top { display: flex; align-items: flex-start; gap: 10px; }
+  .cur .no { width: 32px; height: 32px; border-radius: 999px; background: var(--blue); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; flex: none; }
+  .cur .nm { flex: 1; font-size: 18px; font-weight: 800; line-height: 1.45; }
+  .cur .cnt { text-align: center; font-size: 46px; font-weight: 800; color: var(--blue); line-height: 1.1; }
+  .cur .cnt small { font-size: 22px; color: var(--mute); }
+  .cur .acts { display: flex; gap: 8px; }
+  .cur .acts .btn { flex: 1; min-height: 44px; font-size: 13px; }
+  .cur.hit { animation: hit .5s; }
+  .alldone { background: rgba(220,252,231,.96); border-radius: 18px; padding: 18px; text-align: center; font-size: 18px; font-weight: 800; color: var(--ok); }
+  .lh { font-size: 12px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); padding: 2px 4px 0; }
+  #prep.nocam .lh { color: #355070; text-shadow: none; }
+  .it { background: rgba(255,255,255,.82); border-radius: 14px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; min-height: 48px; margin: 6px 0; cursor: pointer; }
+  .it .no { width: 28px; height: 28px; border-radius: 999px; background: var(--blue-l); color: var(--blue); font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex: none; }
   .it .nm { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; line-height: 1.5; }
   .it .nm small { display: block; font-size: 11px; color: var(--mute); font-weight: 600; }
   .it .q { font-size: 15px; font-weight: 800; color: #355070; white-space: nowrap; }
-  .it.cur { border-color: var(--blue); box-shadow: 0 6px 16px rgba(10,92,173,.16); flex-wrap: wrap; }
-  .it.cur .no { background: var(--blue); color: #fff; }
-  .it.cur .q { font-size: 20px; color: var(--blue); }
-  .it .acts { display: flex; gap: 8px; width: 100%; }
-  .it .acts .btn { flex: 1; min-height: 44px; font-size: 13px; }
-  .it.na { background: var(--bad-l); }
-  .it.na .no { background: var(--bad); color: #fff; }
-  .it.na .nm { color: #7C2D12; }
-  .it.done { background: var(--ok-l); min-height: 44px; }
-  .it.done .no { background: var(--ok); color: #fff; }
-  .it.done .nm { color: #14532D; }
-  .it.done .q { color: var(--ok); }
+  .it.na { background: rgba(255,244,236,.92); } .it.na .no { background: var(--bad); color: #fff; } .it.na .nm { color: #7C2D12; }
+  .it.done { background: rgba(230,246,236,.92); min-height: 40px; } .it.done .no { background: var(--ok); color: #fff; } .it.done .nm { color: #14532D; } .it.done .q { color: var(--ok); }
   .it.part .q { color: var(--warn); }
-  .it.hit { animation: hit .6s; }
-  @keyframes hit { 0% { transform: scale(1.03); background: #FFF6CC; } 100% { transform: none; } }
-  .dh { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; color: var(--ok); padding: 6px 2px 0; }
+  @keyframes hit { 0% { transform: scale(1.03); } 100% { transform: none; } }
+  .dh { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 800; color: var(--ok); background: rgba(255,255,255,.85); border: 0; border-radius: 12px; min-height: 40px; cursor: pointer; width: 100%; margin-top: 4px; }
+  .pfoot { position: relative; z-index: 2; background: rgba(255,255,255,.94); padding: 8px 12px calc(env(safe-area-inset-bottom) + 10px); display: flex; flex-direction: column; gap: 6px; }
+  .ctl { display: flex; align-items: center; gap: 8px; }
+  .cbtn { width: 44px; height: 40px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff; color: var(--ink); display: flex; align-items: center; justify-content: center; font-weight: 800; cursor: pointer; flex: none; }
+  .cbtn svg { width: 20px; height: 20px; }
+  .cbtn.on { background: var(--gold); border-color: var(--gold); }
+  .cbtn.off { opacity: .45; }
+  .savest { flex: 1; font-size: 11px; color: var(--mute); text-align: left; }
+  .pfoot .hint { text-align: center; font-size: 12px; color: var(--mute); }
   .foot { background: #fff; padding: 10px 12px calc(env(safe-area-inset-bottom) + 12px); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
   .foot .row { display: flex; gap: 8px; }
   .foot .row .btn { flex: 1; }
-  .foot .hint { text-align: center; font-size: 12px; color: var(--mute); }
 
   /* الإنهاء والاعتماد */
   .sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -321,29 +317,33 @@
 
 <!-- التحضير -->
 <section id="prep" class="scr hidden">
-  <div class="topbar"><div class="lg lgAS"></div><div class="t">تحضير الطلبيات</div><div class="lg"><img src="/modaqqeq-dashboard/logo_wide.png" alt="مدقق"></div></div>
-  <div class="pbar-h">
-    <div class="row">
-      <button class="ib" id="prepBack" aria-label="رجوع"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
-      <div class="ttl"><b id="pBranch">-</b><span id="pSub"></span></div>
+  <video id="vid" class="bgcam" playsinline muted></video>
+  <div class="veil"></div>
+  <div class="ptop">
+    <div class="prow">
+      <button class="pb" id="prepBack" aria-label="رجوع"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="lg lgAS sml"></div>
+      <div class="pinfo"><b id="pBranch">-</b><span id="pSub"></span></div>
       <div class="pill" id="pCount">0 من 0</div>
+      <div class="lg sml"><img src="/modaqqeq-dashboard/logo_wide.png" alt="مدقق"></div>
     </div>
-    <div class="track"><i id="pTrack" style="width:0"></i></div>
+    <div class="thin"><i id="pTrack" style="width:0"></i></div>
   </div>
-  <div class="camrow">
-    <div class="side">
-      <div class="last" id="last"><div class="h">جاهز</div><div class="nm">دوس «امسح» وابدأ بأول صنف</div></div>
-      <div class="savest" id="saveSt"></div>
-    </div>
+  <div class="pbody" id="pbody">
+    <div class="backnote hidden" id="backNote"></div>
+    <div class="last" id="last"><div class="h">الكاميرا شغالة</div><div class="nm">قرّب باركود أول قطعة</div></div>
+    <div id="curBox"></div>
+    <div id="ilist"></div>
   </div>
-  <div class="backnote hidden" id="backNote"></div>
-  <div class="lh">الأصناف بالترتيب</div>
-  <div class="list" id="ilist"></div>
-  <div class="foot">
-    <div class="row">
-      <button class="btn" id="btnScan" style="flex:2;min-height:56px;font-size:17px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>امسح</button>
-      <button class="btn ok" id="btnFinish" style="flex:1;min-height:56px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>تم التحضير</button>
+  <div class="pfoot">
+    <div class="ctl">
+      <button class="cbtn" id="camTorch" aria-label="الفلاش"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button>
+      <button class="cbtn hidden" id="camZoom" aria-label="تكبير">2x</button>
+      <button class="cbtn" id="camToggle" aria-label="إيقاف الكاميرا"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+      <button class="cbtn" id="voiceToggle" aria-label="الصوت"></button>
+      <span class="savest" id="saveSt"></span>
     </div>
+    <button class="btn ok block" id="btnFinish"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>تم التحضير</button>
     <div class="hint" id="pHint"></div>
   </div>
 </section>
@@ -406,19 +406,6 @@
   </div>
 </section>
 
-<!-- الكاميرا (شاشة كاملة) -->
-<div id="scan" class="hidden">
-  <video id="vid" playsinline muted></video>
-  <div class="sfr"></div><div class="slaser"></div>
-  <div class="stop">
-    <button class="sb" id="scanClose" aria-label="قفل الكاميرا"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    <div class="scur" id="scanCur"></div>
-    <button class="sb hidden" id="camZoom" aria-label="تكبير">2x</button>
-    <button class="sb" id="camTorch" aria-label="الفلاش"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button>
-  </div>
-  <div class="sres" id="scanRes"><div class="h">وجّه الكاميرا على باركود القطعة</div></div>
-  <div class="sbot"><button class="btn block" id="scanDone" style="background:#fff;color:var(--ink)">قفل الكاميرا</button></div>
-</div>
 <div id="toast" class="hidden"></div>
 <input type="file" id="meCam" accept="image/*" capture="user" class="hidden">
 <input type="file" id="meGal" accept="image/*" class="hidden">
@@ -471,7 +458,7 @@ async function api(action, data) {
 function show(id) {
   ['login', 'home', 'prep', 'finish', 'appr', 'invoice'].forEach(s => $(s).classList.toggle('hidden', s !== id));
   window.scrollTo(0, 0);
-  if (id !== 'prep') closeScan();
+  if (id !== 'prep') camStop();
 }
 function sheet(html) {
   const bg = document.createElement('div');
@@ -513,6 +500,41 @@ function beep(ok) {
   } catch (e) {}
   if (navigator.vibrate) navigator.vibrate(ok ? 60 : [200, 80, 200]);
 }
+
+// آخر قطعة في الصنف: تيت تيت تيت سريعة
+function sndLast() {
+  try { for (let i = 0; i < 7; i++) tone(2600, i * 0.09, 0.06, 'square', 0.9); } catch (e) {}
+  if (navigator.vibrate) navigator.vibrate(600);
+}
+// الطلبية كلها خلصت: نغمة طالعة
+function sndOrderDone() {
+  try { [1047, 1319, 1568, 2093].forEach((f, i) => tone(f, i * 0.16, i === 3 ? 0.45 : 0.15, 'square', 0.85)); } catch (e) {}
+  if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 600]);
+}
+// الكلام (صوت الموبايل): اسم الصنف والمطلوب، والعدد مع كل قطعة
+st.voice = ls('wh_voice') !== '0';
+let arVoice = null;
+function pickVoice() {
+  try { const vs = speechSynthesis.getVoices(); arVoice = vs.find(v => /^ar[-_]EG/i.test(v.lang)) || vs.find(v => /^ar/i.test(v.lang)) || null; } catch (e) {}
+}
+if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function say(text, now) {
+  if (!st.voice || !('speechSynthesis' in window)) return;
+  try {
+    if (now) speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = arVoice ? arVoice.lang : 'ar-EG'; if (arVoice) u.voice = arVoice;
+    u.rate = 1.1; u.volume = 1;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+const ICO_VOL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>';
+const ICO_MUTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>';
+function paintVoice() { $('voiceToggle').innerHTML = st.voice ? ICO_VOL : ICO_MUTE; $('voiceToggle').classList.toggle('off', !st.voice); }
+$('voiceToggle').onclick = () => {
+  st.voice = !st.voice; ls('wh_voice', st.voice ? '1' : '0'); paintVoice();
+  if (st.voice) { const c = curItem(); say(c ? c.name + '، مطلوب ' + (c.qty - c.done) : 'الصوت شغال', true); } else try { speechSynthesis.cancel(); } catch (e) {}
+};
 
 // ---------- اللوجوهات ----------
 function paintLogos() {
@@ -832,7 +854,10 @@ async function openPrep(id) {
     $('pBranch').textContent = o.branch;
     $('pSub').textContent = 'مخزن ' + o.store + ' · طلب رقم ' + o.id;
     if (o.status === ST.BACK && o.anote) { $('backNote').textContent = 'اترجعت من المعتمد: ' + o.anote; $('backNote').classList.remove('hidden'); }
+    st.lastAnn = null; st.showDone = false;
+    $('prep').classList.remove('done');
     renderPrep();
+    if (st.camOn !== false) camStart(); else $('prep').classList.add('nocam');
   } catch (err) {
     toast(arErr(err), 'bad'); backHome();
   }
@@ -846,26 +871,40 @@ function renderPrep(hitN) {
   $('pCount').textContent = handled + ' من ' + items.length;
   $('pTrack').style.width = (items.length ? Math.round(100 * handled / items.length) : 0) + '%';
   const cur = curItem();
-  const pending = items.filter(it => !it.na && it.done < it.qty);
+  const pending = items.filter(it => !it.na && it.done < it.qty && (!cur || it.n !== cur.n));
   const na = items.filter(it => it.na);
   const done = items.filter(it => !it.na && it.done >= it.qty);
+  $('curBox').innerHTML = cur ? '<div class="cur' + (hitN === cur.n ? ' hit' : '') + '" data-n="' + cur.n + '"><div class="top"><div class="no">' + cur.n + '</div><div class="nm">' + esc(cur.name) + '</div></div>' +
+    '<div class="cnt">' + cur.done + ' <small>من ' + cur.qty + '</small></div>' +
+    '<div class="acts"><button class="btn ghost" data-a="type">' + ICO_KEY + 'اكتب العدد</button><button class="btn danger" data-a="na">' + ICO_NA + 'غير متوفر</button></div></div>'
+    : '<div class="alldone">كل الأصناف خلصت ✓<br><span style="font-size:14px">دوس «تم التحضير» وصوّر البرنيكة</span></div>';
   const row = (it, cls) => {
-    const isCur = cur && it.n === cur.n;
     const q = it.na ? '<span class="tag t-back">غير متوفر</span>' : it.done + ' من ' + it.qty;
-    const sub = isCur ? '<small>الصنف الحالي</small>' : (it.manual ? '<small>اتكتب بالإيد</small>' : '');
-    return '<div class="it ' + cls + (isCur ? ' cur' : '') + (it.done > 0 && it.done < it.qty ? ' part' : '') + (hitN === it.n ? ' hit' : '') + '" data-n="' + it.n + '">' +
-      '<div class="no">' + it.n + '</div><div class="nm">' + esc(it.name) + sub + '</div><div class="q">' + q + '</div>' +
-      (isCur ? '<div class="acts"><button class="btn ghost" data-a="type">' + ICO_KEY + 'اكتب العدد</button><button class="btn danger" data-a="na">' + ICO_NA + 'غير متوفر</button></div>' : '') +
-      '</div>';
+    return '<div class="it ' + cls + (it.done > 0 && it.done < it.qty ? ' part' : '') + '" data-n="' + it.n + '">' +
+      '<div class="no">' + it.n + '</div><div class="nm">' + esc(it.name) + (it.manual ? '<small>اتكتب بالإيد</small>' : '') + '</div><div class="q">' + q + '</div></div>';
   };
-  $('ilist').innerHTML = pending.map(it => row(it, '')).join('') + na.map(it => row(it, 'na')).join('') +
-    (done.length ? '<div class="dh">' + ICO_OK + 'اتحضّروا (' + done.length + ')</div>' + done.map(it => row(it, 'done')).join('') : '');
-  const left = pending.length;
-  $('pHint').textContent = left ? 'فاضل ' + left + (left === 1 ? ' صنف' : ' أصناف') + ' لسه متحضروش' : 'كل الأصناف خلصت ✓ دوس «تم التحضير»';
-  if (hitN) { const el = document.querySelector('.it[data-n="' + hitN + '"]'); if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  $('ilist').innerHTML = (pending.length ? '<div class="lh">اللي بعده</div>' + pending.map(it => row(it, '')).join('') : '') +
+    na.map(it => row(it, 'na')).join('') +
+    (done.length ? '<button class="dh" data-a="showdone">' + ICO_OK + 'اتحضّروا (' + done.length + ') ' + (st.showDone ? '- إخفاء' : '- عرض') + '</button>' +
+      (st.showDone ? done.map(it => row(it, 'done')).join('') : '') : '');
+  const left = pending.length + (cur ? 1 : 0);
+  $('pHint').textContent = left ? 'فاضل ' + left + (left === 1 ? ' صنف' : ' أصناف') : 'كل الأصناف خلصت ✓';
+  // أول ما يبدأ صنف جديد: الموبايل يقول اسمه والمطلوب منه
+  if (cur && st.lastAnn !== cur.n && !$('prep').classList.contains('hidden')) {
+    st.lastAnn = cur.n;
+    say(cur.name + '، مطلوب ' + (cur.qty - cur.done), false);
+  }
 }
+$('curBox').addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'), c = e.target.closest('.cur'); if (!c) return;
+  const it = st.items.find(x => x.n === Number(c.dataset.n)); if (!it) return;
+  if (b && b.dataset.a === 'type') return typeQty(it);
+  if (b && b.dataset.a === 'na') return setNa(it, true);
+  itemMenu(it);
+});
 $('ilist').addEventListener('click', e => {
   const b = e.target.closest('[data-a]'), r = e.target.closest('.it');
+  if (b && b.dataset.a === 'showdone') { st.showDone = !st.showDone; return renderPrep(); }
   if (!r) return;
   const it = st.items.find(x => x.n === Number(r.dataset.n)); if (!it) return;
   if (b && b.dataset.a === 'type') return typeQty(it);
@@ -914,13 +953,9 @@ function setLast(kind, h, nm, extra) {
   const el = $('last');
   el.className = 'last' + (kind ? ' ' + kind : '');
   el.innerHTML = '<div class="h">' + esc(h) + '</div><div class="nm">' + esc(nm) + '</div>' + (extra ? '<div>' + esc(extra) + '</div>' : '');
-  if (!$('scan').classList.contains('hidden')) {
-    const r = $('scanRes');
-    r.className = 'sres' + (kind ? ' ' + kind : '');
-    r.innerHTML = '<div class="h">' + esc(h) + '</div><div class="nm">' + esc(nm) + '</div>' + (extra ? '<div class="' + (kind === 'ok' ? 'sbig' : '') + '">' + esc(extra) + '</div>' : '');
-    $('scan').classList.remove('ok', 'bad');
-    if (kind) { $('scan').classList.add(kind); clearTimeout(st.flashT); st.flashT = setTimeout(() => $('scan').classList.remove('ok', 'bad'), 900); }
-  }
+  const pr = $('prep');
+  pr.classList.remove('flash', 'flashbad');
+  if (kind) { void pr.offsetWidth; pr.classList.add(kind === 'ok' ? 'flash' : 'flashbad'); clearTimeout(st.flashT); st.flashT = setTimeout(() => pr.classList.remove('flash', 'flashbad'), 450); }
 }
 
 // ---------- الحفظ على السيرفر ----------
@@ -958,23 +993,16 @@ function loadZx() {
     document.head.appendChild(s);
   });
 }
-// فتح الكاميرا شاشة كاملة (زي الجرد والاستلام) - بتفضل مفتوحة لحد ما يقفلها
-function scanCurText() { const c = curItem(); $('scanCur').textContent = c ? 'الحالي: ' + c.name + ' (' + c.done + ' من ' + c.qty + ')' : 'كل الأصناف خلصت ✓'; }
-function openScan() {
-  try { audio(); } catch (e) {}
-  $('scan').classList.remove('hidden', 'ok', 'bad');
-  $('scanRes').className = 'sres';
-  $('scanRes').innerHTML = '<div class="h">وجّه الكاميرا على باركود القطعة</div><div class="nm">قطعة قطعة - بعد كل مسحة شيل القطعة</div>';
-  scanCurText();
-  st.last = { code: '', at: 0 }; st.cand = null; st.pauseUntil = 0;
-  camStart();
-}
-function closeScan() { camStop(); $('scan').classList.add('hidden'); }
-$('btnScan').onclick = openScan;
-$('scanClose').onclick = closeScan;
-$('scanDone').onclick = closeScan;
+// الكاميرا شغالة في خلفية شاشة التحضير - تتقفل وتتفتح من زرار الكاميرا
+st.camOn = ls('wh_cam') !== '0';
+$('camToggle').onclick = () => {
+  st.camOn = !stream;
+  ls('wh_cam', st.camOn ? '1' : '0');
+  if (st.camOn) camStart(); else { camStop(); }
+};
 async function camStart() {
   if (stream) return;
+  $('prep').classList.remove('nocam'); $('camToggle').classList.remove('off');
   const vid = $('vid');
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
@@ -1007,7 +1035,7 @@ async function camStart() {
       stopLoop = () => { try { zx.reset(); } catch (e) {} };
     }
   } catch (err) {
-    closeScan();
+    camStop();
     toast(/Permission|NotAllowed|denied/i.test(String(err && (err.name || err.message))) ? 'لازم تسمح للتطبيق يستخدم الكاميرا' : 'الكاميرا مش شغالة - جرّب تاني', 'bad');
   }
 }
@@ -1016,6 +1044,7 @@ function camStop() {
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
   track = null;
   const v = $('vid'); if (v) v.srcObject = null;
+  $('prep').classList.add('nocam'); $('camToggle').classList.add('off');
 }
 async function setZoom(on) {
   const z = st.zoomCaps; if (!track || !z) return;
@@ -1031,7 +1060,7 @@ $('camTorch').onclick = async () => {
 };
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { camStop(); flushSave(); }
-  else if (!$('scan').classList.contains('hidden')) camStart();
+  else if (!$('prep').classList.contains('hidden') && st.camOn) camStart();
 });
 
 // كل مسحة: نفس الباركود ما يتحسبش تاني غير لما يغيب عن الكاميرا GAP ملي ثانية
@@ -1044,7 +1073,7 @@ function validCode(c) {
 }
 function onCode(raw) {
   const code = String(raw || '').trim();
-  if (!code || !st.order || $('scan').classList.contains('hidden')) return;
+  if (!code || !st.order || !stream || $('prep').classList.contains('hidden')) return;
   if (!validCode(code)) return;
   const now = Date.now();
   // بعد كل مسحة الكاميرا بتقف ثانية تعرض النتيجة (ولو نفس القطعة لسه قدامها ما تتحسبش تاني)
@@ -1087,15 +1116,18 @@ async function handleCode(code) {
   it.na = false;
   it.done += 1;
   it.codes = (it.codes ? it.codes + ',' : '') + code;
-  beep(true);
-  setLast('ok', it.done >= it.qty ? 'الصنف اكتمل ✓' : 'آخر مسحة', it.name, 'اتحسبت قطعة · ' + it.done + ' من ' + it.qty);
+  const itemDone = it.done >= it.qty;
+  const orderDone = itemDone && !st.items.some(x => !x.na && x.done < x.qty);
+  if (orderDone) { sndOrderDone(); say('خلاص، الطلبية خلصت. صوّر البرنيكة', true); }
+  else if (itemDone) { sndLast(); say('خلص', true); }
+  else { beep(true); say(String(it.done), true); }
+  setLast('ok', itemDone ? 'الصنف اكتمل ✓' : 'اتحسبت قطعة', it.name, it.done + ' من ' + it.qty);
   changed(it.n);
-  scanCurText();
+  if (orderDone) $('prep').classList.add('done');
 }
 
 // ---------- إنهاء التحضير ----------
 $('btnFinish').onclick = async () => {
-  closeScan();
   const left = st.items.filter(it => !it.na && it.done < it.qty);
   if (left.length && !confirm('فيه ' + left.length + ' صنف لسه ناقص - تكمل وتبعت كده؟')) return;
   await flushSave();
@@ -1434,6 +1466,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 window.addEventListener('beforeunload', () => { if (st.dirty) doSave(); });
 (function start() {
   paintLogos();
+  paintVoice();
   showInstall();
   const u = ls('wh_user');
   if (u && ls('wh_pass')) {
