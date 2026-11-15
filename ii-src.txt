@@ -1,0 +1,963 @@
+// =====================================================================
+// ===== سيرفر تطبيق صور الأصناف (سكريبت لوحده على حساب ekotb555) =====
+// ليه لوحده: جوجل بتدي كل حساب حد يومي للطلبات اللي بتطلع برّه (حوالي 20 ألف).
+// الصور كانت بتاكل رصيد سكريبت "دليل الموظفين" فبيقف سحب الكميات والإشعارات وغيرهم.
+// دلوقتي الصور ليها رصيدها هنا، ومحدش يقف بسبب التاني.
+//
+// - بيقرا من شيت "دليل الموظفين" (من غير ما يكتب فيه): الموظفين + تطبيق الصور + ربط برامج البيع.
+// - بيكتب في شيت "مدقق - صور الأصناف" بس (تاب لكل فرع + سجل الصور).
+// - الشيتين لازم يبقوا متشاركين مع صاحب السكريبت كـ "محرر".
+// - النشر: تطبيق ويب ← التنفيذ: أنا ← مين يدخل: أي حد.
+// - أول مرة: شغّل setupItemImages من المحرر (بتتأكد إن كل حاجة شايفاها).
+// - الرصيد: التجهيز في الخلفية بيقف لما الطلبات توصل II_SCAN_LIMIT في اليوم (بيكمل بكرة لوحده)،
+//   وفتح صور الأصناف اللي على الشاشة وحفظ الصور بيفضلوا شغالين لحد II_DAY_LIMIT.
+// =====================================================================
+const II_DIR_ID = '1RCOiGnylrzjxBqrY0f0U0ZgIjbzbzJkLgTK9S5xpdVE';   // شيت دليل الموظفين
+const II_CACHE_ID = '1O6F3-4Fy-5ZiOK4H_D2V3ERJ-RVIu6Ffv9cmkMvRJJ0'; // شيت مدقق - صور الأصناف
+const II_TAB = 'تطبيق الصور';
+const II_LOG = 'سجل الصور';
+const II_SS_PROP = 'II_CACHE_SS';
+const II_COLS = ['رقم الصنف', 'اسم الصنف', 'الباركود', 'التصنيف', 'الصورة', 'آخر ظهور'];
+const II_NONE = '-'; // الصنف مالوش صورة في البرنامج
+// الصورة ممكن تبقى في فولدر المحل (upload/41243/x.jpg) أو في فولدر الرفع على طول (upload/x.png)
+const II_IMG_RE = /upload\/(?:\d+\/)?[^"'\s<>\/]+\.(?:jpe?g|png|webp|gif)/i;
+const ALL = 'الكل';
+const SH_USERS = 'الموظفين';
+const SH_POS_LINKS = 'ربط برامج البيع';
+const II_SCAN_LIMIT = 15000; // التجهيز في الخلفية بيقف هنا
+const II_DAY_LIMIT = 19000;  // الصور اللي على الشاشة + الحفظ بيقفوا هنا (حد جوجل حوالي 20 ألف)
+const II_QUOTA_MSG = 'رصيد السيرفر النهارده خلص - التطبيق هيرجع يشتغل بكرة';
+
+// ---------- استقبال الطلبات ----------
+const II_ACTIONS = {
+  imgLogin: d => iiLogin_(d),
+  imgItems: d => iiItems_(d),
+  imgScan: d => iiScan_(d),
+  imgFind: d => iiFind_(d),
+  imgSet: d => iiSet_(d),
+  imgPeek: d => iiPeek_(d),
+  imgWmGet: d => iiWmGet_(d),
+  imgWmSet: d => iiWmSet_(d),
+  imgGet: d => iiGet_(d),
+  ping: () => ({ time: new Date().toISOString(), today: iiCount_() })
+};
+function doGet(e) { return iiHandle_(e); }
+function doPost(e) { return iiHandle_(e); }
+function iiHandle_(e) {
+  let out;
+  try {
+    const p = (e && e.parameter) || {};
+    if (!p.action) return ContentService.createTextOutput('سيرفر صور الأصناف شغال ✓');
+    const data = p.data ? JSON.parse(p.data) : (e.postData && e.postData.contents ? JSON.parse(e.postData.contents) : {});
+    const fn = II_ACTIONS[p.action];
+    if (!fn) throw new Error('طلب مش معروف');
+    out = fn(data) || {};
+    out.ok = true;
+  } catch (err) {
+    const m = String(err && err.message || err);
+    out = { ok: false, error: /too many times|مرات كثيرة|urlfetch|Bandwidth quota/i.test(m) ? II_QUOTA_MSG : m };
+  } finally {
+    iiFlush_();
+  }
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ---------- عدّاد الطلبات اليومي ----------
+let __iiN = 0;
+function iiDayKey_() { return 'II_N_' + Utilities.formatDate(new Date(), 'Africa/Cairo', 'yyyy-MM-dd'); }
+function iiCount_() { return (Number(PropertiesService.getScriptProperties().getProperty(iiDayKey_())) || 0) + __iiN; }
+// فيه مكان لـ n طلب كمان؟ (hard = الحد الكبير بتاع الشاشة والحفظ، غير كده حد التجهيز)
+function iiRoom_(n, hard) { return iiCount_() + (n || 1) <= (hard ? II_DAY_LIMIT : II_SCAN_LIMIT); }
+function iiFlush_() {
+  if (!__iiN) return;
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(5000);
+    const pr = PropertiesService.getScriptProperties(), k = iiDayKey_();
+    pr.setProperty(k, String((Number(pr.getProperty(k)) || 0) + __iiN));
+    __iiN = 0;
+  } catch (e) {} finally { try { lock.releaseLock(); } catch (e) {} }
+}
+function iiUF_(url, opt) { __iiN++; return UrlFetchApp.fetch(url, opt || {}); }
+function iiUFAll_(reqs) { __iiN += reqs.length; return UrlFetchApp.fetchAll(reqs); }
+// تنضيف العدادات القديمة (بتتنادي من التشغيل اليومي لو اتعمل، ومش ضرورية)
+function iiCleanCounters() {
+  const pr = PropertiesService.getScriptProperties(), keep = iiDayKey_();
+  Object.keys(pr.getProperties()).forEach(k => { if (/^II_N_/.test(k) && k !== keep) pr.deleteProperty(k); });
+}
+
+// شغّلها مرة من المحرر: بتعمل تاب الصلاحيات وشيت الصور
+// (بتتأكد إن السكريبت شايف الشيتين - لازم يبقوا متشاركين مع صاحب السكريبت كـ "محرر")
+function setupItemImages() {
+  Logger.log('شيت الدليل: ' + iiDirSS_().getName() + ' ✓');
+  Logger.log('تاب الصلاحيات: ' + iiAccessSheet_().getName() + ' ✓');
+  Logger.log('ربط برامج البيع: ' + iiLinked_().length + ' فرع مربوط ✓');
+  Logger.log('الموظفين: ' + users_().length + ' سطر ✓');
+  Logger.log('شيت الصور: ' + iiCacheSS_().getName() + ' ✓');
+  Logger.log('الطلبات النهارده: ' + iiCount_() + ' من ' + II_DAY_LIMIT);
+}
+
+// تجربة على صنف واحد (من المحرر): بنحط صورة لصنف مالوش صورة، نتأكد إن مفيش حاجة تانية اتغيرت، ونرجّعه زي ما كان
+const II_TEST_BRANCH = 'ميت عقبة';
+const II_TEST_ITEM = '887612';
+function testItemImages() {
+  const s = iiSession_(II_TEST_BRANCH);
+  const snap = () => iiParam_(iiFormPayload_(iiFetch_(s, 'items/new_item.php', { method: 'post', payload: { id: II_TEST_ITEM, edit: 'item', store_id: '' } }).getContentText('UTF-8'), null).payload);
+  const start = snap();
+  const logo = iiUF_('https://ekotb55-code.github.io/modaqqeq-dashboard/icon-192.png').getBlob().setContentType('image/png');
+  const r1 = iiSetCore_(II_TEST_BRANCH, 'تجربة من المحرر', II_TEST_ITEM, logo, null);
+  Logger.log('1) الصورة اتحفظت: ' + r1.url + ' | خانات اتغيرت غير الصورة: ' + (r1.changed.length ? r1.changed.join('، ') : 'ولا حاجة ✓'));
+  // الرجوع: نجرب نفس اللي كان مكتوب، ولو البرنامج ما قبلهوش نجرب فاضي
+  let back = null;
+  [r1.oldImg, ''].some(v => {
+    try { back = iiSetCore_(II_TEST_BRANCH, 'تجربة من المحرر (رجوع)', II_TEST_ITEM, null, v); return true; }
+    catch (e) { Logger.log('الرجوع بـ "' + v + '" ما نفعش: ' + e.message); return false; }
+  });
+  Logger.log(back ? '2) الصنف رجع من غير صورة | خانات اتغيرت: ' + (back.changed.length ? back.changed.join('، ') : 'ولا حاجة ✓')
+    : '2) الصورة التجريبية لسه على الصنف ' + II_TEST_ITEM + ' (تتغير من التطبيق)');
+  const end = snap();
+  const d = iiDiff_(start, end).concat(start.split('&').filter(x => /^img=/.test(x)).join() !== end.split('&').filter(x => /^img=/.test(x)).join() ? ['img'] : []);
+  Logger.log('3) الصنف كله قبل التجربة وبعدها: ' + (d.length ? 'اختلف في: ' + d.join('، ') : 'زي ما هو بالظبط ✓'));
+}
+
+// تجهيز أصناف فرع من المحرر (بدل ما أول واحد يفتح التطبيق يستنى) - شغّلها لحد ما تقول خلص
+function prepareItemImages() {
+  const t0 = Date.now();
+  let p;
+  do { p = iiScanCore_(II_TEST_BRANCH, false); Logger.log(JSON.stringify(p)); } while (!p.finished && Date.now() - t0 < 4.5 * 60 * 1000);
+  Logger.log(p.finished ? 'خلص ✓ ' + p.total + ' صنف، منهم ' + p.withImg + ' بصورة' : 'لسه - شغّلها تاني');
+}
+
+// ---------- الصلاحيات ----------
+function iiAccessSheet_() {
+  const sh = iiDirSS_().getSheetByName(II_TAB);
+  if (!sh) throw new Error('تاب "' + II_TAB + '" مش موجود في شيت الدليل - كلم الدعم');
+  return sh;
+}
+
+// الفروع المربوطة ببرنامج البيع (من تاب "ربط برامج البيع")
+function iiLinked_() {
+  const sh = posLinksSheet_();
+  if (sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues()
+    .filter(r => String(r[0]).trim() && posBaseUrl_(r[1]) && String(r[2]).trim() && String(r[3]))
+    .map(r => String(r[0]).trim());
+}
+
+// الدخول: نفس بيانات تاب الموظفين + لازم الاسم موجود في تاب "تطبيق الصور"
+function iiUser_(d) {
+  const pass = String(d.password || '').trim();
+  if (!String(d.email || '').trim() || !pass) throw new Error('اكتب اسمك (أو الإيميل) وكلمة السر');
+  const everyone = users_();
+  const email = resolveLogin_(d.email, pass, everyone);
+  const me = everyone.filter(u => u.email === email && u.pass === pass);
+  if (!me.length) throw new Error('الاسم (أو الإيميل) أو كلمة السر غلط');
+  if (!me.some(u => u.active)) throw new Error('الحساب ده موقوف - كلم المدير');
+  const keys = [normName_(email)].concat(me.map(u => normName_(u.name)).filter(Boolean));
+  const sh = iiAccessSheet_();
+  const rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues() : [];
+  const linked = iiLinked_();
+  let all = false;
+  const want = [];
+  rows.forEach(r => {
+    if (keys.indexOf(normName_(r[0])) < 0) return;
+    if (r[2] === false || String(r[2]).toUpperCase() === 'FALSE') return;
+    splitStores_(r[1]).forEach(b => { if (normName_(b) === normName_(ALL)) all = true; else want.push(b); });
+  });
+  if (!all && !want.length) throw new Error('حسابك مالوش صلاحية على تطبيق الصور - كلم المدير');
+  const branches = all ? linked : linked.filter(b => want.some(w => posNormBranch_(w) === posNormBranch_(b)));
+  if (!branches.length) throw new Error('الفرع بتاعك مش مربوط ببرنامج البيع - كلم الدعم');
+  return { name: me[0].name || email, email: email, branches: branches, all: all };
+}
+function iiBranch_(d) {
+  const u = iiUser_(d);
+  const b = u.branches.find(x => posNormBranch_(x) === posNormBranch_(d.branch));
+  if (!b) throw new Error('الفرع ده مش من صلاحياتك');
+  return { u: u, branch: b };
+}
+
+function iiLogin_(d) {
+  const u = iiUser_(d);
+  return { name: u.name, email: u.email, branches: u.branches, all: u.all };
+}
+
+// ---------- شيت الصور (شيت لوحده، تاب لكل فرع) ----------
+function iiCacheSS_() {
+  if (iiCacheSS_.ss) return iiCacheSS_.ss;
+  const id = PropertiesService.getScriptProperties().getProperty(II_SS_PROP) || II_CACHE_ID;
+  try { return (iiCacheSS_.ss = SpreadsheetApp.openById(id)); }
+  catch (e) { throw new Error('السيرفر مش شايف شيت الصور - لازم يتشارك مع صاحب السكريبت كـ "محرر"'); }
+}
+function iiTabName_(branch) { return String(branch).replace(/[\[\]*?:\\\/']/g, ' ').trim().slice(0, 90); }
+function iiSheet_(branch) {
+  const ss = iiCacheSS_();
+  let sh = ss.getSheetByName(iiTabName_(branch));
+  if (!sh) {
+    sh = ss.insertSheet(iiTabName_(branch));
+    sh.getRange(1, 1, 1, II_COLS.length).setValues([II_COLS]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+    sh.setRightToLeft(true);
+    sh.getRange('A:C').setNumberFormat('@');
+  }
+  return sh;
+}
+// {sh, rows: [[id,name,code,cat,img,seen]], byId: {id: index}}
+function iiRead_(branch) {
+  const sh = iiSheet_(branch), n = sh.getLastRow() - 1;
+  const rows = n > 0 ? sh.getRange(2, 1, n, II_COLS.length).getValues().map(r => r.map(x => String(x == null ? '' : x))) : [];
+  const byId = {}, origE = {};
+  rows.forEach((r, i) => { if (r[0]) { byId[r[0]] = i; origE[r[0]] = r[4]; } });
+  return { sh: sh, rows: rows, byId: byId, origE: origE };
+}
+// بنكتب الجدول كله مرة واحدة - والصورة اللي حد حفظها في نفس الوقت ما تضيعش
+function iiWrite_(t) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const n = t.sh.getLastRow() - 1;
+    if (n > 0) {
+      t.sh.getRange(2, 1, n, 5).getValues().forEach(r => {
+        const id = String(r[0]), e = String(r[4] == null ? '' : r[4]), i = t.byId[id];
+        if (i !== undefined && e !== t.origE[id] && t.rows[i] && t.rows[i][0] === id) t.rows[i][4] = e;
+      });
+    }
+    if (t.full && n > t.rows.length) t.sh.getRange(t.rows.length + 2, 1, n - t.rows.length, II_COLS.length).clearContent();
+    if (t.rows.length) t.sh.getRange(2, 1, t.rows.length, II_COLS.length).setValues(t.rows);
+    t.byId = {}; t.origE = {};
+    t.rows.forEach((r, i) => { t.byId[r[0]] = i; t.origE[r[0]] = r[4]; });
+  } finally { lock.releaseLock(); }
+}
+// صورة صنف واحد في الشيت (بعد الحفظ)
+function iiSetCell_(branch, id, img) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = iiSheet_(branch), n = sh.getLastRow() - 1;
+    if (n < 1) return;
+    const ids = sh.getRange(2, 1, n, 1).getValues();
+    for (let i = 0; i < ids.length; i++) if (String(ids[i][0]) === String(id)) { sh.getRange(i + 2, 5).setValue(img); return; }
+  } finally { lock.releaseLock(); }
+}
+function iiLog_(branch, who, id, name, oldImg, newImg, result, note) {
+  try {
+    const sh = iiCacheSS_().getSheetByName(II_LOG);
+    sh.appendRow([new Date(), branch, who, id, name, oldImg, newImg, result, note || '']);
+  } catch (e) {}
+}
+
+// ---------- الدخول على برنامج الفرع (الجلسة بتتحفظ 20 دقيقة) ----------
+function iiKey_(branch) { return 'iijar_' + Utilities.base64EncodeWebSafe(Utilities.newBlob(posNormBranch_(branch)).getBytes()).slice(0, 180); }
+// بيانات ربط الفرع: لو اتسجلت "مش مربوط" في الكاش (5 دقايق) نقرا الشيت تاني على طول - علشان الفرع اللي لسه متضاف يشتغل
+function iiCfg_(branch) {
+  let cfg = posCfgFromSheet_(branch);
+  if (!cfg) {
+    const b = posNormBranch_(branch);
+    CacheService.getScriptCache().remove('poscfg_' + Utilities.base64EncodeWebSafe(Utilities.newBlob(b).getBytes()).slice(0, 200));
+    cfg = posCfgFromSheet_(branch);
+  }
+  return cfg;
+}
+function iiSession_(branch, fresh) {
+  const c = CacheService.getScriptCache(), k = iiKey_(branch);
+  if (!fresh) {
+    try {
+      const jar = JSON.parse(c.get(k) || 'null');
+      const cfg = iiCfg_(branch);
+      if (jar && cfg) return { cfg: cfg, jar: jar, branch: branch };
+    } catch (e) {}
+  }
+  if (!iiCfg_(branch)) throw new Error('الفرع مش مربوط ببرنامج البيع - راجع سطره في تاب "ربط برامج البيع" (الرابط واسم المستخدم وكلمة السر)');
+  const s = bsLogin_(branch);
+  s.branch = branch;
+  c.put(k, JSON.stringify(s.jar), 1200);
+  return s;
+}
+function iiExpired_(res) {
+  const code = res.getResponseCode();
+  if (code >= 300 && code < 400) return true;
+  const t = res.getContentText('UTF-8');
+  return /loginform|logincheck\.php/i.test(t.slice(0, 60000)) && !/show_items_cat|edit_item_save|preview_item|id=["']?row\d+/.test(t);
+}
+function iiReq_(s, path, payload) {
+  const r = {
+    url: s.cfg.url + path, muteHttpExceptions: true, followRedirects: false,
+    headers: { Cookie: Object.keys(s.jar).map(k => k + '=' + s.jar[k]).join('; '), 'User-Agent': 'Mozilla/5.0 (Modaqqeq images)' }
+  };
+  if (payload) { r.method = 'post'; r.payload = payload; }
+  return r;
+}
+// طلبات كتير مع بعض - لو الجلسة خلصت ندخل تاني مرة واحدة
+function iiFetchAll_(s, build) {
+  let res = iiUFAll_(build(s));
+  if (res.some(iiExpired_)) {
+    const s2 = iiSession_(s.branch, true);
+    s.jar = s2.jar;
+    res = iiUFAll_(build(s));
+    if (res.some(iiExpired_)) throw new Error('برنامج البيع بيخرّج الجلسة - جرّب كمان شوية');
+  }
+  return res;
+}
+// طلب واحد (لو الجلسة خلصت ندخل تاني)
+function iiFetch_(s, path, opt) {
+  let res = bsFetch_(s, path, opt);
+  if (iiExpired_(res)) {
+    const s2 = iiSession_(s.branch, true);
+    s.jar = s2.jar;
+    res = bsFetch_(s, path, opt);
+  }
+  return res;
+}
+// طلب زي اللي المتصفح بيبعته من صفحة تعديل الصنف بالظبط (نفس الكوكيز + Referer + Origin)
+function iiPage_(s, path, payload, form) {
+  const go = () => {
+    const origin = s.cfg.url.replace(/^(https?:\/\/[^/]+).*$/, '$1');
+    const r = {
+      method: 'post', muteHttpExceptions: true, followRedirects: false, payload: payload,
+      headers: {
+        Cookie: Object.keys(s.jar).map(k => k + '=' + s.jar[k]).join('; '),
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+        'X-Requested-With': 'XMLHttpRequest', Referer: s.cfg.url + 'items/new_item.php', Origin: origin,
+        Accept: '*/*'
+      }
+    };
+    if (form) r.contentType = 'application/x-www-form-urlencoded; charset=UTF-8';
+    const res = iiUF_(s.cfg.url + path, r);
+    const sc = res.getAllHeaders()['Set-Cookie'] || res.getAllHeaders()['set-cookie'];
+    if (sc) (Array.isArray(sc) ? sc : [sc]).forEach(c => {
+      const kv = String(c).split(';')[0], i = kv.indexOf('=');
+      if (i > 0) s.jar[kv.slice(0, i).trim()] = kv.slice(i + 1).trim();
+    });
+    return res;
+  };
+  return go();
+}
+function iiSaveJar_(s) { CacheService.getScriptCache().put(iiKey_(s.branch), JSON.stringify(s.jar), 1200); }
+
+// ---------- قايمة الأصناف ----------
+// صف من جدول الأصناف في البرنامج ← [id, name, code, cat]
+function iiParseRows_(html) {
+  const out = [];
+  (String(html).match(/<tr[^>]*id=["']?row\d+[\s\S]*?<\/tr>/gi) || []).forEach(tr => {
+    const id = (tr.match(/id=["']?row(\d+)/i) || [])[1];
+    if (!id) return;
+    const pt = (tr.match(/<a[^>]*class=["'][^"']*print_ticket[^>]*>/i) || [])[0] || '';
+    let name = pt ? iiAttr_(pt, 'data-name') : '';
+    if (!name) name = iiDecode_(((tr.match(/item\.php\?id=\d+["']\s*>([^<]+)<\/a>/i) || [])[1] || '').trim());
+    const code = pt ? (iiAttr_(pt, 'data-barcode') || '') : '';
+    const cat = iiDecode_(((tr.match(/show_items_cat\(\d+\)["'][^>]*>([^<]*)</i) || [])[1] || '').trim());
+    out.push([id, String(name || '').trim(), String(code).trim(), cat]);
+  });
+  return out;
+}
+function iiPagesOf_(html) {
+  let mx = 1;
+  (String(html).match(/current\s*=\s*(\d+)/g) || []).forEach(x => { const n = Number(x.replace(/\D/g, '')); if (n > mx) mx = n; });
+  (String(html).match(/search_items\((\d+)\)/g) || []).forEach(x => { const n = Number(x.replace(/\D/g, '')); if (n > mx) mx = n; });
+  return mx;
+}
+function iiListPayload_(p) {
+  return { current: String(p), searchval: '', store: '', select_cat: '', comp_id: '', barcode_only: '', factory_id: '' };
+}
+// رابط الصورة من صفحة الصنف (item.php) ← "upload/..." أو "-"
+function iiImgOf_(html) {
+  const m = String(html).match(/<img\b[^>]*class=["'][^"']*preview_item[^"']*["'][^>]*>/i) || String(html).match(/<img\b[^>]*preview_item[^>]*>/i);
+  if (m) {
+    const src = iiAttr_(m[0], 'src') || '';
+    const u = src.match(II_IMG_RE);
+    return u ? u[0] : II_NONE;
+  }
+  return II_NONE;
+}
+
+function iiScanKey_(branch) { return 'II_SCAN_' + Utilities.base64EncodeWebSafe(Utilities.newBlob(posNormBranch_(branch)).getBytes()).slice(0, 120); }
+function iiScanState_(branch) {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(iiScanKey_(branch)) || 'null'); } catch (e) { return null; }
+}
+function iiScanSave_(branch, st) { PropertiesService.getScriptProperties().setProperty(iiScanKey_(branch), JSON.stringify(st)); }
+
+function iiProgress_(t, st) {
+  return {
+    stage: st ? st.stage : 'none', finished: !!(st && st.stage === 'done'), listed: !!(st && st.fullSeen),
+    paused: !(st && st.stage === 'done') && !iiRoom_(30), // التجهيز وقف النهارده علشان رصيد الطلبات
+    page: st ? Math.min(st.page || 1, st.pages || st.page || 1) : 0, pages: st ? st.pages || 0 : 0,
+    total: t.rows.length, checked: t.rows.filter(r => r[4]).length,
+    withImg: t.rows.filter(r => r[4] && r[4] !== II_NONE).length, done: st && st.done || ''
+  };
+}
+
+// قفل لكل فرع لوحده (علشان تجهيز فرع ما يوقفش حفظ صورة في فرع تاني)
+function iiMutex_(key, ttl, waitMs) {
+  const c = CacheService.getScriptCache(), end = Date.now() + (waitMs || 0);
+  for (;;) {
+    const l = LockService.getScriptLock();
+    if (l.tryLock(10000)) {
+      try {
+        if (!c.get(key)) { c.put(key, '1', ttl); return true; }
+      } finally { l.releaseLock(); }
+    }
+    if (Date.now() > end) return false;
+    Utilities.sleep(1500);
+  }
+}
+function iiUnmutex_(key) { CacheService.getScriptCache().remove(key); }
+function iiMKey_(kind, branch) { return 'iim_' + kind + '_' + Utilities.base64EncodeWebSafe(Utilities.newBlob(posNormBranch_(branch)).getBytes()).slice(0, 150); }
+
+// خطوة تجهيز (حوالي 40 ثانية) - التطبيق بينادي لحد ما finished
+// المرحلة 1: صفحات قايمة الأصناف (30 صنف في الصفحة) ← رقم كل صنف واسمه وباركوده وتصنيفه
+// المرحلة 2: صفحة كل صنف لسه ما اتعرفتش صورته ← رابط الصورة
+// d.restart = يبدأ من الأول (أصناف جديدة / أسماء اتغيرت)
+function iiScan_(d) {
+  return iiScanCore_(iiBranch_(d).branch, !!d.restart);
+}
+function iiScanCore_(b, restart) {
+  const d = { restart: restart };
+  const mk = iiMKey_('scan', b);
+  if (!iiMutex_(mk, 90, 0)) return iiProgress_(iiRead_(b), iiScanState_(b)); // فيه حد تاني بيجهّز نفس الفرع
+  try {
+    const t0 = Date.now(), budget = 40 * 1000;
+    let st = iiScanState_(b);
+    if (!st || (d.restart && st.stage === 'done')) st = { stage: 'list', page: 1, pages: 0, run: String(Date.now()), started: new Date().toISOString(), fullSeen: st && st.fullSeen || '' };
+    const t = iiRead_(b);
+    const s = iiSession_(b);
+    if (st.stage === 'list') {
+      while (Date.now() - t0 < budget && (!st.pages || st.page <= st.pages) && iiRoom_(8)) {
+        const batch = [];
+        for (let p = st.page; p < st.page + 8 && (!st.pages || p <= st.pages); p++) batch.push(p);
+        if (!batch.length) break;
+        const res = iiFetchAll_(s, x => batch.map(p => iiReq_(x, 'items/show_items.php', iiListPayload_(p))));
+        res.forEach(r => {
+          const html = r.getContentText('UTF-8');
+          if (!st.pages) st.pages = iiPagesOf_(html);
+          iiParseRows_(html).forEach(it => {
+            const i = t.byId[it[0]];
+            if (i === undefined) { t.byId[it[0]] = t.rows.length; t.rows.push([it[0], it[1], it[2], it[3], '', st.run]); }
+            else { const row = t.rows[i]; row[1] = it[1]; row[2] = it[2]; row[3] = it[3]; row[5] = st.run; }
+          });
+        });
+        st.page = batch[batch.length - 1] + 1;
+      }
+      if (st.pages && st.page > st.pages) {
+        // الأصناف اللي اتمسحت من البرنامج: نشيلها
+        t.rows = t.rows.filter(r => r[5] === st.run);
+        t.byId = {};
+        t.rows.forEach((r, i) => { t.byId[r[0]] = i; });
+        t.full = true;
+        st.fullSeen = st.run;
+        st.stage = 'imgs';
+      }
+      iiWrite_(t);
+    }
+    if (st.stage === 'imgs' && Date.now() - t0 < budget) {
+      const todo = [];
+      t.rows.forEach((r, i) => { if (!r[4]) todo.push(i); });
+      let k = 0;
+      while (Date.now() - t0 < budget && k < todo.length && iiRoom_(30)) {
+        const part = todo.slice(k, k + 30);
+        const res = iiFetchAll_(s, x => part.map(i => iiReq_(x, 'items/item.php?id=' + t.rows[i][0])));
+        part.forEach((i, j) => {
+          const html = res[j].getContentText('UTF-8');
+          if (res[j].getResponseCode() === 200 && html.length > 1000) t.rows[i][4] = iiImgOf_(html);
+        });
+        k += part.length;
+      }
+      iiWrite_(t);
+      if (k >= todo.length) { st.stage = 'done'; st.done = new Date().toISOString(); }
+    }
+    iiSaveJar_(s);
+    iiScanSave_(b, st);
+    return iiProgress_(t, st);
+  } finally {
+    iiUnmutex_(mk);
+  }
+}
+
+// القايمة للتطبيق ← {items: [[id, name, code, cat, img]], base, scan}
+function iiItems_(d) {
+  const b = iiBranch_(d).branch;
+  const cfg = iiCfg_(b);
+  if (!cfg) throw new Error('الفرع مش مربوط ببرنامج البيع - راجع سطره في تاب "ربط برامج البيع" (الرابط واسم المستخدم وكلمة السر)');
+  const t = iiRead_(b), st = iiScanState_(b);
+  const marks = iiMarks_(b);
+  const items = t.rows.filter(r => r[0]).map(r => [r[0], r[1], r[2], r[3], r[4], r[4] && marks[r[0]] === r[4] ? 1 : 0]);
+  // بصمة القايمة: لو الموبايل عنده نفس النسخة ما نبعتش القايمة تاني
+  const hash = Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, cfg.url + JSON.stringify(items), Utilities.Charset.UTF_8));
+  if (d.have && d.have === hash) return { same: true, hash: hash, scan: iiProgress_(t, st) };
+  return { items: items, base: cfg.url, hash: hash, scan: iiProgress_(t, st) };
+}
+
+// البحث بالباركود (الأساسي أو الفرعي) ← {ids: [...]}
+function iiFind_(d) {
+  const b = iiBranch_(d).branch;
+  const code = String(d.code || '').trim();
+  if (!code) return { ids: [] };
+  const s = iiSession_(b);
+  const res = iiFetchAll_(s, x => [iiReq_(x, 'items/show_items.php',
+    { current: '1', searchval: code, store: '', select_cat: '', comp_id: '', barcode_only: '1', factory_id: '' })]);
+  iiSaveJar_(s);
+  const rows = iiParseRows_(res[0].getContentText('UTF-8'));
+  return { ids: rows.slice(0, 10).map(r => r[0]), items: rows.slice(0, 10) };
+}
+
+// ---------- حفظ الصورة ----------
+// d = {branch, id, image: "data:image/jpeg;base64,..."}
+function iiSet_(d) {
+  const ub = iiBranch_(d);
+  const m = String(d.image || '').match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/);
+  if (!m) throw new Error('الصورة مش واضحة - اختار صورة تانية');
+  const r = iiSetCore_(ub.branch, ub.u.name + (d.wm ? ' (بلوجو)' : ''), d.id, Utilities.newBlob(Utilities.base64Decode(m[2]), m[1]), null);
+  if (d.wm && r.img !== II_NONE) { try { iiMark_(ub.branch, r.id, r.img); r.wm = 1; } catch (e) {} }
+  return r;
+}
+// blob = الصورة الجديدة، أو path = رابط صورة موجودة على البرنامج (upload/... - للرجوع بعد التجربة)
+function iiSetCore_(b, who, id, blobIn, path) {
+  id = String(id || '').replace(/\D/g, '');
+  if (!id) throw new Error('الصنف مش معروف');
+  const type = blobIn ? blobIn.getContentType() : '';
+  const bytes = blobIn ? blobIn.getBytes() : null;
+  if (bytes && bytes.length > 3 * 1024 * 1024) throw new Error('الصورة كبيرة قوي');
+  const ext = type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg';
+  const mk = iiMKey_('set', b);
+  if (!iiRoom_(6, true)) throw new Error(II_QUOTA_MSG);
+  if (!iiMutex_(mk, 120, 45000)) throw new Error('فيه صورة تانية بتتحفظ دلوقتي - جرّب تاني');
+  let name = '', oldImg = '';
+  try {
+    const s = iiSession_(b);
+    // نفس ترتيب صفحة البرنامج بالظبط: نفتح صفحة تعديل الصنف ← نرفع الصورة ← نحفظ (من غير ما نفتح الصفحة تاني في النص)
+    const edit = () => iiFetch_(s, 'items/new_item.php', { method: 'post', payload: { id: id, edit: 'item', store_id: '' } }).getContentText('UTF-8');
+    // 1) صفحة تعديل الصنف
+    const html = edit();
+    if (!/edit_item_save\.php/.test(html)) throw new Error('مقدرتش أفتح صفحة تعديل الصنف في البرنامج');
+    const before = iiFormPayload_(html, null);
+    if (before.id !== id) throw new Error('البرنامج فتح صنف تاني - ما اتحفظش حاجة');
+    name = before.payload.item_name || '';
+    oldImg = before.oldImg;
+    // 2) رفع الصورة (البرنامج بيرجّع اسم الملف، والصفحة بتحطه upload/الاسم)
+    let newImg = path;
+    if (bytes) {
+      const blob = Utilities.newBlob(bytes, type, 'item_' + id + '.' + ext);
+      const up = iiPage_(s, 'uploader.php', { photoimg: blob }, false);
+      const raw = String(up.getContentText('UTF-8') || '').trim();
+      const file = raw.replace(/^"+|"+$/g, '');
+      if (up.getResponseCode() !== 200 || !/^[\w\-\/.]+\.(?:jpe?g|png|gif|webp)$/i.test(file)) {
+        iiLog_(b, who, id, name, oldImg, '', 'رفع الصورة فشل', raw.slice(0, 200));
+        throw new Error('البرنامج رفض رفع الصورة' + (raw && raw.length < 120 ? ': ' + raw.replace(/<[^>]+>/g, ' ').trim() : ''));
+      }
+      newImg = 'upload/' + file;
+    }
+    if (newImg == null) throw new Error('مفيش صورة');
+    // 3) الحفظ: نفس بيانات الصفحة بالظبط والصورة الجديدة بس
+    const form = iiFormPayload_(html, newImg);
+    const sent = iiParam_(form.payload);
+    const res = iiPage_(s, 'items/edit_item_save.php', sent, true);
+    const msg = String(res.getContentText('UTF-8') || '').trim();
+    if (!(Number(msg) > 0)) {
+      iiLog_(b, who, id, name, oldImg, newImg, 'الحفظ فشل', msg.slice(0, 300));
+      const txt = msg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      throw new Error('البرنامج ما حفظش الصورة' + (txt && txt.length < 150 ? ': ' + txt : ' - غالباً يوزر الربط مالوش صلاحية تعديل الأصناف'));
+    }
+    // 4) التأكد: نفتح الصنف تاني ونقارن كل الخانات (ما عدا الصورة والكمية لأنها بتتغير مع البيع)
+    const after = iiFormPayload_(edit(), null);
+    const stored = after.oldImg;
+    const diffs = iiDiff_(sent, iiParam_(after.payload));
+    const ok = path != null ? (stored === path || (!II_IMG_RE.test(stored) && !II_IMG_RE.test(path))) : (stored !== oldImg && II_IMG_RE.test(stored));
+    // 5) شيت الصور
+    try { iiSetCell_(b, id, II_IMG_RE.test(stored) ? stored.match(II_IMG_RE)[0] : II_NONE); } catch (e) {}
+    iiSaveJar_(s);
+    iiLog_(b, who, id, name, oldImg, stored, ok ? (diffs.length ? 'اتحفظت - في خانات اتغيرت' : 'تمام') : 'الصورة ما اتغيرتش',
+      (diffs.length ? 'اتغير: ' + diffs.join('، ') : '') + (ok ? '' : ' | اتبعت: ' + newImg));
+    if (!ok) throw new Error('البرنامج رد إن الحفظ تمام بس الصورة ما اتغيرتش - كلم الدعم');
+    return { img: II_IMG_RE.test(stored) ? stored.match(II_IMG_RE)[0] : II_NONE, url: s.cfg.url + stored, changed: diffs, oldImg: oldImg, name: name, id: id };
+  } finally {
+    iiUnmutex_(mk);
+  }
+}
+
+// الخانات اللي اختلفت بين طلبين (ما عدا الصورة والكمية)
+function iiDiff_(a, b) {
+  const skip = { img: 1, quantity: 1, old_quantity: 1 };
+  const A = {}, B = {}, out = [];
+  String(a).split('&').forEach(x => { const k = decodeURIComponent(x.split('=')[0]); if (!skip[k]) A[x] = k; });
+  String(b).split('&').forEach(x => { const k = decodeURIComponent(x.split('=')[0]); if (!skip[k]) B[x] = k; });
+  Object.keys(A).forEach(x => { if (!B[x] && out.indexOf(A[x]) < 0) out.push(A[x]); });
+  Object.keys(B).forEach(x => { if (!A[x] && out.indexOf(B[x]) < 0) out.push(B[x]); });
+  return out;
+}
+
+// ---------- قراءة صفحة تعديل الصنف (نفس اللي الصفحة بتبعته بالظبط) ----------
+function iiDecode_(s) {
+  const named = { quot: '"', apos: "'", lt: '<', gt: '>', amp: '&', nbsp: '\u00a0' };
+  return String(s == null ? '' : s).replace(/&(#\d+|#x[0-9a-f]+|quot|apos|lt|gt|amp|nbsp|#039);/gi, (m, e) => {
+    if (e[0] === '#') return String.fromCharCode(e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : Number(e.slice(1)));
+    return named[e.toLowerCase()];
+  });
+}
+function iiAttr_(tag, name) {
+  const m = String(tag).match(new RegExp('\\s' + name + '\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\'|([^\\s>]+))', 'i'));
+  return m ? iiDecode_(m[1] != null ? m[1] : (m[2] != null ? m[2] : m[3])) : null;
+}
+function iiHasAttr_(tag, name) { return new RegExp('\\s' + name + '(?=[\\s=/>])', 'i').test(String(tag)); }
+// كل التاجات من نوع معين (من غير اللي جوه السكريبتات)
+function iiTags_(html, tagName) {
+  return String(html).match(new RegExp('<' + tagName + '\\b[^>]*>', 'gi')) || [];
+}
+function iiFormPayload_(html, newImg) {
+  // نشيل السكريبتات والتعليقات علشان التاجات اللي جواهم ما تتحسبش
+  const clean = String(html).replace(/<script\b[\s\S]*?<\/script>/gi, '').replace(/<!--[\s\S]*?-->/g, '');
+  const inputs = iiTags_(clean, 'input');
+  const byId = id => inputs.find(t => iiAttr_(t, 'id') === id);
+  const val = id => { const t = byId(id); return t ? (iiAttr_(t, 'value') || '') : undefined; };
+  const checked = id => { const t = byId(id); return !!(t && iiHasAttr_(t, 'checked')); };
+  const radio = name => {
+    const t = inputs.find(x => iiAttr_(x, 'name') === name && /type=["']?radio/i.test(x) && iiHasAttr_(x, 'checked'));
+    return t ? (iiAttr_(t, 'value') || 'on') : undefined;
+  };
+  const radioClass = cls => {
+    const t = inputs.find(x => (' ' + (iiAttr_(x, 'class') || '') + ' ').indexOf(' ' + cls + ' ') >= 0 && iiHasAttr_(x, 'checked'));
+    return t ? (iiAttr_(t, 'value') || 'on') : undefined;
+  };
+  const selects = [];
+  clean.replace(/<select\b([^>]*)>([\s\S]*?)<\/select>/gi, (m, a, body) => { selects.push({ tag: '<select' + a + '>', body: body }); return m; });
+  const sel = id => {
+    const s = selects.find(x => iiAttr_(x.tag, 'id') === id);
+    if (!s) return undefined;
+    const opts = s.body.match(/<option\b[^>]*>/gi) || [];
+    const multi = iiHasAttr_(s.tag, 'multiple');
+    const on = opts.filter(o => iiHasAttr_(o, 'selected')).map(o => { const v = iiAttr_(o, 'value'); return v == null ? '' : v; });
+    if (multi) return on.length ? on : null;
+    if (on.length) return on[on.length - 1];
+    if (!opts.length) return null;
+    const v = iiAttr_(opts[0], 'value');
+    return v == null ? '' : v;
+  };
+  const ta = (clean.match(/<textarea\b[^>]*id=["']details["'][^>]*>([\s\S]*?)<\/textarea>/i) || [])[1];
+  const img = inputs.length >= 0 ? (String(html).match(/<img\b[^>]*id=["']upload_img["'][^>]*>/i) || [])[0] : '';
+  const oldImg = img ? (iiAttr_(img, 'newlink') || '') : '';
+  // آخر جزء في datasend: "multi_price":"1","id":"..","old_quantity":".."
+  const block = (String(html).match(/"store_show_image"\s*:[^\n]*\n([\s\S]*?)\};\s*console\.log\(datasend\)/) || [])[1] || '';
+  const tail = {};
+  block.replace(/"([\w]+)"\s*:\s*"([^"]*)"/g, (m, k, v) => { tail[k] = v; return m; });
+  if (!tail.id) throw new Error('مقدرتش أقرا صفحة تعديل الصنف من البرنامج - ما اتحفظش حاجة');
+
+  const factory = sel('factory_id');
+  const supplier = sel('select_supplier');
+  const priceLists = [];
+  inputs.forEach(t => {
+    const cls = ' ' + (iiAttr_(t, 'class') || '') + ' ';
+    if (cls.indexOf(' item_main_max_quantity ') >= 0) priceLists.push({ id: iiAttr_(t, 'data-id'), item_id: iiAttr_(t, 'data-item'), price_list_id: iiAttr_(t, 'data-list'), unit_id: sel('unit_id'), max_quantity: iiAttr_(t, 'value') || '' });
+  });
+  inputs.forEach(t => {
+    const cls = ' ' + (iiAttr_(t, 'class') || '') + ' ';
+    if (cls.indexOf(' item_sub_max_quantity ') >= 0) priceLists.push({ id: iiAttr_(t, 'data-id'), item_id: iiAttr_(t, 'data-item'), price_list_id: iiAttr_(t, 'data-list'), unit_id: iiAttr_(t, 'data-unit'), max_quantity: iiAttr_(t, 'value') || '' });
+  });
+  const v01 = b => b ? 1 : 0;
+  const p = {
+    item_name: val('item_name'), bolla: val('bolla'), profit_margin: val('profit_margin'), sale_price: val('sale_price'),
+    sale_unit: sel('select_type'), quantity: val('quantity'), damaged: val('damaged'),
+    factory_id: (factory == 0 || factory === '' || factory == null) ? 0 : factory,
+    is_card: v01(checked('is_card')), pay_price: val('pay_price'), about: val('about'), min_quantity: val('mini'),
+    max_quantity: val('max_quantity'), max_quantity_gomla: val('max_quantity_gomla'), supplier: JSON.stringify(supplier),
+    incom_date: val('incom_date'), expire_date: val('expire_date'), barcode: val('barcode'),
+    img: newImg != null ? newImg : oldImg, jsonArray: '[]', deleteArray: '[]', unit_id: sel('unit_id'),
+    is_service: v01(checked('is_service')), is_hidden_deficiency_statement: v01(checked('is_hidden_deficiency_statement')),
+    cooking_add: v01(checked('cooking_add')), available: v01(checked('available')), require_serial: v01(checked('require_serial')),
+    game: v01(checked('game')), is_profit_margin: v01(checked('is_profit_margin')), details: ta != null ? iiDecode_(ta).trim().replace(/\u00a0/g, '&nbsp;') : undefined,
+    show_online: radioClass('show_online'), company_id: sel('company_id'), shelf: sel('shelf'), background_color: val('background_color'),
+    order_show: val('order_show'), lowest_price: val('lowest_price'), meter_ceramic: val('meter_ceramic'),
+    card_company_id: sel('card_company'), warranty_id: sel('warranty_id'), color_list: sel('color_list'), size_list: sel('size_list'),
+    items_group_list: sel('items_group_list'), addbarcode: '[]', vat_id: sel('vat_id'), vat_state: radio('vat_state'),
+    purchase_vat_id: sel('purchase_vat_id'), purchase_vat_state: radio('purchase_vat_state'),
+    price_befor_offer: val('price_befor_offer'), measruing_type: radio('measruing_type'),
+    sale_code: val('sale_code'), purchase_code: val('purchase_code'), item_company_id: sel('item_companies'),
+    item_price_lists: priceLists, order_unit: (val('order_unit') != null ? val('order_unit') : (sel('order_unit') != null ? sel('order_unit') : 1)),
+    store_category_id: sel('store_category_id') !== undefined ? '0' : undefined, store_show_image: v01(checked('store_show_image'))
+  };
+  Object.keys(tail).forEach(k => { p[k] = tail[k]; });
+  return { payload: p, oldImg: oldImg, id: tail.id };
+}
+// زي اللي $.post بيبعته بالظبط: الخانة اللي مش موجودة في الصفحة (undefined) ما بتتبعتش خالص
+// (لو اتبعتت فاضية البرنامج بيرجّع "تمام" بس ما بيحفظش الصورة)، null = فاضي، المصفوفات [0][key]
+function iiParam_(obj) {
+  const out = [];
+  const add = (k, v) => out.push(encodeURIComponent(k) + '=' + encodeURIComponent(v == null ? '' : v));
+  const build = (prefix, v) => {
+    if (v === undefined) return;
+    if (Array.isArray(v)) v.forEach((x, i) => build(prefix + '[' + (typeof x === 'object' && x != null ? i : '') + ']', x));
+    else if (v != null && typeof v === 'object') Object.keys(v).forEach(k => build(prefix + '[' + k + ']', v[k]));
+    else add(prefix, v);
+  };
+  Object.keys(obj).forEach(k => build(k, obj[k]));
+  return out.join('&');
+}
+
+// ---------- صور الأصناف اللي على الشاشة (قبل ما التجهيز يوصلها) ----------
+// d = {branch, ids: [...]} ← {imgs: {id: "upload/..." أو "-"}}
+function iiPeek_(d) {
+  const b = iiBranch_(d).branch;
+  const t = iiRead_(b);
+  const ids = (Array.isArray(d.ids) ? d.ids : []).map(x => String(x).replace(/\D/g, ''))
+    .filter((x, i, a) => x && a.indexOf(x) === i && t.byId[x] !== undefined && !t.rows[t.byId[x]][4]).slice(0, 30);
+  const imgs = {};
+  if (!ids.length) return { imgs: imgs };
+  if (!iiRoom_(ids.length, true)) throw new Error(II_QUOTA_MSG);
+  const s = iiSession_(b);
+  const res = iiFetchAll_(s, x => ids.map(id => iiReq_(x, 'items/item.php?id=' + id)));
+  ids.forEach((id, j) => {
+    const html = res[j].getContentText('UTF-8');
+    if (res[j].getResponseCode() === 200 && html.length > 1000) { imgs[id] = iiImgOf_(html); t.rows[t.byId[id]][4] = imgs[id]; }
+  });
+  if (Object.keys(imgs).length) iiWrite_(t);
+  iiSaveJar_(s);
+  return { imgs: imgs };
+}
+
+// =====================================================================
+// ===== نسخ من سكريبت الدليل (قراية بس - من غير ما نكتب في شيت الدليل) =====
+// =====================================================================
+function iiDirSS_() {
+  if (!iiDirSS_.ss) {
+    try { iiDirSS_.ss = SpreadsheetApp.openById(II_DIR_ID); }
+    catch (e) { throw new Error('السيرفر مش شايف شيت الدليل - لازم يتشارك مع صاحب السكريبت كـ "محرر"'); }
+  }
+  return iiDirSS_.ss;
+}
+function posLinksSheet_() {
+  const sh = iiDirSS_().getSheetByName(SH_POS_LINKS);
+  if (!sh) throw new Error('تاب "' + SH_POS_LINKS + '" مش موجود في شيت الدليل');
+  return sh;
+}
+function posBaseUrl_(v) {
+  let u = String(v || '').trim();
+  if (!u) return '';
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  u = u.replace(/[?#].*$/, '').replace(/\/(login|index|logincheck)\.php$/i, '/');
+  if (!/\/$/.test(u)) u += '/';
+  return u;
+}
+function posNormBranch_(x) {
+  return String(x || '').replace(/[ىی]/g, 'ي').replace(/ة/g, 'ه').replace(/[أإآ]/g, 'ا').replace(/\s+/g, ' ').trim();
+}
+// {url, user, pass} أو null لو الفرع مش مربوط
+function posCfgFromSheet_(branch) {
+  const b = posNormBranch_(branch);
+  if (!b) return null;
+  const cache = CacheService.getScriptCache();
+  const ck = 'poscfg_' + Utilities.base64EncodeWebSafe(Utilities.newBlob(b).getBytes()).slice(0, 200);
+  const hit = cache.get(ck);
+  if (hit) return hit === '-' ? null : JSON.parse(hit);
+  const sh = posLinksSheet_();
+  let cfg = null;
+  if (sh.getLastRow() > 1) {
+    const rows = sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues();
+    for (const r of rows) {
+      if (posNormBranch_(r[0]) !== b) continue;
+      const url = posBaseUrl_(r[1]);
+      const user = String(r[2] || '').trim(), pass = String(r[3] || '');
+      if (!url || !user || !pass) break;
+      cfg = { url: url, user: user, pass: pass };
+      break;
+    }
+  }
+  cache.put(ck, cfg ? JSON.stringify(cfg) : '-', 300);
+  return cfg;
+}
+function bsLogin_(branch) {
+  const cfg = posCfgFromSheet_(branch);
+  if (!cfg) throw new Error('الفرع مش مربوط ببرنامج البيع');
+  const s = { cfg: cfg, jar: {} };
+  bsFetch_(s, 'login.php?lan=ar');
+  const r = bsFetch_(s, 'logincheck.php', { method: 'post', ajax: true, payload: { username: cfg.user, password: cfg.pass, lang: 'ar' } });
+  const msg = r.getContentText('UTF-8').trim();
+  if (!(Number(msg) > 0)) throw new Error('مقدرتش أدخل على برنامج البيع: ' + (msg.length > 200 ? 'رابط البرنامج غلط' : (msg.replace(/<[^>]+>/g, ' ').trim() || 'رد فاضي')));
+  return s;
+}
+function bsFetch_(s, path, opt) {
+  opt = opt || {};
+  let url = s.cfg.url + path;
+  for (let hop = 0; hop < 5; hop++) {
+    const headers = { 'User-Agent': 'Mozilla/5.0 (Modaqqeq images)' };
+    const ck = Object.keys(s.jar).map(k => k + '=' + s.jar[k]).join('; ');
+    if (ck) headers.Cookie = ck;
+    if (opt.ajax) headers['X-Requested-With'] = 'XMLHttpRequest';
+    const req = { method: hop === 0 ? (opt.method || 'get') : 'get', headers: headers, followRedirects: false, muteHttpExceptions: true };
+    if (hop === 0 && opt.payload) req.payload = opt.payload;
+    if (hop === 0 && opt.form) req.contentType = 'application/x-www-form-urlencoded; charset=UTF-8';
+    const res = iiUF_(url, req);
+    const all = res.getAllHeaders();
+    const sc = all['Set-Cookie'] || all['set-cookie'];
+    if (sc) (Array.isArray(sc) ? sc : [sc]).forEach(c => {
+      const kv = String(c).split(';')[0], i = kv.indexOf('=');
+      if (i > 0) s.jar[kv.slice(0, i).trim()] = kv.slice(i + 1).trim();
+    });
+    const loc = all['Location'] || all['location'];
+    if (res.getResponseCode() >= 300 && res.getResponseCode() < 400 && loc) {
+      url = /^https?:/i.test(loc) ? loc : (loc.charAt(0) === '/' ? s.cfg.url.replace(/^(https?:\/\/[^/]+).*$/, '$1') + loc : s.cfg.url + loc);
+      continue;
+    }
+    return res;
+  }
+  throw new Error('برنامج البيع عمل تحويلات كتير');
+}
+
+// الموظفين (نفس تاب الدخول): الإيميل | كلمة السر | الاسم | الفروع | نشط ... | الموبايل
+function users_() {
+  const sh = iiDirSS_().getSheetByName(SH_USERS);
+  if (!sh || sh.getLastRow() < 2) return [];
+  const rows = sh.getRange(1, 1, sh.getLastRow(), sh.getLastColumn()).getValues();
+  const ph = rows[0].map(x => String(x).trim()).indexOf('الموبايل');
+  return rows.slice(1).map(r => ({
+    email: String(r[0]).trim().toLowerCase(), pass: String(r[1]).trim(), name: String(r[2]).trim(),
+    active: isActive_(r[4]), phone: ph >= 0 ? String(r[ph] || '').trim() : ''
+  })).filter(u => u.email);
+}
+function isActive_(v) { return !(v === false || String(v).toUpperCase() === 'FALSE'); }
+function splitStores_(v) { return String(v || '').split(/[,،]/).map(x => x.trim()).filter(Boolean); }
+function normName_(s) {
+  return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase()
+    .replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه');
+}
+function digits_(v) {
+  return String(v == null ? '' : v).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[^0-9]/g, '');
+}
+function phoneKey_(v) {
+  let n = digits_(v);
+  if (n.indexOf('0020') === 0) n = n.slice(4);
+  else if (n.indexOf('20') === 0 && n.length === 12) n = n.slice(2);
+  if (n.indexOf('0') === 0) n = n.slice(1);
+  return n.length >= 9 ? n : '';
+}
+function resolveLogin_(id, password, everyone) {
+  id = String(id || '').trim();
+  if (id.indexOf('@') !== -1) return id.toLowerCase();
+  const pk = phoneKey_(id);
+  if (pk && digits_(id).length === id.replace(/[\s+\-()]/g, '').length) {
+    const byPhone = everyone.filter(u => phoneKey_(u.phone) === pk || phoneKey_(u.email) === pk);
+    const ok = byPhone.filter(u => u.pass === password).map(u => u.email).filter((e, i, a) => a.indexOf(e) === i);
+    if (ok.length > 1) throw new Error('الرقم ده متسجل لأكتر من حساب - ادخل بالإيميل');
+    if (ok.length) return ok[0];
+    if (byPhone.length) return byPhone[0].email;
+  }
+  const n = normName_(id);
+  const byName = everyone.filter(u => u.name && normName_(u.name) === n);
+  if (!byName.length) return id.toLowerCase();
+  const emails = byName.filter(u => u.pass === password).map(u => u.email).filter((e, i, a) => a.indexOf(e) === i);
+  if (emails.length > 1) throw new Error('الاسم ده متكرر عند أكتر من موظف - ادخل بالإيميل');
+  return emails.length ? emails[0] : byName[0].email;
+}
+
+
+// =====================================================================
+// ===== اللوجو (العلامة المائية) - لوجو واحد وإعداد واحد لكل الفروع =====
+// تاب "اللوجو" في شيت الصور: المكان | الحجم % | الشفافية % | النسخة | مين | اللوجو (متقسم على خانات)
+// تاب "علامات اللوجو": الفرع | رقم الصنف | الصورة اللي عليها لوجو | الوقت  (علشان اللوجو ما يتحطش مرتين)
+// اللوجو نفسه بيتحط على الصورة في الموبايل - السيرفر بيحفظ الإعدادات ويجيب الصورة الموجودة بس.
+// =====================================================================
+const II_WM_TAB = 'اللوجو';
+const II_MARK_TAB = 'علامات اللوجو';
+const II_WM_POS = ['tr', 'tl', 'br', 'bl', 'c'];
+function iiWmSheet_() {
+  const ss = iiCacheSS_();
+  let sh = ss.getSheetByName(II_WM_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(II_WM_TAB);
+    sh.getRange(1, 1, 1, 6).setValues([['المكان', 'الحجم %', 'الشفافية %', 'النسخة', 'مين', 'اللوجو (ما تعدلش هنا)']]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function iiWmRead_() {
+  const sh = iiWmSheet_();
+  if (sh.getLastRow() < 2) return { pos: 'br', size: 22, opacity: 80, ver: '', logo: '' };
+  const r = sh.getRange(2, 1, 1, Math.max(6, sh.getLastColumn())).getValues()[0];
+  return { pos: II_WM_POS.indexOf(String(r[0])) >= 0 ? String(r[0]) : 'br', size: Number(r[1]) || 22, opacity: Number(r[2]) || 80,
+    ver: String(r[3] || ''), logo: r.slice(5).map(x => String(x || '')).join('') };
+}
+// d = {have} ← {same} أو {wm: {pos, size, opacity, ver, logo}}
+function iiWmGet_(d) {
+  const u = iiUser_(d);
+  const w = iiWmRead_();
+  if (d.have && d.have === w.ver) return { same: true, all: u.all };
+  return { wm: w, all: u.all };
+}
+// أي حد داخل التطبيق (اسمه بيتسجل في تاب اللوجو): d = {pos, size, opacity, logo: "data:image/png;base64,..." أو "" (يشيل اللوجو) أو من غيرها (يسيبه زي ما هو)}
+function iiWmSet_(d) {
+  const u = iiUser_(d);
+  const cur = iiWmRead_();
+  const pos = II_WM_POS.indexOf(String(d.pos)) >= 0 ? String(d.pos) : cur.pos;
+  const size = Math.max(5, Math.min(100, Math.round(Number(d.size) || cur.size)));
+  const op = Math.max(5, Math.min(100, Math.round(Number(d.opacity) || cur.opacity)));
+  let logo = cur.logo;
+  if (d.logo !== undefined && d.logo !== null) {
+    logo = String(d.logo);
+    if (logo && !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+\/=]+$/.test(logo)) throw new Error('اللوجو مش واضح - اختار صورة تانية');
+    if (logo.length > 400000) throw new Error('اللوجو كبير قوي - اختار صورة أصغر');
+  }
+  const chunks = [];
+  for (let i = 0; i < logo.length; i += 45000) chunks.push(logo.slice(i, i + 45000));
+  const ver = String(Date.now());
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = iiWmSheet_();
+    if (sh.getLastColumn() > 5 && sh.getLastRow() > 1) sh.getRange(2, 6, 1, sh.getLastColumn() - 5).clearContent();
+    sh.getRange(2, 1, 1, 5).setValues([[pos, size, op, ver, u.name]]);
+    sh.getRange(2, 4).setNumberFormat('@').setValue(ver);
+    if (chunks.length) sh.getRange(2, 6, 1, chunks.length).setNumberFormat('@').setValues([chunks]);
+  } finally { lock.releaseLock(); }
+  return { wm: { pos: pos, size: size, opacity: op, ver: ver, logo: logo } };
+}
+function iiMarkSheet_() {
+  const ss = iiCacheSS_();
+  let sh = ss.getSheetByName(II_MARK_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(II_MARK_TAB);
+    sh.getRange(1, 1, 1, 4).setValues([['الفرع', 'رقم الصنف', 'الصورة', 'الوقت']]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+    sh.setRightToLeft(true);
+    sh.getRange('A:C').setNumberFormat('@');
+  }
+  return sh;
+}
+// {رقم الصنف: الصورة اللي عليها لوجو}
+function iiMarks_(branch) {
+  const out = {};
+  try {
+    const sh = iiMarkSheet_(), n = sh.getLastRow() - 1;
+    if (n < 1) return out;
+    const b = posNormBranch_(branch);
+    sh.getRange(2, 1, n, 3).getValues().forEach(r => { if (posNormBranch_(r[0]) === b) out[String(r[1])] = String(r[2]); });
+  } catch (e) {}
+  return out;
+}
+function iiMark_(branch, id, img) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = iiMarkSheet_(), n = sh.getLastRow() - 1, b = posNormBranch_(branch);
+    if (n > 0) {
+      const rows = sh.getRange(2, 1, n, 2).getValues();
+      for (let i = 0; i < rows.length; i++) if (posNormBranch_(rows[i][0]) === b && String(rows[i][1]) === String(id)) {
+        sh.getRange(i + 2, 3, 1, 2).setValues([[img, new Date()]]); return;
+      }
+    }
+    sh.appendRow([branch, String(id), img, new Date()]);
+  } finally { lock.releaseLock(); }
+}
+// الصورة الموجودة على البرنامج (علشان الموبايل يحط عليها اللوجو) - d = {branch, id} ← {image: "data:..."}
+function iiGet_(d) {
+  const b = iiBranch_(d).branch;
+  const id = String(d.id || '').replace(/\D/g, '');
+  const t = iiRead_(b), i = t.byId[id];
+  const path = i === undefined ? '' : t.rows[i][4];
+  if (!path || path === II_NONE) throw new Error('الصنف ده مالوش صورة على البرنامج');
+  // التطبيق الجماعي (bulk) بيقف عند حد التجهيز علشان يسيب رصيد للشغل العادي
+  if (!iiRoom_(8, !d.bulk)) throw new Error(d.bulk ? 'التطبيق الجماعي وقف النهارده علشان رصيد السيرفر - كمّله بكرة من نفس الزرار' : II_QUOTA_MSG);
+  const cfg = iiCfg_(b);
+  if (!cfg) throw new Error('الفرع مش مربوط ببرنامج البيع');
+  const res = iiUF_(cfg.url + path, { muteHttpExceptions: true });
+  const blob = res.getBlob(), bytes = blob.getBytes();
+  let type = String(blob.getContentType() || '').split(';')[0];
+  if (!/^image\//.test(type)) type = /\.png$/i.test(path) ? 'image/png' : /\.webp$/i.test(path) ? 'image/webp' : /\.gif$/i.test(path) ? 'image/gif' : 'image/jpeg';
+  if (res.getResponseCode() !== 200 || bytes.length < 100) throw new Error('مقدرتش أجيب الصورة من البرنامج');
+  if (bytes.length > 6 * 1024 * 1024) throw new Error('الصورة اللي على البرنامج كبيرة قوي');
+  return { image: 'data:' + type + ';base64,' + Utilities.base64Encode(bytes), img: path };
+}
