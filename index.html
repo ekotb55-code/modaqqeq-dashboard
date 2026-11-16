@@ -54,7 +54,8 @@
 
   /* ---------- الهيدر ---------- */
   header { background: #fff; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 10; }
-  .hbar { display: flex; align-items: center; gap: 14px; padding: 8px 18px; max-width: 1500px; margin: 0 auto; }
+  /* الشريط العلوي بعرض الشاشة كلها (من غير حد 1500) */
+  .hbar { display: flex; align-items: center; gap: 14px; padding: 8px 18px; margin: 0 auto; }
   .hbar img { height: 46px; }
   .hbar .title { font-weight: 800; color: var(--navy); font-size: 18px; border-inline-start: 2px solid var(--line); padding-inline-start: 14px; }
   .hbar .sp { flex: 1; }
@@ -122,6 +123,8 @@
 
   /* ---------- الإحصائيات ---------- */
   .main { max-width: 1500px; margin: 0 auto; padding: 16px; }
+  /* صفحة الفواتير بعرض الشاشة كلها */
+  #pageInv { max-width: none; }
   /* ---------- الشات ---------- */
   .s10 { background: linear-gradient(135deg, #00ACC1, #00838F); }
   .chatwrap { background: #fff; border-radius: 16px; box-shadow: var(--shadow); padding: 12px; margin: 12px 0; }
