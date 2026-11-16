@@ -309,8 +309,10 @@
   @media (max-width: 800px) { .stats { grid-template-columns: repeat(2, 1fr); } #stats { display: block; } }
 
   /* ---------- القايمة والتفاصيل ---------- */
-  .wrap { display: grid; grid-template-columns: 360px 1fr; gap: 16px; }
-  @media (max-width: 1000px) { .wrap { grid-template-columns: 1fr; } .wrap.open #listPane { display: none; } .wrap:not(.open) #detailPane { display: none; } }
+  .wrap { display: grid; grid-template-columns: 360px 1fr; gap: 16px; align-items: start; }
+  /* العمود اليمين (القايمة) من فوق لتحت - وعلى شماله: مواعيد العمل + الكروت + الفلاتر + مربع الفاتورة بنفس العرض */
+  #mainCol { min-width: 0; }
+  @media (max-width: 1000px) { .wrap { grid-template-columns: 1fr; } #mainCol { order: -1; } .wrap.open #listPane { display: none; } .wrap:not(.open) #detailPane { display: none; } }
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
   .tabnow { font-size: 14px; color: #4A5868; padding: 2px 4px; }
   .tab { background: #fff; color: var(--text); border: 1.5px solid var(--line); padding: 7px 12px; }
@@ -318,7 +320,8 @@
   .tab .n { display: inline-block; min-width: 22px; padding: 0 6px; margin-inline-start: 6px; border-radius: 10px; background: rgba(0,0,0,.08); font-size: 13px; }
   .tab.on .n { background: rgba(255,255,255,.2); }
   .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-  #list { max-height: calc(100vh - 330px); overflow: auto; padding: 2px; }
+  #list { max-height: calc(100vh - 235px); overflow: auto; padding: 2px; }
+  @media (max-width: 1000px) { #list { max-height: calc(100vh - 330px); } }
   .card { background: var(--card); border-radius: 16px; padding: 12px 14px; margin-bottom: 9px; box-shadow: var(--shadow); cursor: pointer; border-inline-start: 5px solid var(--orange); transition: transform .1s; }
   .card:hover { transform: translateY(-1px); }
   .card.sel { outline: 2.5px solid var(--blue); }
@@ -775,14 +778,13 @@
   <div id="tkAlarm" class="tkalarm hidden"></div>
 
   <div class="main" id="pageInv">
-    <div class="stats" id="stats"></div>
     <div class="wrap" id="wrap">
       <div id="listPane">
         <div id="markBox"></div>
         <div id="devBox"></div>
         <div class="tabs" id="tabs"></div>
         <div class="filters">
-          <select id="fStore" onchange="renderList()"><option value="">كل المحلات</option></select>
+          <input id="fStore" type="search" list="fStoreList" placeholder="🏪 كل المحلات" title="اكتب اسم المحل أو جزء منه علشان تصفّي" oninput="renderList()" autocomplete="off"><datalist id="fStoreList"></datalist>
           <input id="fText" placeholder="🔍 بحث بالمورد أو الرقم أو المشكلة" oninput="renderList()">
           <button class="btn soft hidden" id="tkNewBtn" onclick="tkNewDlg()" title="افتح تذكرة دعم لفرع (مثلًا كلّمك في التليفون)">＋ تذكرة</button>
           <button class="btn soft hidden" id="taskNewBtn" onclick="taskNewDlg()" title="تاسك لمحل أو لكذا محل (ومكررة لو عاوز)">＋ تاسك</button>
@@ -791,7 +793,10 @@
         </div>
         <div id="list"></div>
       </div>
-      <div id="detailPane" class="pane"><div class="empty">👈 اختار فاتورة من القايمة</div></div>
+      <div id="mainCol">
+        <div class="stats" id="stats"></div>
+        <div id="detailPane" class="pane"><div class="empty">👈 اختار فاتورة من القايمة</div></div>
+      </div>
     </div>
   </div>
 
@@ -1207,9 +1212,8 @@ async function loadList(quiet) {
     if (r.me) { const first = !myRole; myRole = r.me.role || 'دعم'; myPhoto = r.me.photo || ''; renderWho(); if (first && isQA()) { tab = ST_QA; } if (first) setTimeout(() => startTour(false), 900); }
     const newMsgs = chatKnown ? chatSum.threads.filter(t => t.unread > (chatKnown[t.store + '|' + t.inv] || 0) && t.lastFrom === 'فرع') : [];
     chatKnown = {}; chatSum.threads.forEach(t => { chatKnown[t.store + '|' + t.inv] = t.unread; });
-    const sel = $('fStore'), val = sel.value;
-    sel.innerHTML = '<option value="">كل المحلات</option>' + stores.map(s => '<option>' + esc(s) + '</option>').join('');
-    sel.value = val;
+    // المحلات: كتابة وتصفية (الاقتراحات بتظهر وانت بتكتب)
+    $('fStoreList').innerHTML = stores.map(s => '<option value="' + esc(s) + '"></option>').join('');
     renderStats(); renderList(); renderMarks(); renderDevs(); updateTitle();
     if (!$('pagePerf').classList.contains('hidden')) renderPerf();
     if (!$('pageStores').classList.contains('hidden')) renderBoard();
@@ -1282,9 +1286,11 @@ const CARD_TABS = [
 ];
 // التذاكر بتتفلتر بقواعدها هي (tkInTab)
 CARD_TABS.forEach(x => { const f = x.f; x.f = v => v.kind === 'task' || v.kind === 'jr' ? taskInTab(x.k, v) : v.kind === 'tk' ? tkInTab(x.k, v) : f(v); });
+// اسم المحل من غير همزات وتاء مربوطة (علشان "أبو" = "ابو")
+function stNorm(x) { return String(x || '').trim().replace(/\s+/g, ' ').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').toLowerCase(); }
 function baseList() {
-  const st = $('fStore').value, q = $('fText').value.trim();
-  return all.concat(tks, tasks, jrs).filter(v => (!st || v.store === st) && (!q || (v.kind === 'task' || v.kind === 'jr' ? (v.title || 'طلب جرد') + ' ' + v.store + ' ' + (v.details || v.notes || '')
+  const st = stNorm($('fStore').value), q = $('fText').value.trim();
+  return all.concat(tks, tasks, jrs).filter(v => (!st || stNorm(v.store).indexOf(st) !== -1) && (!q || (v.kind === 'task' || v.kind === 'jr' ? (v.title || 'طلب جرد') + ' ' + v.store + ' ' + (v.details || v.notes || '')
     : v.kind === 'tk' ? v.title + ' ' + v.desc + ' ' + v.user + ' ' + v.store + ' ' + v.assigneeName
     : v.supplier + ' ' + v.number + ' ' + v.systemNo + ' ' + v.user + ' ' + v.store).indexOf(q) !== -1));
 }
