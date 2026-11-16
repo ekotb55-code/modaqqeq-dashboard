@@ -362,8 +362,19 @@
   .srbox textarea { width: 100%; min-height: 54px; margin: 6px 0; }
   tr.flag td { background: #FFF1F1; }
   .flagwhy { color: #B3261E; font-size: 12px; font-weight: 700; margin-top: 2px; }
-  .tablebox .rvc { display: none; }
-  .tablebox.linked .rvc { display: table-cell; }
+  /* علامة المراجعة بتظهر في كل المحلات (إلزامية في المربوطة بس) + ترتيب الأصناف */
+  .tablebox .rvc { white-space: nowrap; }
+  tr.rvd td { background: #EAF7EE; }
+  .mvc { white-space: nowrap; width: 1%; padding-inline: 4px !important; }
+  .mvh { cursor: grab; font-size: 18px; color: #8A96A3; padding: 0 3px; user-select: none; }
+  .mvh:active { cursor: grabbing; }
+  .mvb { border: 0; background: #EEF3F9; color: #0F5FA8; border-radius: 6px; padding: 1px 6px; font-size: 11px; cursor: pointer; margin: 0 1px; font-family: inherit; }
+  .mvb[disabled] { opacity: .3; cursor: default; }
+  tr.dragging td { opacity: .45; }
+  tr.dov-top td { box-shadow: inset 0 3px 0 var(--blue); }
+  tr.dov-bot td { box-shadow: inset 0 -3px 0 var(--blue); }
+  .loinfo { font-size: 13px; color: var(--muted); margin: 6px 2px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .loinfo .mvb { padding: 3px 10px; font-size: 12.5px; }
   .rvb { border: 1.5px solid #9CC4EC; background: #fff; color: #0F5FA8; border-radius: 10px; padding: 4px 10px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: inherit; }
   .rvb.on { background: #1A8A3E; border-color: #1A8A3E; color: #fff; }
   .card.st-qa, .bcard.st-qa { border-inline-start-color: #6C4BD8; }
@@ -1648,6 +1659,7 @@ async function openInv(id, silent) {
   if (!silent) { $('detailPane').innerHTML = '<div class="empty"><span class="spin"></span></div>'; pIdx = 0; }
   try {
     cur = await api('dInvoice', { token, id });
+    if (loPend[id]) { cur.lines = loApplyLocal(cur.lines, loPend[id]); cur.lineOrder = { by: me, at: new Date(now()).toISOString() }; }
     if (!silent) shots = [];
     renderDetail();
     renderList();
@@ -1738,15 +1750,95 @@ function renderDetail() {
   if (canWork) { renderShots(); bindDrop(); posLoad(v.id); } else if (v.status === ST_DONE) buildMerged();
 }
 
-// جدول الأصناف: التنبيهات (أسعار مش منطقية) + زرار "راجعت" في المحلات المربوطة
+// ---------- ترتيب أصناف الفاتورة (سحب أو أسهم) - بيتحفظ على السيرفر علشان الجودة تشوفه ----------
+let loPend = {}, loTimer = 0, loDragN = null;
+function loApplyLocal(lines, order) {
+  const pos = {};
+  order.forEach((n, i) => { pos[String(n)] = i; });
+  return lines.map((l, i) => ({ l, i, p: String(l.n) in pos ? pos[String(l.n)] : 1e9 })).sort((a, b) => a.p - b.p || a.i - b.i).map(x => x.l);
+}
+function loChanged() {
+  const id = cur.invoice.id;
+  loPend[id] = cur.lines.map(l => l.n);
+  cur.lineOrder = { by: me, at: new Date(now()).toISOString() };
+  renderLines();
+  clearTimeout(loTimer);
+  loTimer = setTimeout(() => loSave(id), 900);
+}
+async function loSave(id) {
+  const order = loPend[id];
+  if (!order) return;
+  try {
+    const r = await api('dLineOrder', { token, id, order }, true);
+    if (loPend[id] !== order) return; // اترتّب تاني وهو بيتحفظ: الحفظ الجاي هيبعت الأحدث
+    delete loPend[id];
+    if (cur && cur.invoice.id === id) { cur.lineOrder = r.lineOrder || null; renderLines(); }
+  } catch (e) {
+    delete loPend[id];
+    if (cur && cur.invoice.id === id) renderLines();
+    toast('الترتيب ما اتحفظش: ' + msg(e));
+  }
+}
+function loMove(n, dir) {
+  const L = cur.lines, i = L.findIndex(l => l.n === n), j = i + dir;
+  if (i < 0 || j < 0 || j >= L.length) return;
+  const t = L[i]; L[i] = L[j]; L[j] = t;
+  loChanged();
+}
+function loStart(e, n) {
+  loDragN = n;
+  const tr = e.target.closest('tr');
+  try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(n)); if (tr) e.dataTransfer.setDragImage(tr, 20, 16); } catch (err) {}
+  if (tr) setTimeout(() => tr.classList.add('dragging'), 0);
+}
+function loEnd() { loDragN = null; document.querySelectorAll('#linesBox tr.dragging, #linesBox tr.dov-top, #linesBox tr.dov-bot').forEach(t => t.classList.remove('dragging', 'dov-top', 'dov-bot')); }
+function loLeave(tr) { tr.classList.remove('dov-top', 'dov-bot'); }
+function loAfter(e, tr) { const b = tr.getBoundingClientRect(); return e.clientY > b.top + b.height / 2; }
+function loOver(e, tr) {
+  if (loDragN === null) return;
+  e.preventDefault();
+  const after = loAfter(e, tr);
+  tr.classList.toggle('dov-bot', after); tr.classList.toggle('dov-top', !after);
+}
+function loDrop(e, tr) {
+  if (loDragN === null) return;
+  e.preventDefault();
+  const from = loDragN, to = Number(tr.dataset.n), after = loAfter(e, tr);
+  loEnd();
+  if (from === to) return;
+  const L = cur.lines, i = L.findIndex(l => l.n === from);
+  if (i < 0) return;
+  const it = L.splice(i, 1)[0];
+  let j = L.findIndex(l => l.n === to);
+  if (j < 0) { L.splice(i, 0, it); return; }
+  L.splice(after ? j + 1 : j, 0, it);
+  loChanged();
+}
+async function loReset() {
+  if (!confirm('ترجّع الأصناف لترتيبها الأصلي زي ما الفرع بعتها؟')) return;
+  const id = cur.invoice.id;
+  clearTimeout(loTimer); delete loPend[id];
+  try {
+    const r = await api('dLineOrder', { token, id, order: [] }, true);
+    if (cur && cur.invoice.id === id) { if (r.lines) cur.lines = r.lines; cur.lineOrder = null; renderLines(); }
+    toast('الترتيب رجع زي الأصل');
+  } catch (e) { toast(msg(e)); }
+}
+
+// جدول الأصناف: التنبيهات (أسعار مش منطقية) + زرار "راجعت" (لكل المحلات - وإلزامي في المربوطة)
 function renderLines() {
   const box = $('linesBox');
   if (!box || !cur) return;
   const v = cur.invoice, L = cur.lines, fl = srFlags(L), lk = linked(), rv = revOk[v.id] || {};
   const canWork = (v.status === ST_NEW || v.status === ST_WORK || !v.status) && !isQA();
   const pDiff = l => l.oldPrice ? l.piecePrice - l.oldPrice : 0;
-  box.innerHTML = '<div class="tablebox' + (lk && canWork ? ' linked' : '') + '"><table><thead><tr><th>م</th><th>اسم الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>سعر البيع</th><th class="rvc">مراجعة</th></tr></thead><tbody>' +
-    L.map(l => '<tr class="' + (fl[l.n] ? 'flag' : l.newSale !== null ? 'pchg' : '') + '"><td>' + l.n + '</td><td>' + esc(l.name) + (l.isNew ? ' <span class="new-item">🆕 جديد ' + esc(l.barcode) + '</span>' : '') +
+  const lo = cur.lineOrder;
+  box.innerHTML = '<div class="tablebox' + (lk && canWork ? ' linked' : '') + '"><table><thead><tr><th class="mvc" title="رتّب الأصناف زي ترتيبها في الورقة">↕</th><th>م</th><th>اسم الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>سعر البيع</th><th class="rvc">مراجعة</th></tr></thead><tbody>' +
+    L.map((l, k) => '<tr data-n="' + l.n + '" class="' + (fl[l.n] ? 'flag' : l.newSale !== null ? 'pchg' : '') + (rv[l.n] ? ' rvd' : '') + '" ondragover="loOver(event,this)" ondragleave="loLeave(this)" ondrop="loDrop(event,this)">' +
+      '<td class="mvc"><span class="mvh" draggable="true" ondragstart="loStart(event,' + l.n + ')" ondragend="loEnd()" title="اسحب علشان تحرّك الصنف">⠿</span>' +
+      '<button class="mvb" onclick="loMove(' + l.n + ',-1)"' + (k === 0 ? ' disabled' : '') + ' title="لفوق">▲</button>' +
+      '<button class="mvb" onclick="loMove(' + l.n + ',1)"' + (k === L.length - 1 ? ' disabled' : '') + ' title="لتحت">▼</button></td>' +
+      '<td>' + (k + 1) + '</td><td>' + esc(l.name) + (l.isNew ? ' <span class="new-item">🆕 جديد ' + esc(l.barcode) + '</span>' : '') +
       (l.unit === 'كرتونة' ? '<div style="color:var(--muted);font-size:12px">' + num(l.qty) + ' كرتونة × ' + esc(l.cartonSize) + '</div>' : '') +
       (fl[l.n] ? '<div class="flagwhy">⚠️ ' + fl[l.n].map(w => esc(w.s)).join(' • ') + '</div>' : '') +
       '</td><td class="num">' + num(l.pieces) + '</td><td class="num">' + money(l.piecePrice) +
@@ -1754,7 +1846,10 @@ function renderLines() {
       '</td><td class="num">' + money(l.total) + '</td><td class="num">' +
       (l.newSale !== null ? '<span class="sale">🏷 ' + money(l.oldSale) + ' ← ' + money(l.newSale) + '</span>' : (l.oldSale !== null ? money(l.oldSale) : '')) + '</td>' +
       '<td class="rvc"><button class="rvb' + (rv[l.n] ? ' on' : '') + '" onclick="revTog(' + l.n + ')">' + (rv[l.n] ? '✓ راجعت' : 'راجعت') + '</button></td></tr>').join('') +
-    '<tr class="total-row"><td></td><td>الإجمالي</td><td></td><td></td><td class="num">' + money(v.total) + '</td><td></td><td class="rvc">' + (L.length - revLeft()) + '/' + L.length + '</td></tr></tbody></table></div>';
+    '<tr class="total-row"><td class="mvc"></td><td></td><td>الإجمالي</td><td></td><td></td><td class="num">' + money(v.total) + '</td><td></td><td class="rvc">' + (L.length - revLeft()) + '/' + L.length + '</td></tr></tbody></table></div>' +
+    '<div class="loinfo">' + (lo
+      ? '<span>↕️ الترتيب اتعدّل' + (lo.by ? ' - رتّبها ' + esc(lo.by) : '') + (lo.at ? ' • ' + dt(lo.at) : '') + (loPend[v.id] ? ' • بيتحفظ...' : '') + '</span><button class="mvb" onclick="loReset()">↩️ رجّع الترتيب الأصلي</button>'
+      : '<span>↕️ اسحب ⠿ أو دوس ▲▼ علشان ترتّب الأصناف زي ترتيبها في الورقة. و«راجعت» اختيارية' + (lk && canWork ? ' (إلزامية هنا لأن المحل مربوط بالبرنامج)' : '') + '.</span>') + '</div>';
   srRender(fl, canWork);
 }
 function srRender(fl, canWork) {
