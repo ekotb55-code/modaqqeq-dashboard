@@ -652,6 +652,12 @@
   .stars { color: #F2A900; letter-spacing: 1px; } .stars i { color: #D5DEE9; font-style: normal; }
   .tkalarm { position: sticky; top: 0; z-index: 40; background: linear-gradient(90deg, #B3261E, #E0393E); color: #fff; padding: 10px 16px; font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; animation: urgepulse 1.2s infinite; }
   .tkalarm .btn { background: #fff; color: #B3261E; padding: 6px 14px; } .tkalarm .btn.soft { background: rgba(255,255,255,.2); color: #fff; }
+  .tpalarm { background: linear-gradient(90deg, #4527A0, #6C4BD8); } .tpalarm .btn { color: #4527A0; }
+  .tpalarm.u { background: linear-gradient(90deg, #B3261E, #E0393E); } .tpalarm.u .btn { color: #B3261E; }
+  .tpb { font-size: 11.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .tpb.h { background: #FFF1DE; color: #B35C00; } .tpb.u { background: #FDECEA; color: #B3261E; } .tpb.r { background: #EDE7F6; color: #4527A0; }
+  .bcard.k-task.tp-h { border-inline-start-color: #E67E00 !important; } .bcard.k-task.tp-u { border-inline-start-color: #C62828 !important; box-shadow: 0 0 0 2px #F5C2BD; }
+  .tprow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .tprow select { width: 100%; }
   .tkacts { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
   .tkpics { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; } .tkpics img { width: 110px; height: 110px; object-fit: cover; border-radius: 12px; cursor: zoom-in; background: #EEF2F7; }
   .tkguide { background: #F3F7FC; border-radius: 12px; padding: 8px 12px; margin: 8px 0; } .tkguide summary { font-weight: 800; color: var(--navy); cursor: pointer; } .tkguide div { margin-top: 6px; line-height: 1.8; }
@@ -855,6 +861,7 @@
     <div class="accent"></div>
   </header>
   <div id="tkAlarm" class="tkalarm hidden"></div>
+  <div id="tpAlarm" class="tkalarm tpalarm hidden"></div>
 
   <div class="main" id="pageInv">
     <div class="wrap" id="wrap">
@@ -1284,7 +1291,7 @@ async function loadList(quiet) {
     all = r.invoices; stores = r.stores;
     tks = (r.tickets || []).map(t => Object.assign(t, { kind: 'tk' })); if (r.storePrio) storePrio = r.storePrio;
     tasks = r.tasks || []; jrs = r.jrs || []; marks = r.marks || []; jardDevs = r.jardDevs || []; if (r.storeColor) storeColor = r.storeColor; if (r.members) members = r.members;
-    tasksAfterLoad(); marksAfterLoad();
+    tasksAfterLoad(); marksAfterLoad(); setTimeout(() => { try { tpCheck(); } catch (e) {} }, 50);
     tkAfterLoad(tks);
     chatSum = r.chat || { threads: [], replies: [] };
     if (r.cm) cmCounts = r.cm;
@@ -3887,7 +3894,7 @@ function taskInTab(k, v) {
   if (k !== 'tasks') return false;
   return v.kind === 'task' ? v.status === TASK_OPEN : ['مستني الدعم', 'مستني الفرع', 'متثبت', 'شغال'].indexOf(v.status) !== -1;
 }
-function taskRank(v) { return !v.kind ? 0 : v.kind === 'jr' ? (jrOpenSup(v) ? 0 : 3) : taskLate(v) ? 1 : taskDue(v) ? 2 : 4; }
+function taskRank(v) { return !v.kind ? 0 : v.kind === 'jr' ? (jrOpenSup(v) ? 0 : 3) : (v.status === TASK_OPEN && taskDue(v) && v.prio === 'u' ? 0.5 : v.status === TASK_OPEN && taskDue(v) && v.prio === 'h' ? 0.8 : 0) || (taskLate(v) ? 1 : taskDue(v) ? 2 : 4); }
 function taskCard(v, board) {
   const done = v.status !== TASK_OPEN, late = taskLate(v), future = !done && !taskDue(v);
   const st = done ? '<span class="badge b-done">' + (v.status === 'اتلغت' ? 'اتلغت' : '✓ اتعملت') + '</span>' : late ? '<span class="badge" style="background:#EDE7F6;color:#4527A0">⏰ متأخرة</span>' : future ? '<span class="badge b-new">📅 ' + tm(v.due) + '</span>' : '<span class="badge" style="background:#EDE7F6;color:#4527A0">مفتوحة</span>';
@@ -3899,13 +3906,116 @@ function taskCard(v, board) {
     (done ? '<div class="bm">✅ ' + esc(v.doneBy) + ' • ' + tm(v.doneAt) + (v.data && v.data.progTotal !== undefined ? ' • البرنامج ' + money(v.data.progTotal) + ' = الجرد ' + money(v.data.appTotal) : '') + '</div>' : '');
   if (!board) {
     return '<div class="card' + (taskSel('task', v.id) ? ' sel' : '') + '" id="task-' + esc(v.id) + '" style="border-inline-start:5px solid #6C4BD8" onclick="openTask(\'task\',\'' + esc(v.id) + '\')">' +
-      '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + cmTag('task', v.id) + '</span>' + st + '</div>' +
+      '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + cmTag('task', v.id) + '</span>' + tpBadge(v) + st + '</div>' +
       '<div class="sub"><span class="lbl">تاسك:</span> 📋 ' + esc(v.title) + '</div><div class="meta">الميعاد ' + dt(v.due) + '</div></div>';
   }
-  return '<div class="bcard k-task' + (done ? ' done' : '') + (late ? ' late' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
-    '<div class="bt"><b><span class="kind">📋</span>' + esc(v.title) + (v.to ? ' <small style="color:#4527A0">' + esc(taskToLabel(v.to)) + '</small>' : '') + cmTag('task', v.id) + '</b>' + st + '</div>' +
+  return '<div class="bcard k-task' + (done ? ' done' : '') + (late ? ' late' : '') + (!done && v.prio === 'u' ? ' tp-u' : !done && v.prio === 'h' ? ' tp-h' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
+    '<div class="bt"><b><span class="kind">📋</span>' + esc(v.title) + (v.to ? ' <small style="color:#4527A0">' + esc(taskToLabel(v.to)) + '</small>' : '') + cmTag('task', v.id) + '</b>' + tpBadge(v) + st + '</div>' +
     '<div class="bm">' + (done ? esc(v.doneBy) + ' • ' + tm(v.doneAt) : 'الميعاد ' + tm(v.due)) + '</div>' + btn +
     '<div class="bx">' + body + '<div style="margin-top:6px">' + shareBtn('task', v.id, '📋 تاسك: ' + v.title + ' - فرع ' + v.store) + cmBtn('task', v.id) + '</div></div></div>';
+}
+// ---------- أهمية التاسك + تكرار النغمة ----------
+// الأهمية: عادية (نغمة هادية) • مهمة (نغمة أعلى مرتين) • عاجلة (إنذار + هزاز) • الدورية (من التاسكات المتكررة): إنذار في معادها
+// التكرار: مرة واحدة • كل 15 دقيقة • كل 5 دقايق (وبانر فوق الصفحة) - لحد ما التاسك تتعمل، في مواعيد الشغل، ولصاحب التاسك بس
+const TP_LBL = { n: '🟢 عادية', h: '🟠 مهمة', u: '🔴 عاجلة' }, TN_LBL = { 1: 'مرة واحدة', 15: 'كل 15 دقيقة', 5: 'كل 5 دقايق' };
+let tpRing = {}; try { tpRing = JSON.parse(localStorage.getItem('mdq-tpring') || '{}') || {}; } catch (e) {}
+function tpBadge(v) {
+  if (v.status !== TASK_OPEN) return '';
+  return (v.prio === 'u' ? '<span class="tpb u">🔴 عاجلة</span>' : v.prio === 'h' ? '<span class="tpb h">🟠 مهمة</span>' : '') + (v.rec ? '<span class="tpb r">🔁</span>' : '');
+}
+function tpFields(p, t) {
+  return '<div class="tprow"><div><label class="fl" style="margin-top:8px">⚡ الأهمية</label><select id="kPr">' +
+    ['n', 'h', 'u'].map(k => '<option value="' + k + '"' + (k === p ? ' selected' : '') + '>' + TP_LBL[k] + '</option>').join('') + '</select></div>' +
+    '<div><label class="fl" style="margin-top:8px">🔔 تكرار النغمة</label><select id="kTn">' +
+    [1, 15, 5].map(k => '<option value="' + k + '"' + (k === t ? ' selected' : '') + '>' + TN_LBL[k] + '</option>').join('') + '</select></div></div>' +
+    '<small style="color:var(--muted)">النغمة بتشتغل لما ييجي الميعاد وبتعيد لحد ما التاسك تتعمل. كل ما الأهمية أعلى النغمة أعلى. ' +
+    '<a href="#" onclick="event.preventDefault();tpTone(document.getElementById(\'kPr\').value===\'u\'?3:document.getElementById(\'kPr\').value===\'h\'?2:1)">🔊 اسمع النغمة</a></small>';
+}
+// النغمة على قد المستوى: 1 عادية • 2 مهمة • 2.5 دورية • 3 عاجلة
+function tpTone(lv) {
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (e) {}
+  if (lv >= 3) return alarm(8);
+  if (lv >= 2.5) return alarm(5);
+  if (lv >= 2) {
+    try {
+      const t0 = audioCtx.currentTime;
+      [0, .75].forEach(r => [[1175, 0], [1568, .14], [2093, .28]].forEach(([f, d]) => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'triangle'; o.frequency.value = f;
+        g.gain.setValueAtTime(0, t0 + r + d); g.gain.linearRampToValueAtTime(.5, t0 + r + d + .02); g.gain.exponentialRampToValueAtTime(.001, t0 + r + d + .4);
+        o.connect(g); g.connect(audioCtx.destination); o.start(t0 + r + d); o.stop(t0 + r + d + .45);
+      }));
+    } catch (e) {}
+    if (navigator.vibrate) try { navigator.vibrate([250, 120, 250]); } catch (e) {}
+    return;
+  }
+  ding();
+}
+const tpLv = v => v.prio === 'u' ? 3 : v.rec ? 2.5 : v.prio === 'h' ? 2 : 1;
+function tpMine(v) {
+  const to = v.to || '';
+  if (!to) return !isQA();
+  if (to.indexOf('role:') === 0) return myRole === to.slice(5);
+  return to.slice(5).toLowerCase() === (ls('dashEmail') || '').trim().toLowerCase();
+}
+// بتتنده بعد كل تحميل وكل 30 ثانية
+function tpCheck() {
+  if (!token || !myRole || isQA()) return;
+  const t = now(), groups = {};
+  (tasks || []).forEach(v => {
+    if (v.status !== TASK_OPEN || !taskDue(v) || !tpMine(v)) return;
+    const g = v.group || v.id; (groups[g] = groups[g] || []).push(v);
+  });
+  const work = inWork(t);
+  let best = null, n = 0;
+  Object.keys(groups).forEach(g => {
+    const v = groups[g][0], due = new Date(v.due || v.createdAt).getTime(), last = tpRing[g] || 0, every = Number(v.tone) || 1;
+    let ring = false;
+    if (!last) ring = t - due < 60 * 60000;                 // أول مرة: لو الميعاد جه من أقل من ساعة (القديمة نعلّمها من غير صوت)
+    else if (every > 1) ring = t - last >= every * 60000 - 20000;
+    if (!ring) { if (!last) tpRing[g] = t; return; }
+    if (!work) return;                                      // برة مواعيد الشغل: من غير صوت (ومانعلّمهاش علشان تضرب أول الشغل)
+    tpRing[g] = t; n++;
+    if (!best || tpLv(v) > tpLv(best.v)) best = { v: v, n: groups[g].length };
+  });
+  const keep = {}; Object.keys(tpRing).forEach(k => { if (groups[k] || t - tpRing[k] < 2 * 864e5) keep[k] = tpRing[k]; }); tpRing = keep;
+  try { localStorage.setItem('mdq-tpring', JSON.stringify(tpRing)); } catch (e) {}
+  tpBanner(groups);
+  if (!best) return;
+  const v = best.v, lv = tpLv(v);
+  tpTone(lv);
+  const head = v.prio === 'u' ? '🔴 تاسك عاجلة' : v.rec ? '🔁 تاسك دورية جه معادها' : v.prio === 'h' ? '🟠 تاسك مهمة' : '📋 تاسك جه معادها';
+  toast(head + ': ' + v.title + ' - ' + (best.n > 1 ? best.n + ' محل' : v.store) + (n > 1 ? ' • و' + (n - 1) + ' كمان' : ''));
+  if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+    try { showNote(head, { body: v.title + ' - ' + (best.n > 1 ? best.n + ' محل' : v.store), tag: 'tp-' + (v.group || v.id), renotify: true, requireInteraction: lv >= 2.5 }, { task: v.id }); } catch (e) {}
+  }
+}
+// بانر فوق الصفحة: التاسكات اللي نغمتها «كل 5 دقايق» وجه معادها ولسه ما اتعملتش
+function tpBanner(groups) {
+  const el = $('tpAlarm'); if (!el) return;
+  const L = Object.keys(groups || {}).map(g => groups[g]).filter(G => Number(G[0].tone) === 5)
+    .sort((a, b) => tpLv(b[0]) - tpLv(a[0]) || String(a[0].due).localeCompare(String(b[0].due)));
+  if (!L.length) { el.classList.add('hidden'); return; }
+  const G = L[0], v = G[0], w = now() - new Date(v.due || v.createdAt).getTime();
+  el.classList.remove('hidden'); el.classList.toggle('u', v.prio === 'u');
+  el.innerHTML = (v.prio === 'u' ? '🔴' : v.rec ? '🔁' : '🔔') + ' <b>' + esc(v.title) + '</b> • ' + (G.length > 1 ? G.length + ' محل' : esc(v.store)) +
+    ' • مستنية من ' + clock(w) + (L.length > 1 ? ' • و' + (L.length - 1) + ' كمان' : '') +
+    (G.length === 1 ? ' <button class="btn" onclick="taskDone(\'' + esc(v.id) + '\')">✓ اتعملت</button>' : '') +
+    ' <button class="btn soft" onclick="goCard(\'task\',\'' + esc(v.id) + '\')">افتحها</button>';
+}
+setInterval(() => { try { tpCheck(); } catch (e) {} }, 30000);
+// تغيير الأهمية والنغمة (لكل المحلات المفتوحة في نفس التاسك)
+function tpEdit(id) {
+  const v = (tasks || []).find(x => x.id === id); if (!v) return;
+  dlg('<h3>⚡ الأهمية والنغمة</h3><p style="margin:0;color:var(--muted)">' + esc(v.title) + '</p>' + tpFields(v.prio || 'n', Number(v.tone) || 1) +
+    '<div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="closeDlg()">رجوع</button></div>');
+  $('dlgOk').onclick = async () => {
+    $('dlgOk').disabled = true;
+    try {
+      const r = await api('dTaskPrio', { token, id, prio: $('kPr').value, tone: Number($('kTn').value) }, true);
+      closeDlg(); delete tpRing[v.group || v.id]; taskApply(r); toast('✅ اتحفظ');
+    } catch (e) { $('dlgOk').disabled = false; toast(msg(e)); }
+  };
 }
 // ---------- التاسك وطلب الجرد في مربع التفاصيل (بدل ما يتفتحوا في الكارت) ----------
 let curTask = null; // {kind: 'task' | 'jr', id}
@@ -3940,11 +4050,13 @@ function renderTaskPane() {
     const st = done ? '<span class="badge b-done">' + (v.status === 'اتلغت' ? 'اتلغت' : '✓ اتعملت') + '</span>' : late ? '<span class="badge" style="background:#EDE7F6;color:#4527A0">⏰ متأخرة</span>' : future ? '<span class="badge b-new">📅 ' + tm(v.due) + '</span>' : '<span class="badge" style="background:#EDE7F6;color:#4527A0">مفتوحة</span>';
     h += '<div class="dhead"><h2>📋 ' + esc(v.title) + '</h2>' + st + '<span class="sp"></span>' + shareBtn('task', v.id, '📋 تاسك: ' + v.title + ' - فرع ' + v.store) + cmBtn('task', v.id) + '</div>';
     h += '<div class="info">' + i('المحل', v.store) + i('الميعاد', dt(v.due)) + (v.to ? i('متعملة لـ', taskToLabel(v.to) + ' بس') : '') +
+      i('الأهمية', TP_LBL[v.prio || 'n'] + (v.rec ? ' • 🔁 دورية' : '')) + i('تكرار النغمة', TN_LBL[v.tone || 1]) +
       i('اتعملت', tm(v.createdAt) + (v.createdBy ? ' - ' + v.createdBy : '')) + (v.type === 'جرد' ? i('النوع', 'من طلب الجرد') : '') +
       (done ? i(v.status === 'اتلغت' ? 'اتلغت' : 'خلصها', (v.doneBy || '') + (v.doneAt ? ' - ' + tm(v.doneAt) : '')) : '') +
       (done && v.data && v.data.progTotal !== undefined ? i('البرنامج', money(v.data.progTotal)) + i('الجرد', money(v.data.appTotal)) : '') + '</div>';
     h += v.details ? '<div class="pane tpbox"><b>التفاصيل:</b><br>' + esc(v.details) + '</div>' : '<div class="tpnone">التاسك دي من غير تفاصيل.</div>';
     if (!done) h += '<div class="tpacts"><button class="btn" onclick="taskDone(\'' + id + '\')">' + (v.step === 'upload' ? '📤 ارفع على البرنامج وطابق' : '✓ اتعملت') + '</button>' +
+      '<button class="btn soft" onclick="tpEdit(\'' + id + '\')">⚡ الأهمية والنغمة</button>' +
       (boss ? '<button class="btn soft" onclick="taskCancel(\'' + id + '\')">إلغاء</button>' : '') + '</div>';
   }
   $('detailPane').innerHTML = h;
@@ -4107,6 +4219,7 @@ function taskNewDlg() {
     '<optgroup label="مستوى إداري">' + Object.keys(TASK_ROLES).map(k => '<option value="role:' + esc(k) + '">' + TASK_ROLES[k] + ' بس</option>').join('') + '</optgroup>' +
     (members.length ? '<optgroup label="شخص معين">' + members.map(m => '<option value="user:' + esc(m.email) + '">👤 ' + esc(m.name) + (m.role ? ' (' + esc(m.role) + ')' : '') + '</option>').join('') + '</optgroup>' : '') +
     '</select><small style="color:var(--muted)">التاسك هتظهر لصاحبها بس، والتذكير يوصله هو بس</small>' +
+    tpFields('n', 1) +
     '<label class="fl" style="margin-top:8px">⏱ الوقت المتوقع للتاسك (دقايق)</label><input id="kEst" type="number" min="1" max="480" step="1" value="' + TASK_EST_MIN + '" inputmode="numeric" style="width:100%">' +
     '<small style="color:var(--muted)">لكل محل لوحده. بيتحسب بيه الدعم خلّص التاسكات في الميعاد ولا لأ</small>' +
     '<label class="fl" style="margin-top:8px">التكرار</label><select id="kR" onchange="$(\'kOnce\').style.display=this.value?\'none\':\'\';$(\'kRep\').style.display=this.value?\'\':\'none\';$(\'kWd\').style.display=this.value===\'أسبوعي\'?\'\':\'none\'">' +
@@ -4118,7 +4231,7 @@ function taskNewDlg() {
   $('dlgOk').onclick = async () => {
     const sel = [...document.querySelectorAll('.stpick input:checked')].map(x => x.value);
     const t = { title: $('kT').value, details: $('kD').value, stores: sel, all: $('kAll').checked, repeat: $('kR').value, to: $('kTo').value,
-      due: $('kDue').value ? new Date($('kDue').value).toISOString() : '', time: $('kTime').value, weekday: Number($('kWday').value), est: Math.round(Number($('kEst').value)) };
+      due: $('kDue').value ? new Date($('kDue').value).toISOString() : '', time: $('kTime').value, weekday: Number($('kWday').value), est: Math.round(Number($('kEst').value)), prio: $('kPr').value, tone: Number($('kTn').value) };
     if (!t.title.trim()) return toast('اكتب عنوان التاسك');
     if (!(t.est >= 1 && t.est <= 480)) return toast('اكتب الوقت المتوقع للتاسك بالدقايق (من 1 لـ 480)');
     if (!t.all && !sel.length) return toast('اختار محل واحد على الأقل');
@@ -4144,7 +4257,7 @@ async function tasksDlg() {
         : '<span style="font-size:12.5px;color:#1A8A3E;padding:4px 6px">✅ ' + esc(x.store) + '</span>').join('') + '</div></div>';
   }).join('') : '<p style="color:var(--muted)">مفيش تاسكات مفتوحة 🎉</p>') +
     '<h3 style="margin-top:14px">🔁 التاسكات المتكررة</h3>' + (reps.filter(x => x.active).length ? reps.filter(x => x.active).map(x =>
-      '<div class="tkgrp"><b>' + esc(x.title) + '</b> <small>• ' + (x.repeat === 'أسبوعي' ? 'كل ' + days[x.weekday] : 'كل يوم') + ' الساعة ' + esc(x.time) + ' • ' + x.stores.length + ' محل</small>' +
+      '<div class="tkgrp"><b>' + esc(x.title) + '</b> <small>• ' + (x.repeat === 'أسبوعي' ? 'كل ' + days[x.weekday] : 'كل يوم') + ' الساعة ' + esc(x.time) + ' • ' + x.stores.length + ' محل' + (x.prio && x.prio !== 'n' ? ' • ' + TP_LBL[x.prio] : '') + (x.tone && x.tone !== 1 ? ' • 🔔 ' + TN_LBL[x.tone] : '') + '</small>' +
       (myRole === 'مدير' ? ' <button class="btn soft" style="padding:3px 9px;font-size:12px" onclick="repeatStop(\'' + esc(x.id) + '\')">إيقاف</button>' : '') + '</div>').join('') : '<p style="color:var(--muted)">مفيش</p>') +
     '<div class="acts"><button class="btn" onclick="taskNewDlg()">＋ تاسك جديدة</button><button class="btn soft" onclick="closeDlg()">قفل</button></div>');
   $('dlg').dataset.k = 'tasks';

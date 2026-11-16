@@ -1,6 +1,6 @@
 // تطبيق الداش بورد: بيشتغل من غير ما يحتاج تنزيل من المتجر
 // الصفحة بتتجاب من النت الأول (علشان أي تحديث يظهر على طول)، ولو النت قاطع بتفتح آخر نسخة محفوظة
-const CACHE = 'modaqqeq-dash-v7';
+const CACHE = 'modaqqeq-dash-v8';
 const SHELL = ['./', './index.html', './logo_wide.png', './icon.png', './icon-192.png', './icon-512.png', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {
@@ -29,9 +29,12 @@ self.addEventListener('push', e => {
   const title = d.title || n.title || 'داش بورد مدقق';
   const opts = {
     body: d.body || n.body || '', icon: 'icon-192.png', badge: 'badge-96.png', dir: 'rtl', lang: 'ar',
-    tag: d.tag || undefined, renotify: !!d.tag, vibrate: [200, 100, 200],
-    data: { inv: d.inv || '', store: d.store || '', team: d.team || '', page: d.page || '', tk: d.tk || '' }
+    tag: d.tag || undefined, renotify: !!d.tag, vibrate: d.urgent === '1' ? [500, 150, 500, 150, 500, 150, 500] : [200, 100, 200],
+    // كل بيانات الإشعار بتتبعت للصفحة (فاتورة / تذكرة / تاسك / تعليق ...)
+    data: Object.assign({}, d, { inv: d.inv || '', store: d.store || '', team: d.team || '', page: d.page || '', tk: d.tk || '' })
   };
+  // التاسك العاجلة / الدورية: الإشعار يفضل على الشاشة لحد ما تدوس عليه
+  if (d.urgent === '1') opts.requireInteraction = true;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
     list.forEach(c => c.postMessage({ type: 'push', data: d }));
     // الداش بورد مفتوح قدامك دلوقتي: هو بيعمل الصوت والتنبيه بنفسه
