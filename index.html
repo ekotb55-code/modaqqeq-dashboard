@@ -748,7 +748,7 @@
   #viewerFull img { max-width: 96vw; max-height: 94vh; }
   /* ---------- الموبايل ---------- */
   @media (max-width: 760px) {
-    html, body { overflow-x: hidden; }
+    html, body { overflow-x: clip; }
     .hbar { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
     .hbar img { height: 32px; }
     .hbar .title { display: none; }
@@ -772,6 +772,26 @@
     .stores-perf { overflow-x: auto; }
     .board { height: auto; min-height: 60vh; scroll-snap-type: x mandatory; }
     .bcol { flex: 0 0 86vw; scroll-snap-align: start; max-height: 75vh; }
+    /* عداد الاستهلاك صغير: نسبة بس بلونها (من غير الشريط و 🌐) */
+    #umPill { padding: 4px 7px; font-size: 11px; gap: 0; }
+    #umPill .umbar, #umPill .umico { display: none; }
+    html, body { overflow-x: clip; }
+    /* الموبايل: عمودين جنب بعض (نص العرض) والكروت أصغر */
+    .board { gap: 8px; }
+    .bcol { flex: 0 0 calc((100vw - 28px) / 2); min-width: 0; width: calc((100vw - 28px) / 2); }
+    .bcol * { min-width: 0; max-width: 100%; }
+    .bhead h3 + * , .bhead > div { flex-wrap: wrap; }
+    .bhead { padding: 8px 8px 6px; }
+    .bhead h3 { font-size: 15px; gap: 4px; }
+    .bhead .chip, .bhead .bchip, .bhead button, .bhead a { font-size: 11px !important; padding: 2px 6px !important; }
+    .bcol .bcards, .bcol > div:last-child { padding-inline: 5px; }
+    .bcard { padding: 6px 7px; border-inline-start-width: 4px; }
+    .bcard .bt { flex-wrap: wrap; gap: 3px; }
+    .bcard .bt b { font-size: 12.5px; }
+    .bcard .bm { font-size: 11px; }
+    .bcard .badge, .bcard .bt > span { font-size: 10.5px; padding: 1px 6px; }
+    .bacts { gap: 4px; }
+    .bacts .btn, .bcard .shr { padding: 4px 7px !important; font-size: 11.5px !important; }
     .bbar input#bText { width: 100%; }
     .msg { max-width: 92%; }
     #chatModal { padding: 0; align-items: stretch; }
@@ -823,7 +843,7 @@
       </div>
       <span class="sp"></span>
       <span class="net good" id="netPill" onclick="netInfo()" title="سرعة النت"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><span id="netTxt">النت...</span></span>
-      <span class="isp hidden" id="umPill" onclick="umDlg()" title="استهلاك جوجل لطلبات النت من السكريبت (آخر 24 ساعة)">🌐 <span class="umbar"><i></i></span> <span id="umTxt"></span></span>
+      <span class="isp hidden" id="umPill" onclick="umDlg()" title="استهلاك جوجل لطلبات النت من السكريبت (آخر 24 ساعة)"><span class="umico">🌐</span> <span class="umbar"><i></i></span> <span id="umTxt"></span></span>
       <span class="isp hidden" id="isPill" onclick="isDlg()" title="تحديث شيت أصناف المخزن من السيستم">📦 <span id="isTxt">الأصناف...</span></span>
       <button class="btn soft bell" id="bellBtn" onclick="enableAlerts()" title="الإشعارات والصوت">🔔</button>
       <button class="btn soft" onclick="loadList()" title="تحديث">⟳</button>
