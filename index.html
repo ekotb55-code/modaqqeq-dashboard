@@ -1751,7 +1751,7 @@ function renderDetail() {
 }
 
 // ---------- ترتيب أصناف الفاتورة (سحب أو أسهم) - بيتحفظ على السيرفر علشان الجودة تشوفه ----------
-let loPend = {}, loTimer = 0, loDragN = null;
+let loPend = {}, loTimer = 0, loDragN = null, lnScroll = { id: '', top: 0 };
 function loApplyLocal(lines, order) {
   const pos = {};
   order.forEach((n, i) => { pos[String(n)] = i; });
@@ -1833,7 +1833,11 @@ function renderLines() {
   const canWork = (v.status === ST_NEW || v.status === ST_WORK || !v.status) && !isQA();
   const pDiff = l => l.oldPrice ? l.piecePrice - l.oldPrice : 0;
   const lo = cur.lineOrder;
-  box.innerHTML = '<div class="tablebox' + (lk && canWork ? ' linked' : '') + '"><table><thead><tr><th class="mvc" title="رتّب الأصناف زي ترتيبها في الورقة">↕</th><th>م</th><th>اسم الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>سعر البيع</th><th class="rvc">مراجعة</th></tr></thead><tbody>' +
+  // الجدول بيفضل واقف مكانه بعد «راجعت» أو الترتيب (ما يرجعش لأول صنف)
+  // (ولما الفاتورة تتحدّث لوحدها من السيرفر برضه - المكان محفوظ لكل فاتورة)
+  if (lnScroll.id !== v.id) lnScroll = { id: v.id, top: 0 };
+  const oldTb = box.querySelector('.tablebox'), keepTop = oldTb ? oldTb.scrollTop : lnScroll.top, keepLeft = oldTb ? oldTb.scrollLeft : 0;
+  box.innerHTML = '<div class="tablebox' + (lk && canWork ? ' linked' : '') + '" onscroll="lnScroll.top=this.scrollTop"><table><thead><tr><th class="mvc" title="رتّب الأصناف زي ترتيبها في الورقة">↕</th><th>م</th><th>اسم الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>سعر البيع</th><th class="rvc">مراجعة</th></tr></thead><tbody>' +
     L.map((l, k) => '<tr data-n="' + l.n + '" class="' + (fl[l.n] ? 'flag' : l.newSale !== null ? 'pchg' : '') + (rv[l.n] ? ' rvd' : '') + '" ondragover="loOver(event,this)" ondragleave="loLeave(this)" ondrop="loDrop(event,this)">' +
       '<td class="mvc"><span class="mvh" draggable="true" ondragstart="loStart(event,' + l.n + ')" ondragend="loEnd()" title="اسحب علشان تحرّك الصنف">⠿</span>' +
       '<button class="mvb" onclick="loMove(' + l.n + ',-1)"' + (k === 0 ? ' disabled' : '') + ' title="لفوق">▲</button>' +
@@ -1850,6 +1854,8 @@ function renderLines() {
     '<div class="loinfo">' + (lo
       ? '<span>↕️ الترتيب اتعدّل' + (lo.by ? ' - رتّبها ' + esc(lo.by) : '') + (lo.at ? ' • ' + dt(lo.at) : '') + (loPend[v.id] ? ' • بيتحفظ...' : '') + '</span><button class="mvb" onclick="loReset()">↩️ رجّع الترتيب الأصلي</button>'
       : '<span>↕️ اسحب ⠿ أو دوس ▲▼ علشان ترتّب الأصناف زي ترتيبها في الورقة. و«راجعت» اختيارية' + (lk && canWork ? ' (إلزامية هنا لأن المحل مربوط بالبرنامج)' : '') + '.</span>') + '</div>';
+  const newTb = box.querySelector('.tablebox');
+  if (newTb && (keepTop || keepLeft)) { newTb.scrollTop = keepTop; newTb.scrollLeft = keepLeft; lnScroll.top = keepTop; }
   srRender(fl, canWork);
 }
 function srRender(fl, canWork) {
