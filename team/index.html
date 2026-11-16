@@ -1,735 +1,291 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
+<!DOCTYPE html>
+<!-- مفيش dir="rtl" هنا: بيزق فيديو الكاميرا برا الشاشة على الويب (Flutter بيظبط الاتجاه لوحده) -->
+<html lang="ar">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>جرد مدقق - الفريق</title>
-<meta name="theme-color" content="#0B3D6E">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="../icon-192.png">
-<link rel="apple-touch-icon" href="../apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<style>
-:root{--blue:#0B3D6E;--blue2:#1565C0;--soft:#EEF5FF;--bg:#F4F7FB;--card:#fff;--text:#1F2D3D;--muted:#6B7A8C;--red:#C62828;--green:#1A8A3E;--amber:#8A5A00;--line:#E1E8F0}
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--text);font-family:Cairo,system-ui,sans-serif;font-size:16px}
-button,input,select,textarea{font-family:inherit;font-size:16px}
-header{position:sticky;top:0;z-index:20;background:var(--blue);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
-header h1{font-size:18px;margin:0;flex:1;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-header .back{background:none;border:0;color:#fff;font-size:24px;padding:0 4px;cursor:pointer}
-header small{opacity:.8;font-size:12px}
-main{max-width:860px;margin:0 auto;padding:14px 14px 90px}
-.card{background:var(--card);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 1px 6px rgba(16,40,80,.07)}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.grow{flex:1}
-.btn{border:0;border-radius:12px;padding:11px 16px;background:var(--blue2);color:#fff;font-weight:700;cursor:pointer}
-.btn:disabled{opacity:.5}
-.btn.soft{background:var(--soft);color:var(--blue2)}
-.btn.red{background:var(--red)}.btn.green{background:var(--green)}
-.btn.big{width:100%;padding:16px;font-size:19px;border-radius:14px}
-.btn.sm{padding:7px 11px;font-size:14px;border-radius:10px}
-input,select,textarea{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:#fff}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue2)}
-label.fl{display:block;font-size:13px;color:var(--muted);margin:8px 2px 4px;font-weight:600}
-.pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:13px;font-weight:700;background:var(--soft);color:var(--blue2)}
-.pill.g{background:#E6F4EA;color:var(--green)}.pill.r{background:#FDECEA;color:var(--red)}.pill.a{background:#FFF4D6;color:var(--amber)}
-.muted{color:var(--muted)}.small{font-size:13px}
-.list .it{display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
-.list .it:last-child{border:0}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:start;vertical-align:top}
-th{background:#F7FAFD;font-weight:700;position:sticky;top:0}
-.tbl{max-height:60vh;overflow:auto;border-radius:12px;border:1px solid var(--line)}
-.zonebar{border-radius:16px;padding:14px;text-align:center;margin-bottom:12px}
-.zonebar.none{background:#FDECEA;border:2px dashed var(--red);color:var(--red)}
-.zonebar.ok{background:#E6F4EA;border:2px solid var(--green);color:var(--green)}
-.zonebar b{font-size:24px;display:block}
-.stat{flex:1;min-width:120px;background:var(--soft);border-radius:12px;padding:10px;text-align:center}
-.stat b{display:block;font-size:22px;color:var(--blue)}
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#263238;color:#fff;padding:11px 18px;border-radius:12px;z-index:99;display:none;max-width:92vw;text-align:center}
-.modal{position:fixed;inset:0;background:rgba(10,26,46,.6);z-index:50;display:flex;align-items:flex-end;justify-content:center}
-.sheet{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:16px;max-height:92vh;overflow:auto}
-@media(min-width:700px){.modal{align-items:center}.sheet{border-radius:20px}}
-#reader{width:100%;min-height:240px;border-radius:14px;overflow:hidden;background:#000}
-.qty{font-size:34px;text-align:center;font-weight:900;padding:14px}
-.warn{background:#FFF4D6;border:1.5px solid #E0B44C;color:var(--amber);border-radius:12px;padding:10px 12px;margin:8px 0}
-.bad{background:#FDECEA;border:1.5px solid #F5B5B7;color:var(--red);border-radius:12px;padding:10px 12px;margin:8px 0}
-.good{background:#E6F4EA;border:1.5px solid #9FD3AE;color:var(--green);border-radius:12px;padding:10px 12px;margin:8px 0}
-.chk{display:flex;gap:8px;align-items:center;padding:6px 0}
-.chk input{width:auto}
-.tabs{display:flex;gap:6px;overflow:auto;margin-bottom:10px}
-.tabs button{white-space:nowrap}
-.logo{height:34px;background:#fff;border-radius:8px;padding:3px 6px}
-/* طباعة الباركود */
-#print{display:none}
-@media print{
-  body *{visibility:hidden}
-  #print,#print *{visibility:visible}
-  #print{display:block;position:absolute;inset:0;background:#fff}
-  .lbl{break-inside:avoid}
-}
-.lbls{display:grid;gap:4mm;padding:6mm}
-.lbl{border:1px dashed #9AA;border-radius:3mm;padding:3mm;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.lbl .q{display:flex;justify-content:center}
-.lbl .nm{font-weight:900;color:#0B3D6E;margin-top:2mm}
-.lbl .st{font-size:10px;color:#555}
-.lbl img.lg{height:7mm;margin-bottom:1mm}
-</style>
+  <base href="/modaqqeq-dashboard/team/">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="جرد مدقق - الفريق">
+  <meta name="theme-color" content="#1479D3">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="جرد مدقق - الفريق">
+  <link rel="apple-touch-icon" href="icons/Icon-maskable.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
+  <title>جرد مدقق - الفريق</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #F3F7FC; }
+    #splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+      font-family: -apple-system, "Segoe UI", Tahoma, sans-serif; color: #fff; background: linear-gradient(180deg, #2696F0, #09488C); z-index: 1; }
+    #splash img { width: 120px; height: 120px; border-radius: 28px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    #splash b { font-size: 22px; }
+    #splash .bar { width: 140px; height: 5px; border-radius: 4px; background: rgba(255,255,255,.25); overflow: hidden; }
+    #splash .bar i { display: block; width: 40%; height: 100%; background: #fff; border-radius: 4px; animation: mv 1.1s infinite ease-in-out; }
+    @keyframes mv { 0% { transform: translateX(160%); } 100% { transform: translateX(-260%); } }
+  </style>
+  <!-- إشعارات (Firebase) - نفس مشروع مدقق -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 </head>
 <body>
-<header><button class="back" id="back" style="display:none">→</button><h1 id="title">جرد مدقق - الفريق</h1><span id="net" class="small"></span></header>
-<main id="app"></main>
-<div id="print"></div>
-<div id="toast"></div>
-<script>
-// =====================================================================
-// جرد مدقق - الفريق: تطبيق ويب لوحده لفريق مدقق
-// السيرفر: سكريبت جوجل لوحده (apps-script/team/Team.gs) - الرابط في API تحت (أو localStorage teamApi للتجربة)
-// =====================================================================
-const API = (() => { try { return localStorage.getItem('teamApi') || ''; } catch (e) { return ''; } })() || 'https://script.google.com/macros/s/AKfycbwDheqGcNC-SgG3dBULQvGpKoXlt5kUv6_EQ__lvjtFnj8WPyiPu3x_Pg0MhcoOJn-8/exec';
-const $ = id => document.getElementById(id);
-const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const num = n => (Number(n) || 0).toLocaleString('ar-EG', { maximumFractionDigits: 3 });
-const money = n => (Number(n) || 0).toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const dt = s => { if (!s) return ''; const d = new Date(s); return isNaN(d) ? '' : d.toLocaleString('ar-EG', { day: 'numeric', month: 'numeric', hour: 'numeric', minute: '2-digit' }); };
-const day = s => { if (!s) return ''; const d = new Date(s); return isNaN(d) ? '' : d.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' }); };
-const norm = s => String(s || '').trim().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ً-ْـ]/g, '').replace(/\s+/g, ' ').toLowerCase();
-const digits = s => String(s || '').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
-const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }, del(k) { try { localStorage.removeItem(k); } catch (e) {} } };
-function toast(m, ms) { const t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', ms || 2800); }
-function beep(ok) {
-  try { const a = new (window.AudioContext || window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain();
-    o.connect(g); g.connect(a.destination); o.frequency.value = ok ? 880 : 220; g.gain.value = .15; o.start(); setTimeout(() => { o.stop(); a.close(); }, ok ? 120 : 380); } catch (e) {}
-  try { navigator.vibrate && navigator.vibrate(ok ? 60 : [120, 60, 120]); } catch (e) {}
-}
-function errText(e) {
-  const m = e && e.message ? e.message : String(e);
-  return /Failed to fetch|NetworkError|Load failed|network|abort/i.test(m) ? 'النت فصل أو السيرفر ما ردّش - حاول تاني' : m;
-}
-
-// ---------- السيرفر ----------
-let S = { token: LS.get('tm_token', ''), user: LS.get('tm_user', null) };
-async function api(action, data, quiet) {
-  if (!API || API.indexOf('http') !== 0) throw new Error('التطبيق لسه ما اتربطش بالسيرفر');
-  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 90000);
-  try {
-    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action, token: S.token, data: data || {} }), signal: ctl.signal });
-    const j = await r.json();
-    if (!j.ok) {
-      if (/ادخل الأول|انتهت الجلسة|كلمة السر اتغيرت|موقوف/.test(j.error || '')) { logout(true); }
-      throw new Error(j.error || 'حصلت مشكلة');
-    }
-    return j;
-  } finally { clearTimeout(to); }
-}
-
-// ---------- التنقل ----------
-let stack = [];
-function go(fn, title, push) {
-  if (push !== false) stack.push([fn, title]);
-  $('title').textContent = title || 'جرد مدقق - الفريق';
-  $('back').style.display = stack.length > 1 ? '' : 'none';
-  stopScan();
-  fn();
-  window.scrollTo(0, 0);
-}
-$('back').onclick = () => { if (stack.length > 1) { stack.pop(); const [fn, t] = stack[stack.length - 1]; go(fn, t, false); } };
-function home() { stack = []; go(renderHome, 'جرد مدقق - الفريق'); }
-const canAdmin = () => S.user && S.user.role === 'أدمن';
-
-// ---------- الدخول ----------
-function logout(silent) {
-  S.token = ''; S.user = null; LS.del('tm_token'); LS.del('tm_user');
-  if (!silent) toast('خرجت من الأكونت');
-  stack = []; go(renderLogin, 'جرد مدقق - الفريق');
-}
-function renderLogin(first) {
-  $('app').innerHTML = `<div class="card" style="text-align:center"><img src="../logo_wide.png" alt="" style="height:54px"><h2 style="margin:8px 0 2px">جرد مدقق - الفريق</h2>
-    <div class="muted small">للفريق بس - الأكونت بيعمله الأدمن</div></div>
-    <div class="card"><label class="fl">رقم الموبايل أو الإيميل</label><input id="lg" autocomplete="username" inputmode="email" value="${esc(LS.get('tm_last', ''))}">
-    <div id="pwBox"><label class="fl">كلمة السر</label><input id="pw" type="password" autocomplete="current-password"></div>
-    <div id="newBox" style="display:none"><div class="warn">أول دخول ليك 👋 اختار كلمة سر (6 حروف أو أرقام على الأقل) - محدش هيعرفها غيرك.</div>
-      <label class="fl">كلمة السر الجديدة</label><input id="np" type="password" autocomplete="new-password"><label class="fl">اكتبها تاني</label><input id="np2" type="password" autocomplete="new-password"></div>
-    <button class="btn big" id="go" style="margin-top:14px">دخول</button></div>`;
-  let firstTime = false;
-  const doIt = async () => {
-    const login = digits($('lg').value).trim();
-    if (!login) return toast('اكتب رقم الموبايل أو الإيميل');
-    const d = { login, password: $('pw').value };
-    if (firstTime) {
-      if ($('np').value.length < 6) return toast('كلمة السر لازم تبقى 6 حروف أو أرقام على الأقل');
-      if ($('np').value !== $('np2').value) return toast('الكلمتين مش زي بعض');
-      d.newPassword = $('np').value;
-    }
-    $('go').disabled = true; $('go').textContent = '⏳ ...';
-    try {
-      const r = await api('login', d);
-      LS.set('tm_last', login);
-      if (r.firstTime) { firstTime = true; $('pwBox').style.display = 'none'; $('newBox').style.display = ''; $('go').textContent = 'احفظ كلمة السر وادخل'; $('go').disabled = false; return; }
-      S.token = r.token; S.user = r.user; LS.set('tm_token', r.token); LS.set('tm_user', r.user);
-      toast('أهلاً ' + r.user.name + ' 👋');
-      home();
-    } catch (e) { toast(errText(e)); $('go').disabled = false; $('go').textContent = firstTime ? 'احفظ كلمة السر وادخل' : 'دخول'; }
-  };
-  $('go').onclick = doIt;
-  $('pw').onkeydown = e => { if (e.key === 'Enter') doIt(); };
-}
-
-// ---------- الرئيسية ----------
-const ST_COLOR = { 'تجهيز': 'a', 'شغالة': '', 'مراجعة': 'r', 'خلصت': 'g' };
-async function renderHome() {
-  const u = S.user;
-  $('app').innerHTML = `<div class="card row"><div class="grow"><b>${esc(u.name)}</b><div class="muted small">${esc(u.role)}${u.store ? ' • ' + esc(u.store) : ''}</div></div>
-    <button class="btn soft sm" id="out">خروج</button></div>
-    <div class="row" style="margin-bottom:12px">${canAdmin() ? '<button class="btn" id="newM">＋ مهمة جرد جديدة</button><button class="btn soft" id="team">👥 الفريق</button>' : ''}
-      ${u.role !== 'أونر' ? `<button class="btn soft" id="sc">⭐ ${canAdmin() || u.role === 'مشرف' ? 'التقييم' : 'تقييمي'}</button>` : ''}</div>
-    <div id="ml" class="card muted">⏳ بنحمّل المهمات...</div>`;
-  $('out').onclick = () => logout();
-  if ($('newM')) $('newM').onclick = () => go(() => renderMissionEdit(null), 'مهمة جديدة');
-  if ($('team')) $('team').onclick = () => go(renderTeam, 'الفريق');
-  if ($('sc')) $('sc').onclick = () => go(renderScores, 'التقييم');
-  try {
-    const r = await api('missions');
-    S.missions = r.missions;
-    if (!r.missions.length) { $('ml').innerHTML = 'مفيش مهمات جرد ليك لسه.'; return; }
-    $('ml').className = 'card list';
-    $('ml').innerHTML = r.missions.map(m => `<div class="it" data-id="${esc(m.id)}" style="cursor:pointer"><div class="grow"><b>${esc(m.store)}</b>
-      <div class="muted small">${day(m.date)} • ${num(m.items)} صنف • انت: ${esc(m.myRole)}</div></div><span class="pill ${ST_COLOR[m.status] || ''}">${esc(m.status)}</span></div>`).join('');
-    $('ml').querySelectorAll('.it').forEach(el => el.onclick = () => openMission(el.dataset.id));
-  } catch (e) { $('ml').innerHTML = `<span style="color:var(--red)">${esc(errText(e))}</span>`; }
-}
-function openMission(id) {
-  const m = (S.missions || []).find(x => x.id === id);
-  if (!m) return;
-  S.m = m;
-  if (m.myRole === 'جرّاد') go(renderCount, m.store);
-  else go(renderMission, m.store);
-}
-
-// ---------- الفريق ----------
-async function loadTeam() { const r = await api('team'); S.team = r.users; return r.users; }
-async function renderTeam() {
-  $('app').innerHTML = `<div class="row" style="margin-bottom:10px"><button class="btn" id="add">＋ أكونت جديد</button></div><div id="tl" class="card muted">⏳ ...</div>`;
-  $('add').onclick = () => userDlg(null);
-  try {
-    const L = await loadTeam();
-    $('tl').className = 'card list';
-    $('tl').innerHTML = L.map(u => `<div class="it" data-id="${esc(u.id)}" style="cursor:pointer"><div class="grow"><b>${esc(u.name)}</b>
-      <div class="muted small">${esc(u.login)}${u.store ? ' • ' + esc(u.store) : ''}${u.hasPass ? '' : ' • لسه ما دخلش'}</div></div>
-      <span class="pill ${u.active ? '' : 'r'}">${u.active ? esc(u.role) : 'موقوف'}</span></div>`).join('') || 'مفيش أكونتات';
-    $('tl').querySelectorAll('.it').forEach(el => el.onclick = () => userDlg(L.find(u => u.id === el.dataset.id)));
-  } catch (e) { $('tl').innerHTML = esc(errText(e)); }
-}
-function sheet(html, onClose) {
-  const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="sheet">${html}</div>`;
-  m.onclick = e => { if (e.target === m) { close(); } };
-  const close = () => { m.remove(); onClose && onClose(); };
-  document.body.appendChild(m); return { el: m, close };
-}
-function userDlg(u) {
-  const roles = ['جرّاد', 'متدرب', 'مشرف', 'أدمن', 'أونر'];
-  const d = sheet(`<h3 style="margin-top:0">${u ? 'تعديل ' + esc(u.name) : 'أكونت جديد'}</h3>
-    <label class="fl">الاسم</label><input id="uN" value="${esc(u ? u.name : '')}">
-    <label class="fl">رقم الموبايل أو الإيميل (بيدخل بيه)</label><input id="uL" value="${esc(u ? u.login : '')}" inputmode="email">
-    <label class="fl">الدور</label><select id="uR">${roles.map(r => `<option ${u && u.role === r ? 'selected' : ''}>${r}</option>`).join('')}</select>
-    <div id="uSB"><label class="fl">المحل (للأونر بس)</label><input id="uS" value="${esc(u ? u.store : '')}"></div>
-    ${u ? `<div class="chk"><input type="checkbox" id="uA" ${u.active ? 'checked' : ''}><label for="uA">الأكونت شغال</label></div>
-      <div class="chk"><input type="checkbox" id="uP"><label for="uP">امسح كلمة السر (يختار واحدة جديدة أول ما يدخل)</label></div>` :
-      '<div class="warn small">أول مرة يدخل هيختار كلمة السر بنفسه - ابعتله لينك التطبيق ورقم الدخول بس.</div>'}
-    <div class="row" style="margin-top:12px"><button class="btn grow" id="uOk">حفظ</button><button class="btn soft" id="uX">رجوع</button></div>`);
-  $('uX').onclick = d.close;
-  $('uOk').onclick = async () => {
-    $('uOk').disabled = true;
-    try {
-      await api('userSave', { id: u ? u.id : '', name: $('uN').value, login: digits($('uL').value), role: $('uR').value, store: $('uS').value,
-        active: u ? $('uA').checked : true, resetPassword: u ? $('uP').checked : false });
-      d.close(); toast('✅ اتحفظ'); renderTeam();
-    } catch (e) { toast(errText(e)); $('uOk').disabled = false; }
-  };
-}
-
-// ---------- المهمة: إنشاء / تعديل ----------
-async function renderMissionEdit(m) {
-  $('app').innerHTML = '<div class="card muted">⏳ ...</div>';
-  let team = [];
-  try { team = await loadTeam(); } catch (e) { $('app').innerHTML = `<div class="card">${esc(errText(e))}</div>`; return; }
-  const counters = team.filter(u => u.active && ['جرّاد', 'متدرب', 'مشرف', 'أدمن'].indexOf(u.role) >= 0);
-  const sel = new Set(m ? m.team : []);
-  const date = m && m.date ? new Date(m.date) : new Date();
-  const ds = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-  $('app').innerHTML = `<div class="card"><label class="fl">اسم المحل</label><input id="mS" value="${esc(m ? m.store : '')}" placeholder="مثلاً: ماركت عمو مصطفى">
-    <label class="fl">اليوم</label><input id="mD" type="date" value="${ds}">
-    <label class="fl">المشرف (بيعمل المراجعة)</label><select id="mSup"><option value="">- من غير مشرف (الأدمن يراجع) -</option>
-      ${team.filter(u => u.active && (u.role === 'مشرف' || u.role === 'أدمن')).map(u => `<option value="${esc(u.id)}" ${m && m.supervisor === u.id ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select>
-    <label class="fl">نسبة المراجعة من شغل كل واحد (أقل حاجة 10 أصناف)</label><input id="mP" type="number" min="2" max="50" value="${m ? m.auditPct : 5}">
-    <label class="fl">ملاحظات</label><textarea id="mN" rows="2">${esc(m ? m.notes : '')}</textarea></div>
-    <div class="card"><b>الفريق اللي هيجرد</b><div class="muted small">اختار الناس - كل واحد هيشوف المهمة عنده</div>
-    ${counters.map(u => `<div class="chk"><input type="checkbox" id="t_${esc(u.id)}" value="${esc(u.id)}" ${sel.has(u.id) ? 'checked' : ''}><label for="t_${esc(u.id)}">${esc(u.name)} <span class="muted small">(${esc(u.role)})</span></label></div>`).join('') || '<div class="muted">ضيف ناس من «الفريق» الأول</div>'}</div>
-    <button class="btn big" id="mOk">حفظ المهمة</button>`;
-  $('mOk').onclick = async () => {
-    const ids = counters.map(u => u.id).filter(id => $('t_' + id) && $('t_' + id).checked);
-    $('mOk').disabled = true;
-    try {
-      const r = await api('missionSave', { id: m ? m.id : '', store: $('mS').value, date: $('mD').value, supervisor: $('mSup').value, auditPct: $('mP').value, notes: $('mN').value, team: ids });
-      S.missions = r.missions; S.m = r.missions.find(x => x.id === r.id);
-      toast('✅ اتحفظت');
-      stack.pop(); go(renderMission, S.m.store);
-    } catch (e) { toast(errText(e)); $('mOk').disabled = false; }
-  };
-}
-
-// ---------- المهمة (الأدمن والمشرف) ----------
-async function refreshMission() {
-  const r = await api('missions'); S.missions = r.missions;
-  S.m = r.missions.find(x => x.id === S.m.id) || S.m;
-  return S.m;
-}
-async function renderMission() {
-  const m = S.m, admin = canAdmin();
-  const inTeam = m.team.indexOf(S.user.id) >= 0;
-  $('app').innerHTML = `<div class="card"><div class="row"><div class="grow"><b style="font-size:19px">${esc(m.store)}</b><div class="muted small">${day(m.date)}${m.notes ? ' • ' + esc(m.notes) : ''}</div></div>
-    <span class="pill ${ST_COLOR[m.status] || ''}">${esc(m.status)}</span></div>
-    <div class="row" style="margin-top:10px"><div class="stat"><b>${num(m.items)}</b>صنف</div><div class="stat"><b>${m.team.length}</b>في الفريق</div><div class="stat"><b>${m.auditPct}%</b>مراجعة</div></div></div>
-    <div id="act" class="card"></div>
-    <div class="card"><b>الخطوات</b><div class="list" id="steps"></div></div>`;
-  const act = $('act');
-  const B = (id, t, cls) => `<button class="btn ${cls || ''}" id="${id}" style="margin:4px">${t}</button>`;
-  let h = '';
-  if (m.status === 'تجهيز') h = '<div class="muted small">جهّز المهمة: الأصناف، والمناطق، والفريق، وبعدين ابدأ.</div>' + B('aStart', '▶️ ابدأ الجرد', 'green');
-  if (m.status === 'شغالة') h = '<div class="muted small">الفريق بيعدّ دلوقتي. لما يخلصوا ابدأ المراجعة - العدّ هيتقفل.</div>' + B('aAudit', '🔎 خلّص العدّ وابدأ المراجعة', 'red') + (inTeam ? B('aCount', '📦 اجرد معاهم') : '');
-  if (m.status === 'مراجعة') h = '<div class="muted small">لازم المراجعة تخلص علشان تقفل المهمة.</div>' + B('aAud', '🔎 المراجعة') + B('aClose', '✅ اقفل المهمة واحسب التقييم', 'green') + B('aReopen', '↩️ رجّع العدّ', 'soft');
-  if (m.status === 'خلصت') h = '<div class="good">✅ المهمة خلصت والتقييم اتحسب</div>';
-  if (m.myRole === 'أونر') h = '<div class="muted small">حالة الجرد: ' + esc(m.status) + '</div>';
-  act.innerHTML = h;
-  const steps = [];
-  if (admin) steps.push(['✏️ بيانات المهمة والفريق', () => go(() => renderMissionEdit(m), 'تعديل المهمة')]);
-  if (admin && m.status === 'تجهيز') steps.push(['📥 رفع الأصناف (إكسل)', () => go(renderUpload, 'رفع الأصناف')]);
-  steps.push(['📍 المناطق وطباعة الباركود', () => go(renderZones, 'المناطق')]);
-  steps.push(['📊 النتيجة والتقرير', () => go(renderResult, 'النتيجة')]);
-  if (m.status === 'مراجعة' || m.status === 'خلصت') steps.push(['🔎 المراجعة', () => go(renderAudit, 'المراجعة')]);
-  $('steps').innerHTML = steps.map((s, i) => `<div class="it" data-i="${i}" style="cursor:pointer"><div class="grow"><b>${s[0]}</b></div><span>‹</span></div>`).join('');
-  $('steps').querySelectorAll('.it').forEach(el => el.onclick = () => steps[el.dataset.i][1]());
-  const st = async (to, msg, force) => {
-    if (msg && !confirm(msg)) return;
-    try { await api('missionStatus', { id: m.id, status: to, force }); await refreshMission(); toast('✅ تمام'); go(renderMission, S.m.store, false); }
-    catch (e) {
-      const t = errText(e);
-      if (/لسه فيه .* في المراجعة/.test(t) && confirm(t + '\n\nتقفل برضه؟ (الأصناف دي مش هتدخل في التقييم)')) return st(to, '', true);
-      toast(t, 5000);
-    }
-  };
-  if ($('aStart')) $('aStart').onclick = () => st('شغالة', 'تبدأ الجرد؟ الفريق هيقدر يعدّ من دلوقتي.');
-  if ($('aAudit')) $('aAudit').onclick = () => st('مراجعة', 'العدّ هيتقفل والمراجعة تبدأ. اتأكد إن كل الموبايلات رفعت شغلها. تكمّل؟');
-  if ($('aReopen')) $('aReopen').onclick = () => st('شغالة', 'العدّ يتفتح تاني؟');
-  if ($('aClose')) $('aClose').onclick = () => st('خلصت', 'تقفل المهمة وتحسب التقييم؟');
-  if ($('aAud')) $('aAud').onclick = () => go(renderAudit, 'المراجعة');
-  if ($('aCount')) $('aCount').onclick = () => go(renderCount, m.store);
-}
-
-// ---------- رفع الأصناف ----------
-const COLS = {
-  code: ['الكود', 'كود', 'كود الصنف', 'رقم الصنف', 'id'],
-  name: ['الصنف', 'اسم الصنف', 'الاسم', 'اسم', 'name'],
-  barcode: ['الباركود', 'باركود', 'الباركود الأساسي', 'barcode', 'sku'],
-  subs: ['الباركود الفرعى', 'الباركود الفرعي', 'باركودات تانية', 'باركود فرعي', 'باركود اضافي'],
-  qty: ['الكمية', 'الكميه', 'الكمية في البرنامج', 'الرصيد', 'stock', 'qty'],
-  price: ['سعر الشراء', 'سعر الشرا', 'التكلفة', 'cost'],
-  unit: ['الوحدة', 'الوحده', 'unit']
-};
-function renderUpload() {
-  $('app').innerHTML = `<div class="card"><b>ملف الأصناف</b><div class="muted small">ملف إكسل من برنامج البيع (تحميل الأصناف) - السطر الأول أسامي الأعمدة.
-    لازم يبقى فيه «اسم الصنف»، والباقي اختياري: الباركود، الباركود الفرعي، الكمية، سعر الشراء، الوحدة.</div>
-    <input type="file" id="f" accept=".xlsx,.xls,.csv" style="margin-top:10px"><div id="pv"></div></div>`;
-  $('f').onchange = async () => {
-    const file = $('f').files[0]; if (!file) return;
-    try {
-      const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
-      let hi = rows.findIndex(r => r.some(c => COLS.name.indexOf(String(c).trim()) >= 0));
-      if (hi < 0) throw new Error('مش لاقي عمود «اسم الصنف» في الملف');
-      const head = rows[hi].map(c => String(c).trim().toLowerCase());
-      const col = k => head.findIndex(h => COLS[k].some(x => x.toLowerCase() === h));
-      const c = {}; Object.keys(COLS).forEach(k => c[k] = col(k));
-      const data = rows.slice(hi + 1).filter(r => String(r[c.name] || '').trim()).map(r => [
-        c.code >= 0 ? r[c.code] : '', r[c.name], c.barcode >= 0 ? r[c.barcode] : '', c.subs >= 0 ? r[c.subs] : '',
-        c.qty >= 0 ? digits(r[c.qty]).replace(/,/g, '') : '', c.price >= 0 ? digits(r[c.price]).replace(/,/g, '') : '', c.unit >= 0 ? r[c.unit] : '']);
-      const bad = data.filter(r => /e\+/i.test(String(r[2]))).length;
-      $('pv').innerHTML = `<div class="good">لقيت <b>${num(data.length)}</b> صنف • الأعمدة: ${Object.keys(c).filter(k => c[k] >= 0).map(k => ({ code: 'الكود', name: 'الاسم', barcode: 'الباركود', subs: 'الفرعي', qty: 'الكمية', price: 'سعر الشراء', unit: 'الوحدة' }[k])).join('، ')}</div>
-        ${bad ? `<div class="bad">⚠️ ${bad} باركود شكله بايظ (E+) - الملف اتفتح في إكسل واتحول. نزّل الملف من البرنامج تاني ومن غير ما تفتحه.</div>` : ''}
-        ${c.qty < 0 ? '<div class="warn">الملف مفيهوش «الكمية» - المقارنة بالبرنامج مش هتشتغل.</div>' : ''}
-        <div class="tbl" style="max-height:220px"><table><tr><th>الصنف</th><th>الباركود</th><th>الكمية</th><th>السعر</th></tr>
-        ${data.slice(0, 30).map(r => `<tr><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[4])}</td><td>${esc(r[5])}</td></tr>`).join('')}</table></div>
-        <button class="btn big" id="up" style="margin-top:10px">⬆️ ارفع ${num(data.length)} صنف</button><div id="upP" class="muted small"></div>`;
-      $('up').onclick = async () => {
-        $('up').disabled = true;
+  <div id="splash" dir="rtl"><img src="icons/Icon-192.png" alt=""><b>جرد مدقق - الفريق</b><div class="bar"><i></i></div></div>
+  <script>
+    // ---- الجسر بين التطبيق والمتصفح: تخزين الملفات (IndexedDB) + الإشعارات ----
+    document.addEventListener('visibilitychange', () => {
+      // الموبايل بيلغي طلب الشاشة لما التطبيق يروح الخلفية - نرجّعه أول ما يرجع
+      if (document.visibilityState === 'visible' && window.mdq && mdq._wlWant) mdq.wakeLock(true);
+    });
+    window.mdq = {
+      _db: null,
+      _open() {
+        return this._db || (this._db = new Promise((ok, bad) => {
+          const r = indexedDB.open('mdq-files', 1);
+          r.onupgradeneeded = () => r.result.createObjectStore('f');
+          r.onsuccess = () => ok(r.result);
+          r.onerror = () => bad(r.error);
+        }));
+      },
+      async _tx(mode, fn) {
+        const db = await this._open();
+        return new Promise((ok, bad) => {
+          const t = db.transaction('f', mode), q = fn(t.objectStore('f'));
+          t.oncomplete = () => ok(q && q.result);
+          t.onerror = () => bad(t.error);
+        });
+      },
+      async get(k) { const v = await this._tx('readonly', s => s.get(k)); return v ? new Uint8Array(v) : null; },
+      put(k, b) { return this._tx('readwrite', s => s.put(b.slice().buffer, k)); },
+      del(k) { return this._tx('readwrite', s => s.delete(k)); },
+      // الإشعارات
+      _cfg: { apiKey: 'AIzaSyD9oDfJSrYrPa1iQEDcg-Oa-iGEmFnR1ok', authDomain: 'modaqqeq-54f57.firebaseapp.com', projectId: 'modaqqeq-54f57',
+        messagingSenderId: '894594212138', appId: '1:894594212138:web:35cf6a1aa4b99a7ccffe53' },
+      _vapid: 'BKobeqFRKZa2eY7VwglxfttYN8pj4sHu3SNDTkJYuUAxPD4Ld0zveWKNGktx7U9-YAiJhwGSn_-hpfI-VxonoaI',
+      pushState() {
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported';
+        return Notification.permission;
+      },
+      async enablePush() {
+        if (this.pushState() === 'unsupported') return 'unsupported';
+        try { return await Notification.requestPermission(); } catch (e) { return 'denied'; }
+      },
+      async pushToken() {
+        if (this.pushState() !== 'granted' || !window.firebase) return null;
+        if (!firebase.apps.length) firebase.initializeApp(this._cfg);
+        const reg = await navigator.serviceWorker.ready;
+        return await firebase.messaging().getToken({ vapidKey: this._vapid, serviceWorkerRegistration: reg });
+      },
+      // الشاشة ما تنطفيش لوحدها طول ما فيه أصناف جرد لسه ما اترفعتش
+      _wl: null, _wlWant: false,
+      async wakeLock(on) {
+        this._wlWant = on;
         try {
-          const CH = 1500;
-          for (let i = 0; i < data.length; i += CH) {
-            $('upP').textContent = `⏳ بيرفع ${num(Math.min(i + CH, data.length))} من ${num(data.length)}...`;
-            await api('itemsUpload', { mid: S.m.id, part: i / CH, rows: data.slice(i, i + CH) });
+          if (on && !this._wl && navigator.wakeLock && document.visibilityState === 'visible') {
+            this._wl = await navigator.wakeLock.request('screen');
+            this._wl.addEventListener('release', () => { this._wl = null; });
+          } else if (!on && this._wl) {
+            const w = this._wl; this._wl = null; await w.release();
           }
-          await refreshMission(); LS.del('tm_items_' + S.m.id);
-          toast('✅ الأصناف اترفعت'); stack.pop(); go(renderMission, S.m.store, false);
-        } catch (e) { toast(errText(e), 5000); $('up').disabled = false; $('upP').textContent = ''; }
-      };
-    } catch (e) { $('pv').innerHTML = `<div class="bad">${esc(errText(e))}</div>`; }
-  };
-}
-
-// ---------- المناطق + طباعة الباركود ----------
-async function renderZones() {
-  const m = S.m, can = canAdmin() || m.supervisor === S.user.id;
-  $('app').innerHTML = `<div class="card"><b>مناطق ${esc(m.store)}</b><div class="muted small">كل منطقة ليها باركود بيتطبع ويتلزق عليها مرة واحدة، ويتستخدم في كل جرد للمحل ده.</div>
-    ${can ? `<label class="fl">ضيف مناطق (كل سطر منطقة)</label><textarea id="zN" rows="3" placeholder="رف 1 - منظفات&#10;رف 2&#10;الثلاجة"></textarea>
-    <div class="row" style="margin-top:6px"><button class="btn" id="zAdd">＋ ضيف</button><span class="muted small">أو سلسلة:</span>
-      <input id="zP" style="width:90px" value="رف"><input id="zA" type="number" style="width:70px" value="1"><span>لـ</span><input id="zB" type="number" style="width:70px" value="10"><button class="btn soft" id="zSer">＋ سلسلة</button></div>` : ''}
-    </div><div class="card"><div class="row"><b class="grow">المناطق</b><button class="btn soft sm" id="zPr">🖨️ اطبع الباركود</button></div><div id="zl" class="list muted">⏳ ...</div></div>`;
-  const load = async () => {
-    const r = await api('zones', { store: m.store }); S.zones = r.zones;
-    $('zl').innerHTML = r.zones.map(z => `<div class="it"><div class="grow"><b>${esc(z.name)}</b> <span class="muted small">${esc(z.code)}</span></div>
-      ${can ? `<button class="btn soft sm" data-ren="${esc(z.code)}">✏️</button><button class="btn soft sm" data-del="${esc(z.code)}">🗑️</button>` : ''}</div>`).join('') || 'مفيش مناطق لسه';
-    $('zl').querySelectorAll('[data-ren]').forEach(b => b.onclick = async () => {
-      const z = r.zones.find(x => x.code === b.dataset.ren), n = prompt('الاسم الجديد', z.name); if (!n) return;
-      await api('zonesSave', { store: m.store, rename: { code: z.code, name: n } }); load();
-    });
-    $('zl').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
-      if (!confirm('تمسح المنطقة دي؟ الباركود المطبوع بتاعها مش هيشتغل تاني.')) return;
-      await api('zonesSave', { store: m.store, remove: b.dataset.del }); load();
-    });
-  };
-  const add = async names => { try { await api('zonesSave', { store: m.store, names }); toast('✅ اتضافت'); if ($('zN')) $('zN').value = ''; load(); } catch (e) { toast(errText(e)); } };
-  if ($('zAdd')) $('zAdd').onclick = () => add($('zN').value.split('\n'));
-  if ($('zSer')) $('zSer').onclick = () => { const a = +$('zA').value, b = +$('zB').value, p = $('zP').value.trim(); if (!(b >= a) || b - a > 200) return toast('السلسلة مش مظبوطة'); const L = []; for (let i = a; i <= b; i++) L.push(p + ' ' + i); add(L); };
-  $('zPr').onclick = () => printZones(m.store, S.zones || []);
-  try { await load(); } catch (e) { $('zl').innerHTML = esc(errText(e)); }
-}
-// طباعة بسيطة دلوقتي - بعدين: تصميم ومقاسات ليبل وطباعة متكررة
-function printZones(store, zones) {
-  if (!zones.length) return toast('مفيش مناطق');
-  const d = sheet(`<h3 style="margin-top:0">🖨️ طباعة باركود المناطق</h3><label class="fl">المقاس</label>
-    <select id="pS"><option value="3">كبير (3 في السطر - A4)</option><option value="4" selected>متوسط (4 في السطر)</option><option value="5">صغير (5 في السطر)</option></select>
-    <label class="fl">كام نسخة من كل منطقة</label><input id="pN" type="number" min="1" max="10" value="1">
-    <div class="muted small" style="margin-top:6px">قريب: تصميم الليبل بلوجو مدقق، ومقاس الورقة بالمللي، والطباعة المتكررة على برنتر الليبل.</div>
-    <div class="row" style="margin-top:12px"><button class="btn grow" id="pGo">اطبع</button><button class="btn soft" id="pX">رجوع</button></div>`);
-  $('pX').onclick = d.close;
-  $('pGo').onclick = () => {
-    const cols = +$('pS').value, n = Math.max(1, Math.min(10, +$('pN').value || 1));
-    const size = { 3: 150, 4: 115, 5: 90 }[cols];
-    const P = $('print');
-    P.innerHTML = `<div class="lbls" style="grid-template-columns:repeat(${cols},1fr)">` + zones.flatMap(z => Array(n).fill(z)).map((z, i) =>
-      `<div class="lbl"><img class="lg" src="../logo_wide.png" alt=""><div class="q" id="q${i}"></div><div class="nm" style="font-size:${cols === 3 ? 20 : 15}px">${esc(z.name)}</div><div class="st">${esc(store)} • ${esc(z.code)}</div></div>`).join('') + '</div>';
-    zones.flatMap(z => Array(n).fill(z)).forEach((z, i) => new QRCode($('q' + i), { text: z.code, width: size, height: size, correctLevel: QRCode.CorrectLevel.M }));
-    d.close();
-    setTimeout(() => window.print(), 600);
-  };
-}
-
-// ---------- العدّ ----------
-let Q = null; // طابور الرفع للمهمة الحالية
-function qKey(mid) { return 'tm_q_' + mid + '_' + (S.user && S.user.id); }
-function qLoad(mid) { Q = LS.get(qKey(mid), null) || { mid, ops: [], events: [], cancel: [], sent: {} }; return Q; }
-function qSave() { if (Q) LS.set(qKey(Q.mid), Q); }
-let flushing = false, flushTimer = null;
-async function flush() {
-  if (!Q || flushing) return;
-  const ops = Q.ops.filter(o => !Q.sent[o.op]).slice(0, 80), ev = Q.events.slice(0, 50), cn = Q.cancel.slice(0, 50);
-  if (!ops.length && !ev.length && !cn.length) { netBadge(); return; }
-  flushing = true; netBadge();
-  try {
-    await api('sync', { mid: Q.mid, ops: ops.map(o => ({ op: o.op, code: o.code, name: o.name, qty: o.qty, zone: o.zone, at: o.at, kind: o.kind })), events: ev, cancel: cn });
-    ops.forEach(o => Q.sent[o.op] = 1);
-    Q.events.splice(0, ev.length); Q.cancel.splice(0, cn.length);
-    qSave();
-  } catch (e) {
-    if (/اتقفلت للعدّ|ما بدأتش/.test(errText(e))) toast(errText(e), 5000);
-  } finally { flushing = false; netBadge(); }
-  if (Q.ops.some(o => !Q.sent[o.op])) { clearTimeout(flushTimer); flushTimer = setTimeout(flush, 4000); }
-}
-function pendingN() { return Q ? Q.ops.filter(o => !Q.sent[o.op]).length : 0; }
-function netBadge() {
-  const n = pendingN();
-  $('net').textContent = !navigator.onLine ? '📴 من غير نت' + (n ? ' • ' + n : '') : n ? '⬆️ ' + n : '☁️ ✓';
-  if ($('pend')) $('pend').textContent = n ? `⬆️ ${n} لسه بيترفعوا` : '☁️ كله اترفع';
-}
-setInterval(() => { if (Q) flush(); }, 20000);
-window.addEventListener('online', () => { if (Q) flush(); });
-window.addEventListener('offline', netBadge);
-
-async function loadItems(mid) {
-  let it = LS.get('tm_items_' + mid, null);
-  if (!it) { const r = await api('items', { mid }); it = r.items; LS.set('tm_items_' + mid, it); }
-  const by = {}, byName = [];
-  it.forEach(r => {
-    const o = { code: String(r[0]), name: String(r[1]), barcode: String(r[2]), subs: String(r[3]), sys: r[4], price: r[5], unit: String(r[6] || '') };
-    o.key = o.code || o.name;
-    [o.barcode].concat(String(o.subs).split(/[,،\s]+/)).map(x => digits(x).trim()).filter(Boolean).forEach(b => { by[b] = by[b] || o; });
-    byName.push(o);
-  });
-  return { by, list: byName };
-}
-// حالة الجرد على الموبايل: المنطقة الحالية + عدّاد التأكيد + الأصناف اللي محتاجة تتعد تاني
-function cKey(mid) { return 'tm_c_' + mid + '_' + (S.user && S.user.id); }
-const randTarget = () => 15 + Math.floor(Math.random() * 6);
-async function renderCount() {
-  const m = S.m;
-  qLoad(m.id);
-  const C = LS.get(cKey(m.id), null) || { zone: '', zoneName: '', since: [], target: randTarget(), redo: [] };
-  const saveC = () => LS.set(cKey(m.id), C);
-  $('app').innerHTML = '<div class="card muted">⏳ بنحمّل الأصناف والمناطق...</div>';
-  let I, zones = [];
-  try {
-    I = await loadItems(m.id);
-    zones = (await api('zones', { store: m.store })).zones; LS.set('tm_z_' + m.store, zones);
-  } catch (e) {
-    zones = LS.get('tm_z_' + m.store, []);
-    if (!I) { $('app').innerHTML = `<div class="card bad">${esc(errText(e))}</div>`; return; }
-  }
-  const zName = code => (zones.find(z => z.code === code) || {}).name || '';
-  const draw = () => {
-    const mine = Q.ops.filter(o => !o.cancelled);
-    $('app').innerHTML = `${m.status !== 'شغالة' ? `<div class="bad">المهمة ${esc(m.status === 'تجهيز' ? 'لسه ما بدأتش' : 'اتقفلت للعدّ')} - العدّ مش هيترفع</div>` : ''}
-      <div class="zonebar ${C.zone ? 'ok' : 'none'}">${C.zone ? `📍 انت في<b>${esc(C.zoneName)}</b><span class="small">التأكيد الجاي بعد ${Math.max(0, C.target - C.since.length)} صنف</span>`
-        : '<b>امسح باركود المنطقة</b><span class="small">قبل ما تعدّ أي صنف - الباركود متلزق على الرف</span>'}</div>
-      ${C.redo.length ? `<div class="bad"><b>⚠️ لازم تعيد عدّ ${C.redo.length} صنف</b> - كانوا في منطقة غلط واتلغوا:<br><span class="small">${C.redo.map(r => esc(r.name)).join('، ')}</span></div>` : ''}
-      <button class="btn big" id="scan">📷 ${C.zone ? 'امسح باركود الصنف' : 'امسح باركود المنطقة'}</button>
-      <div class="card" style="margin-top:12px"><div class="row"><input id="code" class="grow" placeholder="أو اكتب الباركود / اسم الصنف" inputmode="search" autocomplete="off"><button class="btn soft" id="find">بحث</button></div><div id="res"></div></div>
-      <div class="card"><div class="row"><b class="grow">عدّاتي (${num(mine.length)})</b><span id="pend" class="small muted"></span></div>
-      <div class="list small">${mine.slice(-15).reverse().map(o => `<div class="it"><div class="grow">${esc(o.name)}<div class="muted">${esc(zName(o.zone) || o.zone)} • ${dt(o.at)}</div></div><b>${num(o.qty)}</b>
-        <button class="btn soft sm" data-del="${esc(o.op)}">🗑️</button></div>`).join('') || '<div class="muted">لسه ما عدّتش حاجة</div>'}</div></div>`;
-    netBadge();
-    $('scan').onclick = () => openScanner(code => handle(code));
-    const find = () => handle($('code').value);
-    $('find').onclick = find;
-    $('code').onkeydown = e => { if (e.key === 'Enter') find(); };
-    $('app').querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
-      const o = Q.ops.find(x => x.op === b.dataset.del); if (!o || !confirm('تمسح عدّة «' + o.name + '»؟')) return;
-      o.cancelled = 'اتمسح'; Q.cancel.push({ op: o.op, why: 'اتمسح' }); C.since = C.since.filter(x => x !== o.op);
-      qSave(); saveC(); flush(); draw();
-    });
-  };
-  const setZone = code => {
-    C.zone = code; C.zoneName = zName(code); C.since = []; C.target = randTarget(); saveC();
-    Q.events.push({ id: S.user.id + '-' + Date.now() + '-' + Math.floor(Math.random() * 1e6), type: 'دخل منطقة', details: C.zoneName, at: new Date().toISOString() }); qSave();
-  };
-  const handle = raw => {
-    const code = digits(raw).trim();
-    if (!code) return;
-    if (/^MZ[A-Z0-9]{6}$/i.test(code)) {
-      const z = zones.find(x => x.code === code.toUpperCase());
-      if (!z) { beep(false); return toast('الباركود ده لمنطقة في محل تاني - اتأكد', 4000); }
-      if (C.zone === z.code) { beep(true); C.since = []; C.target = randTarget(); saveC(); toast('📍 لسه في ' + z.name); draw(); return; }
-      beep(true); setZone(z.code); toast('📍 ' + z.name); draw(); return;
-    }
-    if (!C.zone) { beep(false); toast('امسح باركود المنطقة الأول', 3500); return; }
-    let it = I.by[code];
-    if (!it && code.length >= 2 && !/^\d+$/.test(code)) {
-      const k = norm(code), L = I.list.filter(x => norm(x.name).indexOf(k) >= 0).slice(0, 25);
-      $('res').innerHTML = L.length ? '<div class="list">' + L.map((x, i) => `<div class="it" data-i="${i}" style="cursor:pointer"><div class="grow">${esc(x.name)}</div><span class="muted small">${esc(x.barcode)}</span></div>`).join('') + '</div>' : '<div class="muted">مفيش صنف بالاسم ده</div>';
-      $('res').querySelectorAll('.it').forEach(el => el.onclick = () => { $('res').innerHTML = ''; countDlg(L[el.dataset.i]); });
-      return;
-    }
-    if (!it) { beep(false); unknownDlg(code); return; }
-    beep(true); countDlg(it);
-  };
-  const unknownDlg = code => {
-    const d = sheet(`<h3 style="margin-top:0">الباركود ده مش في أصناف المحل</h3><div class="muted">${esc(code)}</div>
-      <div class="warn small">اتأكد إنك مسحت باركود الصنف نفسه. لو الصنف فعلاً مش في القايمة اكتب اسمه وعدّه - المشرف هيراجعه.</div>
-      <label class="fl">اسم الصنف زي ما هو مكتوب عليه</label><input id="unN">
-      <div class="row" style="margin-top:12px"><button class="btn grow" id="unOk">كمّل للعدّ</button><button class="btn soft" id="unX">رجوع</button></div>`);
-    $('unX').onclick = d.close;
-    $('unOk').onclick = () => { const n = $('unN').value.trim(); if (!n) return toast('اكتب اسم الصنف'); d.close(); countDlg({ code: code, name: '❓ ' + n, barcode: code, unit: '', key: code, unknown: true }); };
-  };
-  const countDlg = it => {
-    const key = it.key || it.code || it.name;
-    const before = Q.ops.filter(o => !o.cancelled && o.code === key && o.zone === C.zone).reduce((a, o) => a + o.qty, 0);
-    const d = sheet(`<div class="muted small">📍 ${esc(C.zoneName)}</div><h3 style="margin:4px 0">${esc(it.name)}</h3><div class="muted small">${esc(it.barcode)}${it.unit ? ' • ' + esc(it.unit) : ''}</div>
-      ${before ? `<div class="warn">عدّيته قبل كده في المنطقة دي: <b>${num(before)}</b> - اللي هتكتبه هيتضاف عليه (لو لقيت منه حتة تانية)</div>` : ''}
-      <label class="fl">العدد اللي قدامك</label><input id="cq" class="qty" inputmode="decimal" autocomplete="off">
-      <div class="row" style="margin-top:12px"><button class="btn grow green" id="cOk" style="padding:15px;font-size:18px">✅ حفظ</button><button class="btn soft" id="cX">رجوع</button></div>`, () => setTimeout(() => $('code') && $('code').focus(), 50));
-    setTimeout(() => $('cq').focus(), 80);
-    $('cX').onclick = d.close;
-    const ok = () => {
-      const q = Number(digits($('cq').value).replace(',', '.'));
-      if ($('cq').value.trim() === '' || isNaN(q) || q < 0) return toast('اكتب العدد');
-      if (q > 9999 && !confirm('العدد ' + q + ' كبير قوي - متأكد؟')) return;
-      const op = { op: S.user.id + '-' + Date.now() + '-' + Math.floor(Math.random() * 1e4), code: key, name: it.name, qty: q, zone: C.zone, at: new Date().toISOString(),
-        kind: it.unknown ? 'مش موجود' : (C.redo.some(r => r.key === key) ? 'إعادة عدّ' : 'عد') };
-      Q.ops.push(op); qSave();
-      C.redo = C.redo.filter(r => r.key !== key);
-      C.since.push(op.op); saveC();
-      d.close(); beep(true); toast('✅ ' + it.name + ': ' + num(q));
-      flush();
-      if (C.since.length >= C.target) confirmZone(); else draw();
-    };
-    $('cOk').onclick = ok;
-    $('cq').onkeydown = e => { if (e.key === 'Enter') ok(); };
-  };
-  // التأكيد: لازم يمسح باركود المنطقة اللي هو فيها - لو غلط: آخر الأصناف تتلغي ويعيد عدّها
-  const confirmZone = () => {
-    draw();
-    const d = sheet(`<div style="text-align:center"><div style="font-size:48px">📍</div><h3 style="margin:4px 0">امسح باركود المنطقة اللي انت واقف فيها دلوقتي</h3>
-      <div class="muted small">تأكيد بعد ${C.since.length} صنف - لازم بالكاميرا</div></div>
-      <button class="btn big" id="zc" style="margin-top:14px">📷 امسح باركود المنطقة</button>`);
-    d.el.onclick = null;
-    $('zc').onclick = () => openScanner(raw => {
-      const code = digits(raw).trim().toUpperCase();
-      if (!/^MZ[A-Z0-9]{6}$/.test(code)) { beep(false); toast('ده مش باركود منطقة - امسح الباركود اللي على الرف', 4000); return false; }
-      d.close();
-      if (code === C.zone) {
-        beep(true); Q.events.push({ id: S.user.id + '-' + Date.now() + '-' + Math.floor(Math.random() * 1e6), type: 'منطقة صح', details: C.zoneName + ' بعد ' + C.since.length + ' صنف', at: new Date().toISOString() });
-        C.since = []; C.target = randTarget(); saveC(); qSave(); toast('✅ تمام - كمّل', 2500); draw(); return;
+        } catch (e) { this._wl = null; }
+      },
+      // بصمة كلمة السر (PBKDF2-SHA256) للدخول من غير نت - كلمة السر نفسها ما بتتحفظش
+      async pbkdf2(pass, salt, iter) {
+        const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveBits']);
+        const b = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: salt.slice(), iterations: iter }, k, 256);
+        return new Uint8Array(b);
+      },
+      // الإشعار اللي فتح التطبيق
+      openTarget() { return new URLSearchParams(location.search).get('open') || ''; },
+      // تنزيل ملف (تقرير إكسل) باسمه الصح
+      saveFile(name, mime, bytes) {
+        const url = URL.createObjectURL(new Blob([bytes.slice()], { type: mime }));
+        const a = document.createElement('a');
+        a.href = url; a.download = name; a.style.display = 'none';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      },
+      // تحديث التطبيق لآخر نسخة من غير ما يقفله ويفتحه
+      async update() {
+        const o = document.createElement('div');
+        o.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(9,72,140,.92);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font:bold 20px system-ui;gap:14px';
+        o.innerHTML = '<div style="font-size:46px">🔄</div><div>بنجيب أحدث نسخة...</div>';
+        document.body.append(o);
+        try { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch (e) {}
+        try { const r = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch (e) {}
+        await Promise.all(['./', 'index.html', 'flutter_bootstrap.js', 'main.dart.js', 'manifest.json']
+          .map(u => fetch(u, { cache: 'reload' }).catch(() => {})));
+        const u = new URL(location.href);
+        u.searchParams.set('v', Date.now());
+        location.replace(u.toString());
+      },
+      // أي غلط من المتصفح بيتترجم لكلام عربي مفهوم (مفيش إنجليزي يظهر للموظف)
+      arErr(e) {
+        const n = (e && e.name) || '', m = ((e && e.message) || String(e || '')).toLowerCase();
+        if (n === 'NotAllowedError' || m.includes('gesture')) return 'المتصفح محتاج تدوس على الزرار بإيدك - دوس تاني';
+        if (n === 'AbortError') return 'اتلغت';
+        if (n === 'DataError' || n === 'TypeError' && m.includes('share')) return 'المتصفح ده مش بيقبل يبعت الملف ده';
+        if (m.includes('fetch') || m.includes('network')) return 'النت فاصل أو ضعيف - اتأكد من النت وجرّب تاني';
+        return 'حصلت مشكلة في المشاركة - جرّب تاني';
+      },
+      // رسالة صفرا فوق بسبب فشل المشاركة (بالعربي)
+      shareWhy(msg) {
+        const t = document.createElement('div');
+        t.dir = 'rtl';
+        t.style.cssText = 'position:fixed;left:12px;right:12px;top:70px;z-index:2147483647;background:#fff3cd;color:#5c4400;border:1px solid #e0b84c;border-radius:14px;padding:12px;font:15px system-ui;box-shadow:0 6px 20px rgba(0,0,0,.2)';
+        t.textContent = '⚠️ ' + msg + ' (دوس هنا يقفل)';
+        t.onclick = () => t.remove();
+        document.body.append(t);
+        setTimeout(() => t.remove(), 15000);
+      },
+      // يفتح المشاركة - ولو المتصفح عاوز دوسة جديدة: يطلع زرار كبير يفتحها من الدوسة
+      // بيرجع: shared / cancel / unsupported
+      async _share(data, label) {
+        try { await navigator.share(data); return 'shared'; }
+        catch (e) {
+          if (e && e.name === 'AbortError') return 'cancel';
+          if (e && e.name === 'NotAllowedError') return await mdq.shareTap(data, label);
+          mdq.shareWhy(mdq.arErr(e));
+          return 'cancel';
+        }
+      },
+      // مشاركة ملف (واتساب...) - لو المتصفح مش بيقبل الإكسل بنجرب نسخة CSV
+      async shareFile(name, mime, bytes, csvName, csvBytes, text) {
+        if (!navigator.share || !navigator.canShare) return 'unsupported';
+        // CSV الأول: كل المتصفحات بتقبل تشاركه (وبيتفتح على الإكسل) - الإكسل نفسه كروم بيرفضه
+        const cands = [];
+        if (csvBytes && csvBytes.length) cands.push(new File([csvBytes.slice()], csvName, { type: 'text/csv' }));
+        cands.push(new File([bytes.slice()], name, { type: mime }));
+        for (const f of cands) {
+          let ok = false;
+          try { ok = navigator.canShare({ files: [f] }); } catch (e) {}
+          if (!ok) continue;
+          return await mdq._share({ files: [f], title: text, text: text }, text);
+        }
+        return 'unsupported';
+      },
+      // كذا ملف مرة واحدة (صور / PDF): shareAdd لكل ملف وبعدين shareGo
+      _pend: [],
+      shareAdd(name, mime, bytes) { mdq._pend.push(new File([bytes.slice()], name, { type: mime })); },
+      async shareGo(text) {
+        const files = mdq._pend; mdq._pend = [];
+        if (!files.length) return 'cancel';
+        if (!navigator.share || !navigator.canShare) return 'unsupported';
+        let ok = false;
+        try { ok = navigator.canShare({ files }); } catch (e) {}
+        if (!ok) return 'unsupported';
+        return await mdq._share({ files, title: text, text: text }, text);
+      },
+      // مشاركة كلام (رسالة واتساب) - لو مفيش مشاركة في المتصفح: يفتح واتساب على طول
+      async shareText(text) {
+        if (!navigator.share) { window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank'); return 'shared'; }
+        return await mdq._share({ text: text }, 'الرسالة جاهزة');
+      },
+      shareTap(data, text) {
+        return new Promise(resolve => {
+          const bg = document.createElement('div');
+          bg.dir = 'rtl';
+          bg.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif';
+          const box = document.createElement('div');
+          box.style.cssText = 'background:#fff;border-radius:22px;padding:22px 18px;width:min(86vw,360px);text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.3)';
+          box.innerHTML = '<div style="font-size:44px">✅</div><div style="font-size:20px;font-weight:800;margin:6px 0 4px">جاهز</div>' +
+            '<div style="color:#555;font-size:15px;margin-bottom:16px;white-space:pre-line;max-height:30vh;overflow:auto"></div>';
+          box.children[2].textContent = (text || '').slice(0, 200);
+          const go = document.createElement('button');
+          go.textContent = '📤 ابعت / شارك';
+          go.style.cssText = 'width:100%;height:54px;border:0;border-radius:16px;background:#25D366;color:#fff;font-size:18px;font-weight:800;margin-bottom:8px';
+          const no = document.createElement('button');
+          no.textContent = 'رجوع';
+          no.style.cssText = 'width:100%;height:44px;border:0;border-radius:14px;background:#eef2f6;color:#333;font-size:16px';
+          box.append(go, no);
+          bg.append(box);
+          document.body.append(bg);
+          const done = r => { bg.remove(); resolve(r); };
+          no.onclick = () => done('cancel');
+          go.onclick = () => {
+            navigator.share(data)
+              .then(() => done('shared'))
+              .catch(e => {
+                if (e && e.name === 'AbortError') return done('cancel');
+                mdq.shareWhy(mdq.arErr(e));
+                done('unsupported');
+              });
+          };
+        });
       }
-      beep(false);
-      const wrongZone = C.zoneName, newZ = zones.find(z => z.code === code);
-      const L = Q.ops.filter(o => C.since.indexOf(o.op) >= 0 && !o.cancelled);
-      L.forEach(o => { o.cancelled = 'منطقة غلط'; Q.cancel.push({ op: o.op, why: 'منطقة غلط' }); });
-      L.forEach(o => { if (!C.redo.some(r => r.key === o.code)) C.redo.push({ key: o.code, name: o.name }); });
-      Q.events.push({ id: S.user.id + '-' + Date.now() + '-' + Math.floor(Math.random() * 1e6), type: 'منطقة غلط', details: 'كان مسجّل ' + wrongZone + ' وطلع في ' + (newZ ? newZ.name : code) + ' • ' + L.length + ' صنف اتلغوا', at: new Date().toISOString() });
-      qSave();
-      if (newZ) setZone(newZ.code); else { C.zone = ''; C.zoneName = ''; C.since = []; saveC(); }
-      flush(); draw();
-      sheet(`<div class="bad" style="font-size:17px"><b>❌ المنطقة غلط</b><br>كنت مسجّل «${esc(wrongZone)}» والباركود طلع «${esc(newZ ? newZ.name : 'منطقة مش معروفة')}».<br>
-        آخر ${L.length} صنف اتلغوا - <b>اعدّهم تاني</b> في المنطقة الصح:</div><div class="small">${L.map(o => esc(o.name)).join('<br>')}</div>
-        <button class="btn big" style="margin-top:12px" onclick="this.closest('.modal').remove()">فهمت</button>`);
-    }, true);
-  };
-  draw();
-  flush();
-}
-
-// ---------- الكاميرا ----------
-let scanner = null, scanBusy = false;
-async function stopScan() { if (scanner) { try { await scanner.stop(); } catch (e) {} try { scanner.clear(); } catch (e) {} scanner = null; } document.querySelectorAll('.scanModal').forEach(x => x.remove()); }
-// cameraOnly: تأكيد المنطقة لازم بالكاميرا (من غير كتابة بالإيد)
-async function openScanner(cb, cameraOnly) {
-  await stopScan();
-  const m = document.createElement('div'); m.className = 'modal scanModal';
-  m.innerHTML = `<div class="sheet"><div id="reader"></div>${cameraOnly ? '<div class="muted small" style="margin-top:8px;text-align:center">وجّه الكاميرا على الباركود اللي على الرف</div>' :
-    '<div class="row" style="margin-top:10px"><input id="manual" class="grow" placeholder="أو اكتب الباركود" inputmode="numeric"><button class="btn soft" id="mOk">تمام</button></div>'}
-    <button class="btn soft big" id="sX" style="margin-top:10px">قفل الكاميرا</button></div>`;
-  document.body.appendChild(m);
-  const done = v => { const r = cb(v); if (r === false) return; stopScan(); };
-  window.__scanCb = done; // للتجربة الأوتوماتيك بس
-  $('sX').onclick = stopScan;
-  if ($('mOk')) {
-    $('mOk').onclick = () => { const v = $('manual').value.trim(); if (v) done(v); };
-    $('manual').onkeydown = e => { if (e.key === 'Enter') $('mOk').click(); };
-  }
-  if (typeof Html5Qrcode === 'undefined') { toast('الكاميرا مش شغالة - اكتب الباركود'); return; }
-  try {
-    const F = Html5QrcodeSupportedFormats;
-    scanner = new Html5Qrcode('reader', { formatsToSupport: [F.QR_CODE, F.EAN_13, F.EAN_8, F.CODE_128, F.CODE_39, F.UPC_A, F.UPC_E, F.ITF], verbose: false });
-    let last = '', lastAt = 0;
-    await scanner.start({ facingMode: 'environment' }, { fps: 12, qrbox: (w, h) => ({ width: Math.min(w * .85, 340), height: Math.min(h * .55, 220) }) }, txt => {
-      const now = Date.now(); if (txt === last && now - lastAt < 2500) return; last = txt; lastAt = now;
-      done(txt);
-    }, () => {});
-  } catch (e) { toast('مقدرتش أفتح الكاميرا - اسمح للمتصفح بالكاميرا أو اكتب الباركود', 5000); }
-}
-
-// ---------- المراجعة ----------
-async function renderAudit() {
-  const m = S.m;
-  $('app').innerHTML = '<div class="card muted">⏳ ...</div>';
-  let r;
-  try { r = await api('audit', { mid: m.id }); } catch (e) { $('app').innerHTML = `<div class="card bad">${esc(errText(e))}</div>`; return; }
-  const rows = r.rows, done = rows.filter(x => x.done).length, wrong = rows.filter(x => x.result === 'غلط').length;
-  const byZone = {}; rows.forEach(x => (byZone[x.zoneName] = byZone[x.zoneName] || []).push(x));
-  $('app').innerHTML = `<div class="card"><div class="row"><div class="stat"><b>${done}/${rows.length}</b>اتراجع</div><div class="stat"><b style="color:var(--red)">${wrong}</b>غلط</div></div>
-    <div class="muted small" style="margin-top:8px">روح لكل منطقة واعدّ الصنف ده فيها بنفسك. انت مش هتشوف عدّ الجرّاد غير بعد ما تكتب عدّك.</div></div>
-    ${Object.keys(byZone).map(z => `<div class="card"><b>📍 ${esc(z)}</b><div class="list">${byZone[z].map(x => `<div class="it"><div class="grow"><b>${esc(x.name)}</b>
-      <div class="muted small">${esc(x.why)}${x.done ? ` • الجرّاد ${esc(x.userName)}: ${num(x.qty)} • انت: ${num(x.auditQty)}` : ''}</div></div>
-      ${x.done ? `<span class="pill ${x.result === 'صح' ? 'g' : 'r'}">${x.result === 'صح' ? '✅ صح' : '❌ غلط'}</span>` : `<button class="btn sm" data-k="${esc(x.key)}">اعدّه</button>`}</div>`).join('')}</div></div>`).join('') || '<div class="card">مفيش أصناف في المراجعة</div>'}
-    ${m.status === 'مراجعة' && done === rows.length && rows.length ? '<button class="btn big green" id="cl">✅ المراجعة خلصت - اقفل المهمة</button>' : ''}`;
-  $('app').querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
-    const x = rows.find(y => y.key === b.dataset.k);
-    const d = sheet(`<div class="muted small">📍 ${esc(x.zoneName)}</div><h3 style="margin:4px 0">${esc(x.name)}</h3><label class="fl">عدّك انت</label><input id="aq" class="qty" inputmode="decimal">
-      <div class="row" style="margin-top:12px"><button class="btn grow" id="aOk">حفظ</button><button class="btn soft" id="aX">رجوع</button></div>`);
-    setTimeout(() => $('aq').focus(), 80);
-    $('aX').onclick = d.close;
-    $('aOk').onclick = async () => {
-      if ($('aq').value.trim() === '') return toast('اكتب العدد');
-      $('aOk').disabled = true;
-      try { const s = await api('auditSave', { mid: m.id, key: x.key, qty: digits($('aq').value).replace(',', '.') }); d.close(); beep(s.result === 'صح'); toast(s.result === 'صح' ? '✅ مطابق' : `❌ الجرّاد كان عادد ${num(s.qty)}`, 4000); renderAudit(); }
-      catch (e) { toast(errText(e)); $('aOk').disabled = false; }
     };
-  });
-  if ($('cl')) $('cl').onclick = async () => {
-    if (!confirm('تقفل المهمة وتحسب التقييم؟')) return;
-    try { await api('missionStatus', { id: m.id, status: 'خلصت' }); await refreshMission(); toast('✅ المهمة اتقفلت'); stack.pop(); go(renderMission, S.m.store, false); }
-    catch (e) { toast(errText(e), 5000); }
-  };
-}
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
-// ---------- النتيجة ----------
-async function renderResult() {
-  const m = S.m;
-  $('app').innerHTML = '<div class="card muted">⏳ ...</div>';
-  let r;
-  try { r = await api('result', { mid: m.id }); } catch (e) { $('app').innerHTML = `<div class="card bad">${esc(errText(e))}</div>`; return; }
-  const L = r.items, counted = L.filter(x => x.counted);
-  const val = counted.reduce((a, x) => a + x.qty * x.price, 0), sysVal = L.reduce((a, x) => a + Math.max(0, x.sys) * x.price, 0);
-  const diffs = counted.filter(x => Math.abs(x.qty - x.sys) > 0.001);
-  let f = 'diff';
-  const draw = () => {
-    const show = f === 'all' ? L : f === 'not' ? L.filter(x => !x.counted) : f === 'diff' ? diffs : counted;
-    $('tb').innerHTML = `<tr><th>الصنف</th><th>البرنامج</th><th>الجرد</th><th>الفرق</th><th>القيمة</th></tr>` + show.slice(0, 400).map(x => {
-      const d = x.qty - x.sys;
-      return `<tr><td>${esc(x.name)}<div class="muted small">${Object.keys(x.zones).map(z => esc(r.zones[z] || z) + ': ' + num(x.zones[z])).join(' • ')}</div></td><td>${num(x.sys)}</td><td><b>${x.counted ? num(x.qty) : '-'}</b></td>
-        <td style="color:${d < 0 ? 'var(--red)' : d > 0 ? 'var(--blue2)' : 'var(--green)'}">${x.counted ? num(d) : ''}</td><td>${money(d * x.price)}</td></tr>`;
-    }).join('') + (show.length > 400 ? `<tr><td colspan="5" class="muted">... و${num(show.length - 400)} صنف تاني (في ملف الإكسل)</td></tr>` : '');
-  };
-  $('app').innerHTML = `<div class="card"><div class="row"><div class="stat"><b>${num(counted.length)}</b>من ${num(L.length)} صنف اتعدّ</div><div class="stat"><b>${money(val)}</b>قيمة الجرد</div>
-    <div class="stat"><b>${money(sysVal)}</b>قيمة البرنامج</div><div class="stat"><b style="color:${val - sysVal < 0 ? 'var(--red)' : 'var(--green)'}">${money(val - sysVal)}</b>الفرق</div></div>
-    <div class="muted small" style="margin-top:8px">${Object.keys(r.people).map(k => esc(r.people[k].name) + ': ' + num(r.people[k].n) + ' عدّة').join(' • ')}</div>
-    <div class="row" style="margin-top:10px"><button class="btn soft sm" id="x1">⬇️ تقرير الجرد (إكسل)</button><button class="btn soft sm" id="x2">⬇️ ملف رفع للبرنامج (xls)</button></div></div>
-    <div class="tabs"><button class="btn sm" data-f="diff">فيها فرق (${num(diffs.length)})</button><button class="btn soft sm" data-f="counted">اتعدّت</button><button class="btn soft sm" data-f="not">ما اتعدّتش (${num(L.length - counted.length)})</button><button class="btn soft sm" data-f="all">الكل</button></div>
-    <div class="card" style="padding:6px"><div class="tbl"><table id="tb"></table></div></div>`;
-  $('app').querySelectorAll('[data-f]').forEach(b => b.onclick = () => { f = b.dataset.f; $('app').querySelectorAll('[data-f]').forEach(x => x.className = 'btn sm ' + (x === b ? '' : 'soft')); draw(); });
-  draw();
-  $('x1').onclick = () => {
-    const ws = XLSX.utils.aoa_to_sheet([['مدقق - تقرير جرد', m.store, day(m.date)], [], ['الصنف', 'الباركود', 'كمية البرنامج', 'كمية الجرد', 'الفرق', 'سعر الشراء', 'قيمة الفرق', 'المناطق']]
-      .concat(L.map(x => [x.name, x.barcode, x.sys, x.counted ? x.qty : '', x.counted ? x.qty - x.sys : '', x.price, x.counted ? (x.qty - x.sys) * x.price : '', Object.keys(x.zones).map(z => (r.zones[z] || z) + ': ' + x.zones[z]).join(' | ')])));
-    ws['!cols'] = [{ wch: 40 }, { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 11 }, { wch: 12 }, { wch: 40 }];
-    const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] }; XLSX.utils.book_append_sheet(wb, ws, 'الجرد');
-    const wa = XLSX.utils.aoa_to_sheet([['الصنف', 'المنطقة', 'الجرّاد', 'عدّه', 'المراجعة', 'النتيجة', 'السبب']].concat(r.audit.map(a => [a.name, a.zone, a.userName, a.qty, a.auditQty, a.result, a.why])));
-    XLSX.utils.book_append_sheet(wb, wa, 'المراجعة');
-    XLSX.writeFile(wb, 'جرد ' + m.store + '.xlsx');
-  };
-  $('x2').onclick = () => {
-    const ws = XLSX.utils.aoa_to_sheet([['الاسم', 'الكمية']].concat(counted.map(x => [x.name, x.qty])));
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-    XLSX.writeFile(wb, 'رفع جرد ' + m.store + '.xls', { bookType: 'biff8' });
-  };
-}
+    // ---- لو نزلت نسخة جديدة وهو فاتح: شريط "فيه تحديث جديد" تحت ----
+    (function () {
+      let base = null, shown = false;
+      const ver = () => fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => j.version + '+' + j.build_number).catch(() => null);
+      async function check() {
+        const v = await ver();
+        if (!v) return;
+        if (base === null) { base = v; return; }
+        if (v === base || shown) return;
+        shown = true;
+        const b = document.createElement('div');
+        b.dir = 'rtl';
+        b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:16px;z-index:2147483646;background:#0b5cad;color:#fff;border-radius:16px;padding:14px 16px;font:bold 16px system-ui;box-shadow:0 8px 24px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px;cursor:pointer';
+        b.innerHTML = '<span style="font-size:24px">🔄</span><span style="flex:1">فيه تحديث جديد للتطبيق - دوس هنا</span><span style="background:#fff;color:#0b5cad;border-radius:10px;padding:6px 12px">تحديث</span>';
+        b.onclick = () => mdq.update();
+        document.body.append(b);
+      }
+      check();
+      setInterval(check, 5 * 60 * 1000);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+    })();
 
-// ---------- التقييم ----------
-async function renderScores() {
-  $('app').innerHTML = '<div class="card muted">⏳ ...</div>';
-  let r;
-  try { r = await api('scores'); } catch (e) { $('app').innerHTML = `<div class="card bad">${esc(errText(e))}</div>`; return; }
-  const sum = r.summary;
-  $('app').innerHTML = `<div class="card"><b>الترتيب</b><div class="muted small">الدرجة = متوسط آخر 10 مهمات (الأحدث أتقل): 50% دقة + 20% التزام + 15% انضباط + 15% سرعة. السرعة ما بتتحسبش لو الدقة أقل من 80.</div>
-    <div class="tbl" style="margin-top:8px"><table><tr><th>#</th><th>الاسم</th><th>المستوى</th><th>الدرجة</th><th>الدقة</th><th>مهمات</th><th>أصناف</th></tr>
-    ${sum.map((s, i) => `<tr data-u="${esc(s.user)}" style="cursor:pointer"><td>${i + 1}</td><td><b>${esc(s.name)}</b></td><td>${esc(s.rank)}</td><td><b>${s.avg}</b></td><td>${s.accuracy}%</td><td>${s.missions}</td><td>${num(s.items)}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">لسه مفيش مهمات اتقفلت</td></tr>'}</table></div></div>
-    <div class="card" id="det"><div class="muted small">دوس على اسم علشان تشوف مهماته</div></div>`;
-  $('app').querySelectorAll('[data-u]').forEach(tr => tr.onclick = () => {
-    const L = r.rows.filter(x => x.user === tr.dataset.u);
-    $('det').innerHTML = `<b>${esc(L[0] ? L[0].name : '')}</b><div class="tbl" style="margin-top:6px"><table><tr><th>المحل</th><th>الدرجة</th><th>الدقة</th><th>الانضباط</th><th>السرعة</th><th>غلط</th><th>منطقة غلط</th><th>أصناف</th><th>ساعات</th></tr>
-      ${L.map(x => `<tr><td>${esc(x.store)}<div class="muted small">${dt(x.at)}</div></td><td><b>${x.score}</b></td><td>${x.acc}</td><td>${x.disc}</td><td>${x.speed}</td><td>${x.wrong}/${x.audited}</td><td>${x.zoneWrong}</td><td>${num(x.items)}</td><td>${x.hours}</td></tr>`).join('')}</table></div>`;
-  });
-}
-
-// ---------- البداية ----------
-if ('serviceWorker' in navigator) { /* PWA بسيط من غير كاش علشان التحديثات توصل على طول */ }
-if (S.token && S.user) home(); else go(renderLogin, 'جرد مدقق - الفريق');
-if (S.token) api('me', {}).then(r => { if (r && r.user) { S.user = r.user; LS.set('tm_user', r.user); } }).catch(() => {});
-</script>
+    // ---- زرار "ثبّت التطبيق" تحت (بيختفي لو التطبيق متثبت أو الموظف قفله) ----
+    (function () {
+      const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      let evt = null;
+      const KEY = 'mdq-install-hidden';
+      const hiddenRecently = () => { try { return Date.now() - Number(localStorage.getItem(KEY) || 0) < 3 * 86400000; } catch (e) { return false; } };
+      function bar() {
+        if (standalone() || hiddenRecently() || document.getElementById('mdqInstall')) return;
+        if (!evt && !ios) return;
+        const d = document.createElement('div');
+        d.id = 'mdqInstall';
+        d.setAttribute('dir', 'rtl');
+        d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:9999;' +
+          'background:#0B4F94;color:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;align-items:center;gap:10px;' +
+          'padding:10px 12px;font-family:-apple-system,"Segoe UI",Tahoma,sans-serif;font-size:15px';
+        d.innerHTML = '<img src="icons/Icon-192.png" alt="" style="width:40px;height:40px;border-radius:10px;background:#fff">' +
+          '<div style="flex:1;line-height:1.4"><b>ثبّت التطبيق على موبايلك</b><br><span style="font-size:13px;opacity:.85">يفتح من الأيقونة زي أي تطبيق</span></div>' +
+          '<button id="mdqInstallGo" style="border:0;border-radius:12px;background:#fff;color:#0B4F94;font-weight:bold;font-size:15px;padding:10px 14px;font-family:inherit">ثبّت</button>' +
+          '<button id="mdqInstallX" aria-label="قفل" style="border:0;background:transparent;color:#fff;font-size:22px;padding:4px 6px">×</button>';
+        document.body.appendChild(d);
+        document.getElementById('mdqInstallX').onclick = () => { try { localStorage.setItem(KEY, Date.now()); } catch (e) {} d.remove(); };
+        document.getElementById('mdqInstallGo').onclick = async () => {
+          if (evt) {
+            evt.prompt();
+            const r = await evt.userChoice.catch(() => null);
+            if (r && r.outcome === 'accepted') d.remove();
+            evt = null;
+            return;
+          }
+          // آيفون: نشرح الطريقة
+          const h = document.createElement('div');
+          h.setAttribute('dir', 'rtl');
+          h.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(8,25,45,.6);display:flex;align-items:flex-end;justify-content:center';
+          h.innerHTML = '<div style="background:#fff;color:#0B3D6E;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));width:min(520px,100%);line-height:1.9;font-family:-apple-system,Tahoma,sans-serif;font-size:16px">' +
+            '<b style="font-size:18px">ثبّت التطبيق على الآيفون</b><br>1- افتح الصفحة دي من <b>Safari</b><br>2- دوس زرار المشاركة <b>⬆️</b> اللي تحت<br>' +
+            '3- اختار <b>"إضافة إلى الشاشة الرئيسية"</b> وبعدين <b>إضافة</b>' +
+            '<div style="text-align:center;margin-top:12px"><button style="border:0;border-radius:12px;background:#1479D3;color:#fff;font-weight:bold;font-size:16px;padding:10px 28px">تمام</button></div></div>';
+          h.onclick = (e) => { if (e.target === h || e.target.tagName === 'BUTTON') h.remove(); };
+          document.body.appendChild(h);
+        };
+      }
+      window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); evt = e; bar(); });
+      window.addEventListener('appinstalled', () => { const d = document.getElementById('mdqInstall'); if (d) d.remove(); });
+      if (ios) setTimeout(bar, 4000);
+    })();
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
