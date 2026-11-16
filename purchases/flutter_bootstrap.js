@@ -45,8 +45,16 @@ _flutter.buildConfig = {"engineRevision":"371f77202a73e8dff57a8b3bff75bca55c090a
 _flutter.loader.load({
   onEntrypointLoaded: async function (engineInitializer) {
     const appRunner = await engineInitializer.initializeEngine();
-    await appRunner.runApp();
     const s = document.getElementById('splash');
-    if (s) s.remove();
+    const hide = () => { if (s && s.parentNode) s.remove(); };
+    // تطبيق مدقق المجمع: شاشة التحميل تفضل لحد ما الانترو يرسم أول صورة (من غير شاشة بيضا في النص)
+    const keep = !!(s && s.classList.contains('intro'));
+    if (keep) {
+      s.style.zIndex = '2147483000';
+      window.addEventListener('flutter-first-frame', hide, { once: true });
+    }
+    await appRunner.runApp();
+    if (keep) setTimeout(hide, 12000); // احتياطي لو أول صورة ماتبلغش
+    else hide();
   }
 });

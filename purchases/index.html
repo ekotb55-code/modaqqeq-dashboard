@@ -25,13 +25,24 @@
     #splash .bar { width: 140px; height: 5px; border-radius: 4px; background: rgba(255,255,255,.25); overflow: hidden; }
     #splash .bar i { display: block; width: 40%; height: 100%; background: #fff; border-radius: 4px; animation: mv 1.1s infinite ease-in-out; }
     @keyframes mv { 0% { transform: translateX(160%); } 100% { transform: translateX(-260%); } }
+    /* تطبيق مدقق المجمع: شاشة التحميل نفس بداية الانترو (خلفية زرقا + موجات بيضا) علشان يبان انترو واحد من أول لحظة */
+    #splash.intro img, #splash.intro b, #splash.intro .bar { display: none; }
+    #splash .ring { display: none; }
+    #splash.intro .ring { display: block; position: absolute; left: 50%; top: 50%; width: 140px; height: 140px; margin: -70px 0 0 -70px;
+      border-radius: 50%; border: 2px solid rgba(255,255,255,.25); opacity: 0; animation: rg 1.9s infinite ease-out; }
+    #splash.intro .ring + .ring { animation-delay: .5s; }
+    @keyframes rg { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(4); opacity: 0; } }
   </style>
   <!-- إشعارات (Firebase) - نفس مشروع مدقق -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 </head>
 <body>
-  <div id="splash" dir="rtl"><img src="icons/Icon-192.png" alt=""><b>مشتريات ودعم فني</b><div class="bar"><i></i></div></div>
+  <div id="splash" dir="rtl" data-app="مشتريات ودعم فني"><img src="icons/Icon-192.png" alt=""><b>مشتريات ودعم فني</b><div class="bar"><i></i></div><div class="ring"></div><div class="ring"></div></div>
+  <script>
+    // تطبيق مدقق المجمع بس: شاشة التحميل بشكل بداية الانترو
+    (function () { var s = document.getElementById('splash'); if (s && s.dataset.app === 'مدقق') s.classList.add('intro'); })();
+  </script>
   <script>
     // ---- الجسر بين التطبيق والمتصفح: تخزين الملفات (IndexedDB) + الإشعارات ----
     document.addEventListener('visibilitychange', () => {
