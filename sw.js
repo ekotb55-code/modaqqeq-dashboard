@@ -1,6 +1,6 @@
 // تطبيق الداش بورد: بيشتغل من غير ما يحتاج تنزيل من المتجر
 // الصفحة بتتجاب من النت الأول (علشان أي تحديث يظهر على طول)، ولو النت قاطع بتفتح آخر نسخة محفوظة
-const CACHE = 'modaqqeq-dash-v6';
+const CACHE = 'modaqqeq-dash-v7';
 const SHELL = ['./', './index.html', './logo_wide.png', './icon.png', './icon-192.png', './icon-512.png', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {
@@ -15,7 +15,7 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;
   e.respondWith(
     // الصفحة نفسها: نسأل السيرفر دايماً (من غير كاش المتصفح بتاع الـ 10 دقايق) علشان التحديث يظهر على طول
-    fetch(e.request, (e.request.mode === 'navigate' || /\/(index\.html)?$/.test(u.pathname)) ? { cache: 'no-cache' } : undefined).then(r => {
+    ((e.request.mode === 'navigate' || /\/(index\.html)?$/.test(u.pathname)) ? fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' }) : fetch(e.request)).then(r => {
       if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
       return r;
     }).catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')))
