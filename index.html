@@ -666,6 +666,24 @@
   .tpb.h { background: #FFF1DE; color: #B35C00; } .tpb.u { background: #FDECEA; color: #B3261E; } .tpb.r { background: #EDE7F6; color: #4527A0; }
   .bcard.k-task.tp-h { border-inline-start-color: #E67E00 !important; } .bcard.k-task.tp-u { border-inline-start-color: #C62828 !important; box-shadow: 0 0 0 2px #F5C2BD; }
   .tprow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .tprow select { width: 100%; }
+  /* صفحة الشغل الدوري (أعمدة) */
+  .ordboard { height: auto; max-height: none; }
+  .ordboard .bcol { flex: 0 0 330px; max-height: 78vh; }
+  .ordadd { margin-top: 8px; padding: 6px 12px; font-size: 13px; width: 100%; }
+  .ordc { background: #fff; border-radius: 12px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(16,40,70,.12); border-inline-start: 5px solid var(--sc, #1479D3); }
+  .ordch { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .ordch b { font-size: 14.5px; color: var(--navy); }
+  .ordedit { padding: 2px 8px; font-size: 13px; }
+  .ordSch { font-size: 12.5px; color: var(--muted); margin: 3px 0 6px; line-height: 1.6; }
+  .ordchips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .ordchip { border: 1px solid #D6DFEA; background: #F5F8FC; border-radius: 999px; padding: 3px 9px; font: inherit; font-size: 12.5px; font-weight: 700; color: #33475B; cursor: pointer; }
+  span.ordchip { cursor: default; font-weight: 600; }
+  .ordchip.on { background: #1479D3; color: #fff; border-color: #1479D3; } .ordchip.off { opacity: .55; }
+  .ordbr { margin-top: 8px; border: 1.5px solid; border-radius: 10px; padding: 8px 10px; background: #FBFCFE; }
+  .ordbr .btn { padding: 5px 10px; font-size: 12.5px; }
+  .ordSw { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 4px; cursor: pointer; } .ordSw input { width: auto; }
+  .ordwide .bacts { flex-wrap: wrap; } .ordwide .wobox, .ordwide .isbox { box-shadow: none; padding: 0; margin: 0; }
+  .orddays { display: flex; flex-wrap: wrap; gap: 6px 12px; }
   .tkacts { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
   .tkpics { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; } .tkpics img { width: 110px; height: 110px; object-fit: cover; border-radius: 12px; cursor: zoom-in; background: #EEF2F7; }
   .tkguide { background: #F3F7FC; border-radius: 12px; padding: 8px 12px; margin: 8px 0; } .tkguide summary { font-weight: 800; color: var(--navy); cursor: pointer; } .tkguide div { margin-top: 6px; line-height: 1.8; }
@@ -787,6 +805,9 @@
     .board { height: auto; min-height: 60vh; scroll-snap-type: x mandatory; }
     .bcol { flex: 0 0 86vw; scroll-snap-align: start; max-height: 75vh; }
     /* عداد الاستهلاك صغير: نسبة بس بلونها (من غير الشريط و 🌐) */
+    .ordboard .bcol { flex: 0 0 calc((100vw - 28px) / 2); max-height: 75vh; }
+    .ordc { padding: 7px 8px; } .ordch b { font-size: 13px; } .ordSch { font-size: 11.5px; }
+    .ordchip { font-size: 11.5px; padding: 2px 7px; } .ordbr { padding: 6px 7px; } .ordbr .btn, .ordwide .btn { padding: 4px 8px !important; font-size: 11.5px !important; }
     #umPill { padding: 4px 7px; font-size: 11px; gap: 0; }
     #umPill .umbar, #umPill .umico { display: none; }
     #iiPill { padding: 4px 7px; font-size: 11px; gap: 0; }
@@ -2390,7 +2411,7 @@ async function ordApi(action, data) {
 function ordStop() { clearInterval(ordTimer); ordTimer = null; }
 async function ordLoad(quiet) {
   if (!quiet && !ordData) $('pageOrd').innerHTML = '<div class="pane"><div class="empty"><span class="spin"></span></div></div>';
-  try { ordData = await ordApi('status'); ordRender(); }
+  try { ordData = await ordApi('status'); ordRender(); ordRepLoad(!quiet); if (!wo) woLoad(); }
   catch (e) { if (!quiet) $('pageOrd').innerHTML = '<div class="pane"><div class="empty">' + esc(msg(e)) + '</div></div>'; }
   if (!ordTimer) ordTimer = setInterval(() => { if ($('pageOrd').classList.contains('hidden')) ordStop(); else ordLoad(true); }, 30000);
 }
@@ -2407,11 +2428,17 @@ function ordBadge(s) {
   const ic = s === 'تم' ? '✅ ' : s === 'فشل' ? '❌ ' : s === 'شغال' ? '⏳ ' : String(s).indexOf('اتبعت') === 0 ? '📤 ' : '🕒 ';
   return '<span class="badge ' + c + '">' + ic + esc(s || 'مستني') + '</span>';
 }
-function ordRender() {
-  if (!ordData) return;
-  const D = ordData;
-  const cards = D.sched.map((s, ci) => {
-    const L = s.last;
+// ---------- صفحة الشغل الدوري: كل نوع شغل في عمود ----------
+// علشان تزوّد عمود جديد: ضيف عنصر في ORD_COLS: { k, icon, title, color, cards: () => [html...], add: 'دالة()', addT: 'اسم الزرار' }
+let ordReps = [], ordRepsAt = 0, ordOpen = {};
+const ORD_COLS = [
+  { k: 'ord', icon: '🧾', title: 'فاتورة من الموزع الرئيسي', color: '#1479D3', cards: () => ordColOrders(), add: 'ordAddDlg()', addT: 'طلب دوري' },
+  { k: 'wo', icon: '🏷️', title: 'العروض الأسبوعية', color: '#E67E00', cards: () => ordColWo() },
+  { k: 'is', icon: '📦', title: 'تحديث الأصناف', color: '#2E7D32', cards: () => ordColItems() },
+  { k: 'rep', icon: '🔁', title: 'التاسكات المتكررة', color: '#6C4BD8', cards: () => ordColReps(), add: 'ordRepAdd()', addT: 'تاسك متكررة' }
+];
+const ORD_WD = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+function ordLastHtml(L) {
     let body = '<div style="color:var(--muted);font-size:13px">لسه ما اتعملش ولا طلب</div>';
     if (L) {
       body = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' + ordBadge(L['الحالة']) +
@@ -2424,21 +2451,131 @@ function ordRender() {
         (L['الحالة'] === 'تم' ? (L['راجعه'] ? '<div style="margin-top:6px;font-size:12.5px;color:var(--green)">✔ راجعه ' + esc(L['راجعه']) + ' - ' + ordTime(L['وقت المراجعة']) + '</div>'
           : '<button class="btn green" style="margin-top:8px;padding:6px 14px;font-size:13px" onclick="ordReview(\'' + esc(L['المعرف']) + '\')">✔ اتراجع</button>') : '');
     }
-    return '<div class="pane' + (ci === 0 ? '" id="ordCard0' : '') + '" style="min-height:0;padding:14px;border-inline-start:5px solid ' + (!s.active ? '#B0B8C4' : L && L['الحالة'] === 'فشل' ? 'var(--red)' : L && L['الحالة'] === 'تم' ? 'var(--green)' : 'var(--blue)') + '">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0;color:var(--navy)">🏪 ' + esc(s.branch) + '</h3>' +
-      '<label class="ordSw" style="font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ' + (s.active ? 'checked' : '') + ' onchange="ordToggle(\'' + esc(s.branch) + '\',this.checked)"> شغال</label></div>' +
-      '<div class="ordSch" style="font-size:13px;color:var(--muted);margin:4px 0 10px">📅 ' + esc(s.days) + ' - ' + esc(s.time) + ' &nbsp;•&nbsp; بيان ' + esc(s.stat) + '<br>' +
-      (s.active ? '<span class="ordNext">⏭️ الجاي: <b style="color:var(--text)">' + ordTime(s.next) + '</b></span>' : '<span class="ordNext">⏸️ متوقف</span>') + '</div><div class="ordLast">' + body + '</div>' +
-      '<div style="margin-top:10px"><button class="btn ghost ordRun" style="padding:6px 12px;font-size:13px" onclick="ordRunNow(\'' + esc(s.branch) + '\')">▶ اعمله دلوقتي</button></div></div>';
-  }).join('');
+    return body;
+}
+// الفروع اللي ليها نفس الأيام والساعة والبيان: كارت واحد
+function ordGroups() {
+  const G = {};
+  (ordData ? ordData.sched : []).forEach(s => {
+    const k = s.days + '|' + s.time + '|' + s.stat;
+    (G[k] = G[k] || { days: s.days, time: s.time, stat: s.stat, list: [] }).list.push(s);
+  });
+  return Object.values(G).sort((a, b) => b.list.length - a.list.length || String(a.time).localeCompare(String(b.time)));
+}
+function ordDot(s) {
+  const st = s.last ? String(s.last['الحالة'] || '') : '';
+  return !s.active ? '⏸️' : st === 'تم' ? '✅' : st === 'فشل' ? '❌' : st === 'شغال' || st.indexOf('اتبعت') === 0 ? '⏳' : st ? '🕒' : '⚪';
+}
+function ordColOrders() {
+  if (!ordData) return [];
+  return ordGroups().map((g, gi) => {
+    const nx = g.list.filter(s => s.active && s.next).map(s => s.next).sort()[0];
+    const chips = g.list.map(s => '<button class="ordchip' + (ordOpen[s.branch] ? ' on' : '') + (!s.active ? ' off' : '') + '" onclick="ordChip(\'' + esc(s.branch) + '\')">' + ordDot(s) + ' ' + esc(s.branch) + '</button>').join('');
+    const open = g.list.filter(s => ordOpen[s.branch]).map(s => {
+      const L = s.last;
+      return '<div class="ordbr" style="border-color:' + (!s.active ? '#B0B8C4' : L && L['الحالة'] === 'فشل' ? 'var(--red)' : L && L['الحالة'] === 'تم' ? 'var(--green)' : 'var(--blue)') + '">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><b>🏪 ' + esc(s.branch) + '</b>' +
+        '<label class="ordSw"><input type="checkbox" ' + (s.active ? 'checked' : '') + ' onchange="ordToggle(\'' + esc(s.branch) + '\',this.checked)"> شغال</label></div>' +
+        '<div class="ordLast" style="margin-top:6px">' + ordLastHtml(L) + '</div>' +
+        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost ordRun" onclick="ordRunNow(\'' + esc(s.branch) + '\')">▶ اعمله دلوقتي</button>' +
+        '<button class="btn ghost" onclick="ordRemove(\'' + esc(s.branch) + '\')">🗑 شيله من الجدول</button></div></div>';
+    }).join('');
+    return '<div class="ordc"' + (gi === 0 ? ' id="ordCard0"' : '') + '><div class="ordch"><b>📅 ' + esc(g.days) + ' - ' + esc(g.time) + '</b>' +
+      '<button class="btn ghost ordedit" title="تعديل المعاد" onclick="ordAddDlg(' + gi + ')">✏️</button></div>' +
+      '<div class="ordSch">بيان ' + esc(g.stat) + ' • ' + g.list.length + ' فرع<br>' + (nx ? '⏭️ الجاي: <b>' + ordTime(nx) + '</b>' : '⏸️ متوقف') + '</div>' +
+      '<div class="ordchips">' + chips + '</div>' + open + '</div>';
+  });
+}
+function ordChip(b) { ordOpen[b] = !ordOpen[b]; ordRender(); }
+const ordStrip = h => String(h || '').replace('<button class="btn ghost" onclick="closeDlg()">قفل</button>', '');
+function ordColWo() {
+  if (!wo) return ['<div class="ordc"><div class="empty" style="padding:14px"><span class="spin"></span></div></div>'];
+  return ['<div class="ordc ordwide">' + ordStrip(woHtml()) + '<div class="ordSch" style="margin-top:6px">📅 بتتفعّل لوحدها الجمعة 5 الفجر وبتتلغي التلات</div></div>'];
+}
+function ordColItems() {
+  if (!isState) return ['<div class="ordc"><div class="empty" style="padding:14px"><span class="spin"></span></div></div>'];
+  return ['<div class="ordc ordwide">' + ordStrip(isHtml_()).replace('<h3>📦 تحديث شيت أصناف المخزن</h3>', '') + '</div>'];
+}
+function ordColReps() {
+  const L = (ordReps || []).filter(x => x.active);
+  if (!L.length) return [];
+  const days = ['الحد', 'الاتنين', 'التلات', 'الأربع', 'الخميس', 'الجمعة', 'السبت'];
+  return L.map(x => {
+    const st = x.stores || [];
+    return '<div class="ordc"><div class="ordch"><b>' + esc(x.title) + '</b>' +
+      (myRole === 'مدير' ? '<button class="btn ghost ordedit" title="إيقاف" onclick="ordRepStop(\'' + esc(x.id) + '\')">⏹</button>' : '') + '</div>' +
+      '<div class="ordSch">📅 ' + (x.repeat === 'أسبوعي' ? 'كل ' + days[x.weekday] : 'كل يوم') + ' الساعة ' + esc(x.time) +
+      (x.prio && x.prio !== 'n' ? ' • ' + TP_LBL[x.prio] : '') + (x.tone && x.tone !== 1 ? ' • 🔔 ' + TN_LBL[x.tone] : '') + '</div>' +
+      '<div class="ordchips">' + st.slice(0, 8).map(n => '<span class="ordchip">' + sdot(n) + esc(n) + '</span>').join('') + (st.length > 8 ? '<span class="ordchip">و' + (st.length - 8) + ' كمان</span>' : '') + '</div>' +
+      (x.details ? '<div class="ordSch" style="margin-top:6px">' + esc(x.details).slice(0, 160) + '</div>' : '') + '</div>';
+  });
+}
+function ordRender() {
+  if (!ordData) return;
+  const D = ordData;
   const rows = D.log.map(r => '<tr><td>' + esc(r['الفرع']) + '</td><td>' + esc(r['الموعد']) + '</td><td>' + esc(r['النوع']) + '</td><td>' + ordBadge(r['الحالة']) + '</td><td>' + esc(r['رقم الطلب']) + '</td><td>' + (r['عدد الأصناف'] ? num(r['عدد الأصناف']) : '') + '</td><td>' + (r['الإجمالي'] ? money(r['الإجمالي']) : '') + '</td><td style="font-size:12px;color:var(--muted)">' + esc(r['ملاحظة']) + '</td><td>' + esc(r['راجعه']) + '</td></tr>').join('');
-  $('pageOrd').innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px"><div><h2 style="margin:0;color:var(--navy)">🔁 الطلبات الدورية من الموزع الرئيسي</h2>' +
-    '<div style="color:var(--muted);font-size:13px;margin-top:4px">بتتعمل لوحدها في مواعيدها: نوع الفاتورة «الكل» والبيان الإحصائي بتاع الفرع، والأصناف المؤرشفة بتتشال، وبعدين بتتبعت. بعد 10 دقايق بنتأكد إن الطلب اتسجل.</div></div>' +
+  const cols = ORD_COLS.map(c => {
+    let cards = [];
+    try { cards = c.cards() || []; } catch (e) { cards = []; }
+    return '<div class="bcol" style="--sc:' + c.color + '"><div class="bhead"><h3><span class="bname">' + c.icon + ' ' + esc(c.title) + '</span><span class="bcount">' + cards.length + '</span></h3>' +
+      (c.add && !isQA() ? '<button class="btn soft ordadd" onclick="' + c.add + '">＋ ' + esc(c.addT) + '</button>' : '') + '</div>' +
+      '<div class="bbody">' + (cards.length ? cards.join('') : '<div class="bempty">مفيش لسه</div>') + '</div></div>';
+  }).join('');
+  $('pageOrd').innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px"><div><h2 style="margin:0;color:var(--navy)">🔁 الشغل الدوري</h2>' +
+    '<div style="color:var(--muted);font-size:13px;margin-top:4px">كل الشغل اللي بيتعمل لوحده في مواعيده - كل نوع في عمود. دوس على اسم أي فرع علشان تشوف آخر طلب وتشغّله أو توقفه.</div></div>' +
     '<div style="display:flex;gap:8px"><button class="btn soft" id="ordHelp" style="padding:8px 14px" onclick="ordTour(true)">؟ شرح الصفحة</button><button class="btn soft" id="ordRefresh" style="padding:8px 14px" onclick="ordLoad()">🔄 تحديث</button></div></div>' +
-    '<div id="ordGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px">' + cards + '</div>' +
-    '<div class="pane" id="ordLog" style="margin-top:14px;min-height:0"><h3 style="margin-top:0;color:var(--navy)">📜 السجل</h3>' +
+    '<div class="board ordboard" id="ordGrid">' + cols + '</div>' +
+    '<div class="pane" id="ordLog" style="margin-top:14px;min-height:0"><h3 style="margin-top:0;color:var(--navy)">📜 سجل فاتورة الموزع الرئيسي</h3>' +
     (rows ? '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px" class="ordlog"><tr><th>الفرع</th><th>الموعد</th><th>النوع</th><th>الحالة</th><th>رقم الطلب</th><th>الأصناف</th><th>الإجمالي</th><th>ملاحظة</th><th>راجعه</th></tr>' + rows + '</table></div>' : '<div class="empty" style="padding:20px">لسه مافيش طلبات</div>') + '</div>';
   if (!ordTourAuto && !ls('ordTour1')) { ordTourAuto = true; setTimeout(() => ordTour(false), 700); }
+}
+// ＋ طلب دوري / ✏️ تعديل معاد مجموعة: الفروع + الأيام + الساعة + البيان
+async function ordAddDlg(gi) {
+  const g = gi === undefined ? null : ordGroups()[gi];
+  dlg('<h3>' + (g ? '✏️ تعديل المعاد' : '＋ طلب دوري جديد') + '</h3><div id="ordAddBox"><div class="empty"><span class="spin"></span></div></div>');
+  let B;
+  try { B = await ordApi('branches'); } catch (e) { closeDlg(); return toast(msg(e)); }
+  if (!$('ordAddBox')) return;
+  const inG = n => !!(g && g.list.some(s => s.branch === n));
+  const inS = n => (ordData ? ordData.sched : []).find(s => s.branch === n);
+  const dsel = g ? String(g.days).split(/[،,\s]+/).map(x => x.trim()) : ['السبت', 'الثلاثاء'];
+  $('ordAddBox').innerHTML = '<label class="fl">الفروع</label><input id="oQ" placeholder="🔍 دوّر على فرع" style="width:100%;margin-bottom:4px" oninput="document.querySelectorAll(\'#oSt label\').forEach(l=>l.style.display=l.textContent.indexOf(this.value)!==-1?\'\':\'none\')">' +
+    '<div class="stpick" id="oSt">' + B.branches.map(n => { const s = inS(n); return '<label><input type="checkbox" value="' + esc(n) + '"' + (inG(n) ? ' checked' : '') + '>' + esc(n) +
+      (s && !inG(n) ? ' <small style="color:var(--muted)">(' + esc(s.days) + ' ' + esc(s.time) + ')</small>' : '') + '</label>'; }).join('') + '</div>' +
+    '<small style="color:var(--muted)">الفرع اللي له معاد قبل كده، المعاد بتاعه هيتغيّر للجديد. الفروع اللي مش ظاهرة هنا لازم تتربط الأول في «ربط برامج البيع».</small>' +
+    '<label class="fl" style="margin-top:8px">الأيام</label><div class="orddays">' + (B.days || ORD_WD).map(d => '<label class="chk"><input type="checkbox" value="' + esc(d) + '"' + (dsel.indexOf(d) !== -1 || (d === 'الثلاثاء' && dsel.indexOf('التلات') !== -1) ? ' checked' : '') + '> ' + esc(d) + '</label>').join('') + '</div>' +
+    '<div class="tprow"><div><label class="fl" style="margin-top:8px">الساعة</label><input type="time" id="oTime" value="' + esc(g ? g.time : '23:00') + '" style="width:100%"></div>' +
+    '<div><label class="fl" style="margin-top:8px">البيان الإحصائي</label><select id="oStat">' + (B.stats || ['شهر', 'شهرين', '3 شهور']).map(x => '<option' + (g && g.stat === x ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '</select></div></div>' +
+    '<div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="closeDlg()">رجوع</button></div>';
+  $('dlgOk').onclick = async () => {
+    const branches = [...document.querySelectorAll('#oSt input:checked')].map(x => x.value);
+    const days = [...document.querySelectorAll('.orddays input:checked')].map(x => x.value);
+    if (!branches.length) return toast('اختار فرع واحد على الأقل');
+    if (!days.length) return toast('اختار يوم واحد على الأقل');
+    $('dlgOk').disabled = true;
+    try {
+      ordData = await ordApi('add', { branches, days, time: $('oTime').value, stat: $('oStat').value });
+      closeDlg(); ordRender(); toast('✅ اتحفظ - ' + branches.length + ' فرع');
+    } catch (e) { $('dlgOk').disabled = false; toast(msg(e)); }
+  };
+}
+async function ordRemove(branch) {
+  if (!confirm('هيتشال «' + branch + '» من جدول الطلبات الدورية خالص (السجل بتاعه هيفضل).\nلو عايز توقفه مؤقتاً شيل علامة «شغال» بدل كده.\nمتأكد؟')) return;
+  try { ordData = await ordApi('remove', { branch }); delete ordOpen[branch]; ordRender(); toast('اتشال من الجدول'); } catch (e) { toast(msg(e)); }
+}
+// ＋ تاسك متكررة: فورم التاسك الجديدة على «كل يوم»
+function ordRepAdd() {
+  taskNewDlg();
+  const r = $('kR'); if (r) { r.value = 'يومي'; r.onchange && r.onchange(); }
+  const ok = $('dlgOk'); if (ok) { const f = ok.onclick; ok.onclick = async () => { await f(); ordRepLoad(true); }; }
+}
+async function ordRepLoad(force) {
+  if (!force && Date.now() - ordRepsAt < 5 * 60000) return;
+  try { const r = await api('dTasks', { token }); ordReps = r.repeats || []; ordRepsAt = Date.now(); if (r.tasks) tasks = r.tasks; ordRender(); } catch (e) {}
+}
+async function ordRepStop(id) {
+  if (!confirm('توقف التاسك المتكررة دي؟ (التاسكات اللي اتعملت قبل كده بتفضل)')) return;
+  try { const r = await api('dRepeatStop', { token, id }, true); ordReps = r.repeats || ordReps; ordRender(); toast('اتوقفت'); } catch (e) { toast(msg(e)); }
 }
 async function ordRunNow(branch) {
   if (!confirm('هيتعمل دلوقتي طلب جديد لـ ' + branch + ' ويتبعت للموزع الرئيسي على طول.\nمتأكد؟')) return;
@@ -3071,7 +3208,7 @@ function ordTourSteps() {
     { t: 'أهلاً ' + me + ' 👋', b: 'دي جولة صفحة «الطلبات الدورية».\nالصفحة دي بتتابع الطلبات اللي بنعملها من «الموزع الرئيسي» لفروع أبو سمرة بشكل دوري.\nالطلب ده بيتعمل لوحده من غير ما حد يدخل السيستم: بيدخل على الفرع، يفتح «المخزن ← طلب جديد من الموزع الرئيسي»، يختار نوع الفاتورة والبيان، ويدوس «إرسال».\nكمل معايا خطوة خطوة 👇' },
     { t: 'المواعيد 📅', b: '• فرع مايو، المرج، ارض الجمعية، عزبة 1، التبين، فرع الحوامدية، مكي:\n   كل سبت وتلات الساعة 11 بالليل - بيان إحصائي عن شهر.\n• ابوتيج:\n   كل تلات الساعة 11 بالليل - بيان إحصائي عن شهرين.\n• كلهم نوع الفاتورة «الكل».\nالسيستم بيصحى كل 10 دقايق، فالطلب ممكن يبدأ من 11:00 لحد 11:10 تقريباً. ولو اتأخر لأي سبب بيلحقه طول ما لسه مافاتش 6 ساعات على ميعاده.' },
     { t: 'إيه اللي بيتبعت بالظبط؟ 📦', b: 'الكميات اللي السيستم نفسه بيقترحها في خانة «المطلوب» لما تختار البيان الإحصائي (شهر أو شهرين) - زي ما هي من غير تعديل.\nالأصناف المؤرشفة (اللي اسمها بيبدأ بـ «ييي») بتتصفّر ومش بتظهر في الطلب خالص.\nوالأصناف اللي كميتها صفر مش بتتبعت.' },
-    { el: '#ordGrid', t: 'كروت الفروع 🏪', b: 'كل كارت = فرع.\nلون الشريط اللي على جنب الكارت:\n🔵 أزرق = شغال عادي ولسه مافيش نتيجة نهائية\n🟢 أخضر = آخر طلب تم\n🔴 أحمر = آخر طلب فشل ومحتاج تدخل\n⚪ رمادي = الفرع متوقف' },
+    { el: '#ordGrid', t: 'الأعمدة 🗂️', b: 'كل عمود = نوع شغل بيتعمل لوحده: فاتورة الموزع الرئيسي، العروض الأسبوعية، تحديث الأصناف، والتاسكات المتكررة.\nفي عمود الفاتورة: كل كارت = فروع ليها نفس الأيام والساعة والبيان، وجواه أسماء الفروع.\nالعلامة جنب اسم الفرع: ✅ آخر طلب تم • ❌ فشل • ⏳ شغال • ⏸️ الفرع متوقف.\nدوس على اسم الفرع علشان تفتح تفاصيله، وزرار «＋» فوق العمود بيضيف طلب جديد.' },
     { el: '#ordCard0 .ordSch', t: 'ميعاد الفرع ⏭️', b: 'هنا أيام الفرع وساعته ونوع البيان (شهر أو شهرين).\nوتحتها «الجاي» = إمتى الطلب الجاي هيتعمل بالظبط.\nلو مكتوب «⏸️ متوقف» يبقى الفرع مقفول ومش هيتعمله طلب.' },
     { el: '#ordCard0 .ordSw', t: 'مفتاح «شغال» 🔘', b: 'شيل العلامة علشان توقف الطلبات الدورية للفرع ده (مثلاً الفرع مقفول للجرد، أو في أجازة، أو صاحبه قال مش عايز طلب الأسبوع ده).\nرجّع العلامة علشان يرجع يشتغل في مواعيده.\n⚠️ التوقيف بيوقف المواعيد التلقائية بس، و«اعمله دلوقتي» لسه شغال.' },
     { el: '#ordCard0 .ordLast', t: 'آخر طلب للفرع 🧾', b: 'هنا حالة آخر طلب اتعمل للفرع، ووقت ما بدأ أو اتبعت.\nولما يتم بيظهر:\n🧾 رقم الطلب في السيستم\n📦 عدد الأصناف اللي ليها كمية\n💰 الإجمالي بسعر الشراء\nوتقدر تتأكد منهم في السيستم من: المخزن ← قايمة الطلبات.' },
@@ -3087,6 +3224,7 @@ function ordTourSteps() {
 function ordTour(force) {
   if (!force && ls('ordTour1')) return;
   if ($('pageOrd').classList.contains('hidden') || $('app').classList.contains('hidden')) return;
+  try { const g = ordGroups()[0]; if (g && g.list[0]) { ordOpen[g.list[0].branch] = true; ordRender(); } } catch (e) {}
   tourKey = 'ordTour1';
   tourL = ordTourSteps(); tourI = 0;
   if (!$('tourMask')) document.body.insertAdjacentHTML('beforeend', '<div id="tourMask"></div><div id="tourHole"></div><div id="tourTip"></div>');
@@ -4537,6 +4675,7 @@ function isPaint() {
     failed ? 'تحديث الأصناف فشل' :
     'الأصناف: ' + (s.lastOk ? isClock_(s.lastOk.at) : '—') + ' • الجاي بعد ' + isLeft_(s.next);
   if ($('isBox')) $('isBox').innerHTML = isHtml_();
+  if (ordData && !$('pageOrd').classList.contains('hidden') && !$('dlg')) ordRender();
 }
 function isHtml_() {
   const s = isState;
@@ -4824,6 +4963,7 @@ function woRender() {
   if ($('woDlgBox')) $('woDlgBox').innerHTML = woHtml();
   const nav = $('navStores'); if (nav) nav.classList.toggle('woalarm', !!(wo && wo.missing && !isQA()));
   if (!$('pageStores').classList.contains('hidden') && typeof renderBoard === 'function') renderBoard();
+  if (ordData && !$('pageOrd').classList.contains('hidden') && !$('dlg')) ordRender();
 }
 async function woRun(action, data, okMsg) {
   woBusy = true; woRender();
