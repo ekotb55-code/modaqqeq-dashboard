@@ -328,6 +328,12 @@
   .card { background: var(--card); border-radius: 16px; padding: 12px 14px; margin-bottom: 9px; box-shadow: var(--shadow); cursor: pointer; border-inline-start: 5px solid var(--orange); transition: transform .1s; }
   .card:hover { transform: translateY(-1px); }
   .card.sel { outline: 2.5px solid var(--blue); }
+  /* التاسك / طلب الجرد في مربع التفاصيل */
+  .pane.tpbox { min-height: 0; background: #F7FAFE; margin-bottom: 12px; white-space: pre-wrap; box-shadow: none; padding: 12px 14px; }
+  .tpnone { color: var(--muted); margin-bottom: 12px; }
+  .tpacts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tph { margin: 14px 0 6px; color: var(--navy); }
+  .tplog li { font-size: 14px; padding: 2px 0; }
   .card.st-work { border-inline-start-color: var(--blue); }
   .card.st-done { border-inline-start-color: var(--green); }
   .card .top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
@@ -1265,6 +1271,7 @@ async function loadList(quiet) {
     });
     if (cur && !quiet) openInv(cur.invoice.id, true);
     if (curTk && !quiet) openTk(curTk.ticket.id, true);
+    if (curTask && !cur && !curTk) renderTaskPane();
     $('tkTypesBtn').classList.toggle('hidden', myRole !== 'مدير'); $('tkNewBtn').classList.toggle('hidden', isQA()); $('bsBtn').classList.toggle('hidden', isQA()); $('taskNewBtn').classList.toggle('hidden', isQA());
   } catch (e) { if (!quiet) toast(msg(e)); }
 }
@@ -1478,7 +1485,7 @@ function notifyTk(title, body, id) {
 // ---------- تفاصيل التذكرة ----------
 async function openTk(id, silent) {
   page('inv');
-  cur = null;
+  cur = null; curTask = null;
   $('wrap').classList.add('open'); $('pageInv').classList.add('detail');
   if (!silent) $('detailPane').innerHTML = '<div class="empty"><span class="spin"></span></div>';
   try { curTk = await api('dTicket', { token, id }); renderTk(); renderList(); }
@@ -1635,7 +1642,7 @@ function tkTypeEdit(id) {
 
 // ---------- الفاتورة ----------
 async function openInv(id, silent) {
-  curTk = null;
+  curTk = null; curTask = null;
   $('wrap').classList.add('open');
   $('pageInv').classList.add('detail');
   if (!silent) { $('detailPane').innerHTML = '<div class="empty"><span class="spin"></span></div>'; pIdx = 0; }
@@ -2981,9 +2988,12 @@ function goCard(kind, id) {
   let el = find();
   if (!el) { pickTab('الكل'); el = find(); }
   if (!el) return toast(kind === 'jr' ? 'طلب الجرد ده مش ظاهر - يمكن خلص أو اتلغى' : 'التاسك ده مش ظاهر - يمكن خلص');
-  el.classList.add('open', 'goflash');
+  openTask(kind, id);
+  el = find();
+  if (!el) return;
+  el.classList.add('goflash');
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  setTimeout(() => el.classList.remove('goflash'), 4000);
+  setTimeout(() => { const e2 = find(); if (e2) e2.classList.remove('goflash'); }, 4000);
 }
 function noteGo(go) {
   window.focus();
@@ -3515,14 +3525,56 @@ function taskCard(v, board) {
     '<div class="bm">' + (v.type === 'جرد' ? '📋 من طلب الجرد • ' : '') + 'اتعملت ' + tm(v.createdAt) + ' بواسطة ' + esc(v.createdBy) + '</div>' +
     (done ? '<div class="bm">✅ ' + esc(v.doneBy) + ' • ' + tm(v.doneAt) + (v.data && v.data.progTotal !== undefined ? ' • البرنامج ' + money(v.data.progTotal) + ' = الجرد ' + money(v.data.appTotal) : '') + '</div>' : '');
   if (!board) {
-    return '<div class="card fold" id="task-' + esc(v.id) + '" style="border-inline-start:5px solid #6C4BD8" onclick="if(!event.target.closest(\'button\'))this.classList.toggle(\'open\')">' +
+    return '<div class="card' + (taskSel('task', v.id) ? ' sel' : '') + '" id="task-' + esc(v.id) + '" style="border-inline-start:5px solid #6C4BD8" onclick="openTask(\'task\',\'' + esc(v.id) + '\')">' +
       '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + '</span>' + st + '</div>' +
-      '<div class="sub"><span class="lbl">تاسك:</span> 📋 ' + esc(v.title) + '</div><div class="xbody"><div class="meta">الميعاد ' + dt(v.due) + ' ' + shareBtn('task', v.id, '📋 تاسك: ' + v.title + ' - فرع ' + v.store) + '</div>' + body + btn + '</div></div>';
+      '<div class="sub"><span class="lbl">تاسك:</span> 📋 ' + esc(v.title) + '</div><div class="meta">الميعاد ' + dt(v.due) + '</div></div>';
   }
   return '<div class="bcard k-task' + (done ? ' done' : '') + (late ? ' late' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
     '<div class="bt"><b><span class="kind">📋</span>' + esc(v.title) + (v.to ? ' <small style="color:#4527A0">' + esc(taskToLabel(v.to)) + '</small>' : '') + '</b>' + st + '</div>' +
     '<div class="bm">' + (done ? esc(v.doneBy) + ' • ' + tm(v.doneAt) : 'الميعاد ' + tm(v.due)) + '</div>' + btn +
     '<div class="bx">' + body + '<div style="margin-top:6px">' + shareBtn('task', v.id, '📋 تاسك: ' + v.title + ' - فرع ' + v.store) + '</div></div></div>';
+}
+// ---------- التاسك وطلب الجرد في مربع التفاصيل (بدل ما يتفتحوا في الكارت) ----------
+let curTask = null; // {kind: 'task' | 'jr', id}
+function taskSel(kind, id) { return !!curTask && curTask.kind === kind && curTask.id === id; }
+function openTask(kind, id) {
+  page('inv');
+  cur = null; curTk = null; curTask = { kind, id };
+  $('wrap').classList.add('open'); $('pageInv').classList.add('detail');
+  renderTaskPane(); renderList();
+}
+function renderTaskPane() {
+  if (!curTask) return;
+  const jr = curTask.kind === 'jr', v = (jr ? jrs : tasks).find(x => x.id === curTask.id);
+  if (!v) { curTask = null; $('detailPane').innerHTML = '<div class="empty">👈 اختار فاتورة من القايمة</div>'; closeInv(); return; }
+  const boss = myRole === 'مدير', id = esc(v.id);
+  let h = '<button class="btn ghost back" onclick="closeInv()">→ رجوع للقايمة</button>';
+  if (jr) {
+    const stage = v.status === 'شغال' ? ['', 'التحضير', 'الفرع بيجرد', 'الفرع خلص - رفع الكميات والتقرير'][v.stage] || '' : '';
+    h += '<div class="dhead"><h2>📋 طلب جرد</h2><span class="badge ' + (JR_ST_CLS[v.status] || 'b-new') + '">' + esc(v.status) + '</span><span class="sp"></span>' + shareBtn('jr', v.id, '📋 طلب جرد - فرع ' + v.store) + '</div>';
+    h += '<div class="info">' + i('المحل', v.store) + i('الميعاد', dt(v.at)) + (stage ? i('المرحلة', stage) : '') + (v.user ? i('اللي طلب', v.user) : '') + '</div>';
+    if (v.notes) h += '<div class="pane tpbox"><b>ملاحظات:</b><br>' + esc(v.notes) + '</div>';
+    const acts = v.status === 'مستني الدعم'
+      ? '<button class="btn" onclick="jrDecide(\'' + id + '\',true)">✅ موافق</button><button class="btn soft" onclick="jrOther(\'' + id + '\')">🔁 ميعاد تاني</button>' +
+        (boss ? '<button class="btn soft" onclick="jrCancel(\'' + id + '\')">إلغاء</button>' : '')
+      : v.status === 'شغال' || v.status === 'متثبت' ? jrUploadBtn(v) + '<button class="btn soft" onclick="jrLive(\'' + id + '\',this)">📡 حالة الجرد دلوقتي</button>' +
+        (boss ? '<button class="btn soft" onclick="jrCancel(\'' + id + '\')">إلغاء</button>' : '') : '';
+    if (acts) h += '<div class="tpacts">' + acts + '</div>';
+    h += '<div class="jrlive" data-jr="' + id + '"></div>';
+    if ((v.log || []).length) h += '<h4 class="tph">اللي حصل</h4><ul class="tl tplog">' + v.log.map(e => '<li><span>' + (e.side === 'فرع' ? '🏪' : '🎧') + '</span><span>' + esc(e.text) + (e.by ? ' - ' + esc(e.by) : '') + '</span><span class="tm">' + tm(e.at) + '</span></li>').join('') + '</ul>';
+  } else {
+    const done = v.status !== TASK_OPEN, late = taskLate(v), future = !done && !taskDue(v);
+    const st = done ? '<span class="badge b-done">' + (v.status === 'اتلغت' ? 'اتلغت' : '✓ اتعملت') + '</span>' : late ? '<span class="badge" style="background:#EDE7F6;color:#4527A0">⏰ متأخرة</span>' : future ? '<span class="badge b-new">📅 ' + tm(v.due) + '</span>' : '<span class="badge" style="background:#EDE7F6;color:#4527A0">مفتوحة</span>';
+    h += '<div class="dhead"><h2>📋 ' + esc(v.title) + '</h2>' + st + '<span class="sp"></span>' + shareBtn('task', v.id, '📋 تاسك: ' + v.title + ' - فرع ' + v.store) + '</div>';
+    h += '<div class="info">' + i('المحل', v.store) + i('الميعاد', dt(v.due)) + (v.to ? i('متعملة لـ', taskToLabel(v.to) + ' بس') : '') +
+      i('اتعملت', tm(v.createdAt) + (v.createdBy ? ' - ' + v.createdBy : '')) + (v.type === 'جرد' ? i('النوع', 'من طلب الجرد') : '') +
+      (done ? i(v.status === 'اتلغت' ? 'اتلغت' : 'خلصها', (v.doneBy || '') + (v.doneAt ? ' - ' + tm(v.doneAt) : '')) : '') +
+      (done && v.data && v.data.progTotal !== undefined ? i('البرنامج', money(v.data.progTotal)) + i('الجرد', money(v.data.appTotal)) : '') + '</div>';
+    h += v.details ? '<div class="pane tpbox"><b>التفاصيل:</b><br>' + esc(v.details) + '</div>' : '<div class="tpnone">التاسك دي من غير تفاصيل.</div>';
+    if (!done) h += '<div class="tpacts"><button class="btn" onclick="taskDone(\'' + id + '\')">' + (v.step === 'upload' ? '📤 ارفع على البرنامج وطابق' : '✓ اتعملت') + '</button>' +
+      (boss ? '<button class="btn soft" onclick="taskCancel(\'' + id + '\')">إلغاء</button>' : '') + '</div>';
+  }
+  $('detailPane').innerHTML = h;
 }
 async function taskDone(id) {
   const v = tasks.find(x => x.id === id); if (!v) return;
@@ -3664,6 +3716,7 @@ async function taskCancel(id) {
 async function taskCancelGo(id, allG) { try { const r = await api('dTaskCancel', { token, id, all: allG }, true); closeDlg(); taskApply(r); toast('اتلغت'); } catch (e) { toast(msg(e)); } }
 function taskApply(r) {
   if (r.tasks) tasks = r.tasks; if (r.jrs) jrs = r.jrs;
+  if (curTask) renderTaskPane();
   renderList(); if (!$('pageStores').classList.contains('hidden')) renderBoard();
   if ($('dlg') && $('dlg').dataset.k === 'tasks') tasksDlg();
 }
@@ -3737,10 +3790,9 @@ function jrCard(v, board) {
   const stage = v.status === 'شغال' ? ['', 'التحضير', 'الفرع بيجرد', 'الفرع خلص - رفع الكميات والتقرير'][v.stage] || '' : '';
   const log = '<ul class="tl">' + (v.log || []).map(e => '<li><span>' + (e.side === 'فرع' ? '🏪' : '🎧') + '</span><span>' + esc(e.text) + (e.by ? ' - ' + esc(e.by) : '') + '</span><span class="tm">' + tm(e.at) + '</span></li>').join('') + '</ul>';
   if (!board) {
-    return '<div class="card fold" id="jr-' + esc(v.id) + '" style="border-inline-start:5px solid #00897B" onclick="if(!event.target.closest(\'button\'))this.classList.toggle(\'open\')"><div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + '</span>' + st + '</div>' +
-      '<div class="sub"><span class="lbl">تاسك:</span> 📋 طلب جرد</div><div class="xbody">' +
-      '<div class="meta">الميعاد <b>' + dt(v.at) + '</b>' + (stage ? ' • ' + stage : '') + ' ' + shareBtn('jr', v.id, '📋 طلب جرد - فرع ' + v.store) + '</div>' +
-      (v.notes ? '<div class="meta">' + esc(v.notes) + '</div>' : '') + acts + log + '</div></div>';
+    return '<div class="card' + (taskSel('jr', v.id) ? ' sel' : '') + '" id="jr-' + esc(v.id) + '" style="border-inline-start:5px solid #00897B" onclick="openTask(\'jr\',\'' + esc(v.id) + '\')"><div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + '</span>' + st + '</div>' +
+      '<div class="sub"><span class="lbl">تاسك:</span> 📋 طلب جرد</div>' +
+      '<div class="meta">الميعاد <b>' + dt(v.at) + '</b>' + (stage ? ' • ' + stage : '') + '</div></div>';
   }
   return '<div class="bcard k-jr' + (jrOpenSup(v) ? ' late' : '') + '" onclick="bTap(this,event,()=>this.classList.toggle(\'open\'))">' +
     '<div class="bt"><b><span class="kind">📋</span>طلب جرد • ' + dt(v.at) + '</b>' + st + '</div>' +
