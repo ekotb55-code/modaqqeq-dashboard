@@ -318,6 +318,7 @@
   @media (max-width: 1000px) { .wrap { grid-template-columns: 1fr; } #mainCol { order: -1; } .wrap.open #listPane { display: none; } .wrap:not(.open) #detailPane { display: none; } }
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
   .tabnow { font-size: 14px; color: #4A5868; padding: 2px 4px; }
+  .dbuild { font-size: 11px; color: #A0ABB8; margin-inline-start: auto; align-self: center; }
   .tab { background: #fff; color: var(--text); border: 1.5px solid var(--line); padding: 7px 12px; }
   .tab.on { background: var(--navy); color: #fff; border-color: var(--navy); }
   .tab .n { display: inline-block; min-width: 22px; padding: 0 6px; margin-inline-start: 6px; border-radius: 10px; background: rgba(0,0,0,.08); font-size: 13px; }
@@ -1347,7 +1348,7 @@ function renderList() {
   renderStats(); // الكروت هي الفلاتر وعدّها بيتغير مع المحل والبحث
   const base = baseList();
   const ct = CARD_TABS.find(x => x.k === tab) || CARD_TABS[0];
-  $('tabs').innerHTML = '<span class="tabnow">بتعرض: <b>' + ct.t + '</b></span>';
+  $('tabs').innerHTML = '<span class="tabnow">بتعرض: <b>' + ct.t + '</b></span><span class="dbuild" title="نسخة الداش بورد اللي مفتوحة عندك">نسخة ' + DASH_BUILD + '</span>';
   let list = base.filter(ct.f);
   // الأحدث الأول في المنتهية، والأقدم الأول في الشغالة، والمستعجلة فوق خالص
   if (tab === ST_DONE || tab === 'review') list = list.slice().sort((a, b) => String(b.doneAt || b.solvedAt).localeCompare(String(a.doneAt || a.solvedAt)));
@@ -1752,6 +1753,8 @@ function renderDetail() {
 
 // ---------- ترتيب أصناف الفاتورة (سحب أو أسهم) - بيتحفظ على السيرفر علشان الجودة تشوفه ----------
 let loPend = {}, loTimer = 0, loDragN = null, lnScroll = { id: '', top: 0 };
+// رقم نسخة الداش بورد (بيظهر جنب «بتعرض» علشان نعرف التحديث وصل ولا لأ) - زوّده مع كل تعديل
+const DASH_BUILD = '16/11 - 3';
 function loApplyLocal(lines, order) {
   const pos = {};
   order.forEach((n, i) => { pos[String(n)] = i; });
@@ -1855,7 +1858,11 @@ function renderLines() {
       ? '<span>↕️ الترتيب اتعدّل' + (lo.by ? ' - رتّبها ' + esc(lo.by) : '') + (lo.at ? ' • ' + dt(lo.at) : '') + (loPend[v.id] ? ' • بيتحفظ...' : '') + '</span><button class="mvb" onclick="loReset()">↩️ رجّع الترتيب الأصلي</button>'
       : '<span>↕️ اسحب ⠿ أو دوس ▲▼ علشان ترتّب الأصناف زي ترتيبها في الورقة. و«راجعت» اختيارية' + (lk && canWork ? ' (إلزامية هنا لأن المحل مربوط بالبرنامج)' : '') + '.</span>') + '</div>';
   const newTb = box.querySelector('.tablebox');
-  if (newTb && (keepTop || keepLeft)) { newTb.scrollTop = keepTop; newTb.scrollLeft = keepLeft; lnScroll.top = keepTop; }
+  if (newTb && (keepTop || keepLeft)) {
+    const put = () => { if (newTb.isConnected) { newTb.scrollTop = keepTop; newTb.scrollLeft = keepLeft; } };
+    put(); lnScroll.top = keepTop;
+    requestAnimationFrame(put); // لو الصفحة لسه بتترسم
+  }
   srRender(fl, canWork);
 }
 function srRender(fl, canWork) {
