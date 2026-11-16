@@ -39163,7 +39163,7 @@ k=J
 s=6
 return A.c(A.fe(),$async$aTe)
 case 6:o=l.jS(k.D(b.a,"textScale_v1"))
-if(o!=null&&o>=0.6&&o<=1.6)$.aq4().sp(0,o)
+if(o!=null&&o>=0.45&&o<=1.6)$.aq4().sp(0,o)
 q=1
 s=5
 break
@@ -150878,7 +150878,7 @@ $3(a,b,c){var s,r,q,p,o=null,n=A.a([],t.p)
 for(s=new A.dF($.bFr,A.r($.bFr).i("dF<1,2>")).gaj(0);s.q();){r=s.d
 q=r.b
 p=r.a
-n.push(A.Z4(A.p(q,o,o,o,o,o,new A.x(!0,o,o,o,o,o,13*p,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o),o,o,o),new A.aTc(r),Math.abs(b-p)<0.01))}return A.A2(B.UO,n,B.fk,6,6)},
+n.push(A.Z4(A.p(q,o,o,o,o,o,new A.x(!0,o,o,o,o,o,10+4*p,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o),o,o,o),new A.aTc(r),Math.abs(b-p)<0.01))}return A.A2(B.UO,n,B.fk,6,6)},
 $S:927}
 A.aTc.prototype={
 $1(a){return A.aTf(this.a.a)},
@@ -171872,7 +171872,7 @@ $.a75=""
 $.bEn=!1
 $.bCU=null
 $.bUf=A.B(t.N,A.ay("DW"))
-$.bFr=A.a8([0.8,"\u0635\u063a\u064a\u0631 \u062c\u062f\u0627\u064b",0.9,"\u0635\u063a\u064a\u0631",1,"\u0639\u0627\u062f\u064a",1.15,"\u0643\u0628\u064a\u0631",1.3,"\u0643\u0628\u064a\u0631 \u0642\u0648\u064a"],t.i,t.N)
+$.bFr=A.a8([0.5,"\u0623\u0635\u063a\u0631 \u062d\u0627\u062c\u0629",0.6,"\u0635\u063a\u064a\u0631 \u0642\u0648\u064a",0.7,"\u0623\u0635\u063a\u0631",0.8,"\u0635\u063a\u064a\u0631 \u062c\u062f\u0627\u064b",0.9,"\u0635\u063a\u064a\u0631",1,"\u0639\u0627\u062f\u064a",1.15,"\u0643\u0628\u064a\u0631",1.3,"\u0643\u0628\u064a\u0631 \u0642\u0648\u064a"],t.i,t.N)
 $.aQd=null
 $.bF6=!1
 $.a9a=0
