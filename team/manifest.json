@@ -1,7 +1,7 @@
 {
   "name": "جرد مدقق - الفريق",
   "short_name": "جرد مدقق - الفريق",
-  "start_url": ".",
+  "id": "./?app=team", "start_url": ".",
   "scope": ".",
   "display": "standalone",
   "background_color": "#F3F7FC",
