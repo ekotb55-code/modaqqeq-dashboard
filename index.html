@@ -102,6 +102,14 @@
   .umoff { grid-column: 1 / -1; font-size: 12px; color: #B3261E; margin-top: -4px; }
   .umspark { display: flex; align-items: flex-end; gap: 2px; height: 54px; margin: 6px 0 2px; direction: ltr; }
   .umspark i { flex: 1; background: #9FC3EA; border-radius: 2px 2px 0 0; min-height: 1px; }
+  /* 🖼️ عداد سيرفر تطبيق الصور (حساب pos-assist) - بنفسجي علشان يبان إنه حاجة تانية غير عداد الدليل */
+  .isp.iip { background: #F3E8FD; color: #6A1B9A; border-color: #DCC3F5; }
+  .isp.iip.warn { background: #FFF6E0; color: #9A6700; border-color: #F5DD9C; }
+  .isp.iip.bad { background: #FDECEA; color: #B3261E; border-color: #F5C2BD; }
+  .iibox h3, .iibox h4 { color: #6A1B9A; }
+  .iibox .umrow .umbar { color: #8E24AA; }
+  .iibox .umspark i { background: #CE93D8; }
+  .iibox .iitag { display: inline-block; background: #F3E8FD; color: #6A1B9A; border: 1px solid #DCC3F5; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700; }
   .umnote { font-size: 12px; color: var(--muted); line-height: 1.7; }
   .isbox h3 { margin: 0 0 10px; }
   .isrow { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #EEF2F7; font-size: 14px; }
@@ -781,6 +789,8 @@
     /* عداد الاستهلاك صغير: نسبة بس بلونها (من غير الشريط و 🌐) */
     #umPill { padding: 4px 7px; font-size: 11px; gap: 0; }
     #umPill .umbar, #umPill .umico { display: none; }
+    #iiPill { padding: 4px 7px; font-size: 11px; gap: 0; }
+    #iiPill .umbar, #iiPill .umico { display: none; }
     html, body { overflow-x: clip; }
     /* الموبايل: عمودين جنب بعض (نص العرض) والكروت أصغر */
     .board { gap: 8px; }
@@ -850,6 +860,7 @@
       <span class="sp"></span>
       <span class="net good" id="netPill" onclick="netInfo()" title="سرعة النت"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><span id="netTxt">النت...</span></span>
       <span class="isp hidden" id="umPill" onclick="umDlg()" title="استهلاك جوجل لطلبات النت من السكريبت (آخر 24 ساعة)"><span class="umico">🌐</span> <span class="umbar"><i></i></span> <span id="umTxt"></span></span>
+      <span class="isp iip hidden" id="iiPill" onclick="iiuDlg()" title="استهلاك سيرفر تطبيق الصور (حساب pos-assist) النهارده"><span class="umico">🖼️</span> <span class="umbar"><i></i></span> <span id="iiTxt"></span></span>
       <span class="isp hidden" id="isPill" onclick="isDlg()" title="تحديث شيت أصناف المخزن من السيستم">📦 <span id="isTxt">الأصناف...</span></span>
       <button class="btn soft bell" id="bellBtn" onclick="enableAlerts()" title="الإشعارات والصوت">🔔</button>
       <button class="btn soft" onclick="loadList()" title="تحديث">⟳</button>
@@ -4570,7 +4581,7 @@ const UM_NAMES = {
 };
 function umStart() { umLoad(); setInterval(umLoad, 5 * 60000); }
 async function umLoad() {
-  try { um = await api('dUsage', { token }); umPaint(); } catch (e) { /* السكريبت لسه ما اتحدّثش: العداد يفضل مستخبي */ }
+  try { um = await api('dUsage', { token }); umPaint(); iiuLoad(); } catch (e) { /* السكريبت لسه ما اتحدّثش: العداد يفضل مستخبي */ }
 }
 function umPct() { return um && um.limit ? Math.round(um.used / um.limit * 100) : 0; }
 function umCls() { const p = umPct(); return um.blocked || p >= 90 ? 'bad' : p >= 70 ? 'warn' : ''; }
@@ -4634,6 +4645,82 @@ async function umSw(key, off) {
     toast(off ? 'اتوقفت: ' + name : 'اشتغلت: ' + name);
   } catch (e) { toast(msg(e)); }
   umSwBusy = false;
+}
+
+// ---------- 🖼️ عداد سيرفر تطبيق الصور (سكريبت لوحده على حساب pos-assist@modaqqeq.com) ----------
+// السيرفر ده ليه حد يومي لوحده (مش من حد «دليل الموظفين»). بيظهر لنفس اللي بيشوفوا عداد 🌐.
+// القفل والفتح للمدير بس: السيرفر بيتأكد من التوكن ده عن طريق «دليل الموظفين».
+const II_API = 'https://script.google.com/macros/s/AKfycbyvFXAEMIC3d9MoupDDlUirRAkKzJ3d2B4JKMRgT3MApkkotS2VPBVEE12psaJu1l8M/exec';
+const II_NAMES = {
+  scan: '🔍 تجهيز الأصناف في الخلفية', peek: '👀 صور الأصناف اللي على الشاشة', save: '💾 حفظ الصور (ومعاها اللوجو)',
+  find: '🔎 البحث بالباركود', logo: '🏷️ اللوجو على الصور القديمة', other: '❔ حاجات تانية (التأكد من المدير...)'
+};
+let iiu = null, iiuBusy = false;
+async function iiApi(action, data) {
+  let res;
+  try { res = await fetch(II_API + '?action=' + action + (data ? '&data=' + encodeURIComponent(JSON.stringify(data)) : '')); }
+  catch (e) { throw new Error('سيرفر الصور ما ردّش - حاول تاني كمان شوية'); }
+  let j = null;
+  try { j = await res.json(); } catch (e) { throw new Error('سيرفر الصور ما ردّش صح - حاول تاني كمان شوية'); }
+  if (!j.ok) throw new Error(j.error || 'حصلت مشكلة في سيرفر الصور');
+  return j;
+}
+async function iiuLoad() {
+  try { iiu = await iiApi('imgUsage'); iiuPaint(); } catch (e) { /* سيرفر الصور ما ردّش: العداد يفضل زي ما هو */ }
+}
+function iiuPct() { return iiu && iiu.limit ? Math.round(iiu.used / iiu.limit * 100) : 0; }
+function iiuPaint() {
+  const p = $('iiPill');
+  if (!p || !iiu) return;
+  const pc = iiuPct();
+  p.className = 'isp iip' + (pc >= 90 ? ' bad' : pc >= 70 ? ' warn' : '');
+  p.style.setProperty('--um', Math.min(100, pc) + '%');
+  $('iiTxt').textContent = pc + '%';
+  if ($('iiBox')) $('iiBox').innerHTML = iiuHtml();
+}
+function iiuHtml() {
+  if (!iiu) return '<div class="empty"><span class="spin"></span></div>';
+  const pc = iiuPct(), col = pc >= 90 ? '#D93025' : pc >= 70 ? '#E0A100' : '#8E24AA', boss = !!(um && um.boss);
+  let h = '<h3>🖼️ سيرفر تطبيق الصور</h3><div style="text-align:center"><span class="iitag">حساب pos-assist@modaqqeq.com</span></div>' +
+    '<div class="isbig">' + umN(iiu.used) + ' <small style="font-size:14px;color:var(--muted)">من ' + umN(iiu.limit) + ' • ' + pc + '%</small></div>' +
+    '<div class="umbig"><i style="width:' + Math.min(100, pc) + '%;background:' + col + '"></i></div>' +
+    '<div class="umnote">النهارده (بيتصفّر 12 بالليل) • فاضل تقريباً <b>' + umN(Math.max(0, iiu.limit - iiu.used)) + '</b> طلب' +
+    ' • التجهيز في الخلفية بيقف لوحده عند ' + umN(iiu.scanLimit) + '</div>';
+  const sw = iiu.sw || [], off = iiu.off || {}, all = Object.assign({}, iiu.by || {});
+  sw.forEach(k => { if (!(k in all)) all[k] = 0; });
+  const tot = Object.keys(all).reduce((t, k) => t + all[k], 0);
+  const by = Object.keys(all).map(k => ({ k, n: all[k] })).sort((a, b) => b.n - a.n);
+  h += '<h4 style="margin:14px 0 4px">مين اللي بيصرف</h4>';
+  h += by.map(x => {
+    const can = sw.indexOf(x.k) !== -1, o = off[x.k];
+    return '<div class="umrow sw' + (o ? ' off' : '') + '"><span>' + esc(II_NAMES[x.k] || x.k) + '</span><b>' + umN(x.n) + '</b>' +
+      '<span class="umbar" style="--um:' + (tot ? Math.round(x.n / tot * 100) : 0) + '%"><i></i></span>' +
+      (!can ? '<span></span>'
+        : '<button class="umsw' + (o ? ' off' : '') + '"' + (boss ? ' onclick="iiuSw(\'' + x.k + '\',' + (o ? 'false' : 'true') + ')"' : ' disabled') +
+          ' title="' + (boss ? (o ? 'دوس علشان تشغّلها' : 'دوس علشان توقفها') : 'الإيقاف والتشغيل للمدير بس') + '">' + (o ? '⛔ واقف' : '✅ شغّال') + '</button>') +
+      (o ? '<div class="umoff">موقوفة من ' + woWhen(o.at) + (o.by ? ' • وقّفها ' + esc(o.by) : '') + '</div>' : '') + '</div>';
+  }).join('');
+  h += '<div class="umnote" style="margin-top:6px">' + (boss
+    ? 'الخدمة الموقوفة مابتصرفش من رصيد سيرفر الصور، واللي يحاول يستخدمها في تطبيق الصور بتطلعله رسالة إنها موقوفة مؤقتًا.'
+    : 'إيقاف وتشغيل الخدمات للمدير بس.') + '</div>';
+  const mx = Math.max(1, ...(iiu.hours || []));
+  h += '<h4 style="margin:14px 0 0">كل ساعة (من 24 ساعة لدلوقتي)</h4><div class="umspark">' +
+    (iiu.hours || []).map(n => '<i style="height:' + Math.max(2, Math.round(n / mx * 100)) + '%" title="' + umN(n) + '"></i>').join('') + '</div>';
+  h += '<div class="umnote" style="margin-top:10px">ده رصيد سيرفر تطبيق الصور لوحده - مش من رصيد «دليل الموظفين» (عداد 🌐). التفصيل بالخدمة شغال من 17/11.</div>';
+  return h;
+}
+function iiuDlg() { dlg('<div id="iiBox" class="iibox">' + iiuHtml() + '</div>'); iiuLoad(); }
+async function iiuSw(key, off) {
+  if (iiuBusy) return;
+  const name = II_NAMES[key] || key;
+  if (!confirm(off ? 'توقف «' + name + '» في تطبيق الصور؟\nهتفضل واقفة لحد ما تشغّلها تاني.' : 'تشغّل «' + name + '» تاني؟')) return;
+  iiuBusy = true;
+  try {
+    iiu = await iiApi('imgUsageSet', { token, key, off, by: me });
+    iiuPaint();
+    toast(off ? 'اتوقفت: ' + name : 'اشتغلت: ' + name);
+  } catch (e) { toast(msg(e)); }
+  iiuBusy = false;
 }
 
 // ---------- 🏷️ عروض أبو سمرة الأسبوعية (تاسك دوري) ----------
