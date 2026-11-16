@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>طباعة باركود المناطق - مدقق</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root { --blue: #0A2E57; --teal: #0E8C9A; --line: #d6dde6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Cairo', Tahoma, sans-serif; background: #eef3f8; color: #12233a; }
+  .bar { background: linear-gradient(90deg, var(--teal), var(--blue)); color: #fff; padding: 14px 16px; }
+  .bar h1 { margin: 0; font-size: 19px; }
+  .bar p { margin: 2px 0 0; font-size: 13px; opacity: .85; }
+  .opts { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; padding: 14px 16px; background: #fff; border-bottom: 1px solid var(--line); }
+  .opts label[hidden] { display: none; }
+  .opts label { display: flex; flex-direction: column; font-size: 13px; font-weight: 700; gap: 4px; }
+  .opts select, .opts input { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; min-width: 120px; }
+  .opts button { font: inherit; font-weight: 900; border: 0; border-radius: 12px; padding: 10px 22px; background: var(--blue); color: #fff; cursor: pointer; }
+  .note { padding: 10px 16px; font-size: 13px; color: #556; }
+  #sheet { display: flex; flex-wrap: wrap; gap: 4mm; justify-content: center; padding: 6mm; }
+  .lbl { width: var(--w); height: var(--h); background: #fff; border: 1px dashed #9aa8b8; border-radius: 3mm;
+         display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 3mm; overflow: hidden; break-inside: avoid; }
+  .lbl img.logo { height: calc(var(--h) * .12); max-width: 70%; object-fit: contain; }
+  .lbl .qr { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+  .lbl .qr img, .lbl .qr canvas { width: var(--q) !important; height: var(--q) !important; }
+  .lbl .z { font-weight: 900; font-size: var(--fz); line-height: 1.2; text-align: center; color: var(--blue); }
+  .lbl .b { font-size: calc(var(--fz) * .55); color: #556; text-align: center; }
+  .empty { text-align: center; padding: 60px 16px; color: #556; }
+  @media print {
+    body { background: #fff; }
+    .bar, .opts, .note { display: none !important; }
+    #sheet { padding: 0; gap: 3mm; }
+    .lbl { border-color: #bbb; }
+    @page { margin: 6mm; }
+  }
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>🖨️ طباعة باركود المناطق</h1>
+  <p id="sub">جرد مدقق - الفريق</p>
+</div>
+<div class="opts">
+  <label>مقاس الملصق
+    <select id="size">
+      <option value="100x70">100 × 70 مم (كبير)</option>
+      <option value="70x50" selected>70 × 50 مم (متوسط)</option>
+      <option value="50x40">50 × 40 مم (صغير)</option>
+      <option value="custom">مقاس تاني...</option>
+    </select>
+  </label>
+  <label id="cw" hidden>العرض (مم)<input id="w" type="number" min="30" max="200" value="80"></label>
+  <label id="ch" hidden>الطول (مم)<input id="h" type="number" min="30" max="280" value="60"></label>
+  <label>عدد النسخ من كل منطقة<input id="copies" type="number" min="1" max="20" value="1"></label>
+  <button id="go">اطبع</button>
+</div>
+<div class="note">كل ملصق عليه لوجو مدقق واسم الفرع والمنطقة. الزق كل ملصق على المنطقة بتاعته في مكان واضح.</div>
+<div id="sheet"></div>
+<script>
+  const qs = new URLSearchParams(location.search);
+  const branch = qs.get('b') || '';
+  const zones = qs.getAll('z').map(z => z.trim()).filter(Boolean);
+  const $ = id => document.getElementById(id);
+  // UTF-8 → base64url من غير = (نفس اللي في التطبيق)
+  const b64 = t => btoa(String.fromCharCode(...new TextEncoder().encode(t))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  $('sub').textContent = branch ? 'فرع: ' + branch + ' • ' + zones.length + ' منطقة' : 'جرد مدقق - الفريق';
+
+  function dims() {
+    const v = $('size').value;
+    $('cw').hidden = $('ch').hidden = v !== 'custom';
+    if (v === 'custom') return [Number($('w').value) || 80, Number($('h').value) || 60];
+    return v.split('x').map(Number);
+  }
+
+  function render() {
+    const sheet = $('sheet');
+    sheet.innerHTML = '';
+    if (!branch || !zones.length) {
+      sheet.innerHTML = '<div class="empty">مفيش مناطق - افتح الصفحة دي من تطبيق «جرد مدقق - الفريق» ← مناطق الجرد ← زرار الطباعة</div>';
+      return;
+    }
+    const [w, h] = dims();
+    const q = Math.min(w * 0.62, h * 0.58);
+    sheet.style.setProperty('--w', w + 'mm');
+    sheet.style.setProperty('--h', h + 'mm');
+    sheet.style.setProperty('--q', q + 'mm');
+    sheet.style.setProperty('--fz', Math.max(10, Math.min(w, h) * 0.28) + 'pt');
+    const copies = Math.max(1, Math.min(20, Number($('copies').value) || 1));
+    for (const z of zones) {
+      for (let i = 0; i < copies; i++) {
+        const d = document.createElement('div');
+        d.className = 'lbl';
+        d.innerHTML = '<img class="logo" src="../logo_wide.png" alt="مدقق"><div class="qr"></div><div><div class="z"></div><div class="b"></div></div>';
+        d.querySelector('.z').textContent = z;
+        d.querySelector('.b').textContent = branch;
+        sheet.appendChild(d);
+        // نفس الصيغة اللي التطبيق بيقراها: MZ1|الفرع|المنطقة (الأسامي متشفّرة base64 بحروف إنجليزي علشان أي قارئ يقراها)
+        new QRCode(d.querySelector('.qr'), { text: 'MZ1|' + b64(branch) + '|' + b64(z), width: 512, height: 512, correctLevel: QRCode.CorrectLevel.M });
+      }
+    }
+  }
+
+  ['size', 'w', 'h', 'copies'].forEach(id => $(id).addEventListener('input', render));
+  $('go').onclick = () => window.print();
+  render();
+</script>
+</body>
+</html>
