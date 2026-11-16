@@ -92,6 +92,13 @@
   .umbig i { display: block; height: 100%; border-radius: 6px; }
   .umrow { display: grid; grid-template-columns: 1fr auto 70px; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid #EEF2F7; font-size: 14px; }
   .umrow .umbar { width: 70px; color: #1460A8; }
+  /* مفتاح إيقاف/تشغيل الخدمة */
+  .umrow.sw { grid-template-columns: 1fr auto 70px 74px; }
+  .umrow.off > span:first-child { color: #B3261E; }
+  .umsw { border: 0; border-radius: 999px; padding: 5px 0; width: 74px; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; background: #E7F6EC; color: #1E7D3A; }
+  .umsw.off { background: #FDECEA; color: #B3261E; }
+  .umsw[disabled] { cursor: default; opacity: .75; }
+  .umoff { grid-column: 1 / -1; font-size: 12px; color: #B3261E; margin-top: -4px; }
   .umspark { display: flex; align-items: flex-end; gap: 2px; height: 54px; margin: 6px 0 2px; direction: ltr; }
   .umspark i { flex: 1; background: #9FC3EA; border-radius: 2px 2px 0 0; min-height: 1px; }
   .umnote { font-size: 12px; color: var(--muted); line-height: 1.7; }
@@ -4010,7 +4017,7 @@ async function isNow() {
 let um = null;
 const UM_NAMES = {
   BranchSync: '🔄 مزامنة فروع أبو سمرة', PosPurchase: '🧾 رفع المشتريات على البرنامج', WeeklyOffers: '🏷️ العروض الأسبوعية',
-  JardCentral: '📋 الجرد وعلامة الجرد', ItemImages: '🖼️ صور الأصناف', PosImages: '🖼️ صور الأصناف', ItemsSync: '📦 تحديث شيت الأصناف',
+  JardCentral: '📋 سحب الأصناف وعلامة الجرد', ItemImages: '🖼️ صور الأصناف', PosImages: '🖼️ صور الأصناف', ItemsSync: '📦 تحديث شيت الأصناف',
   Invoices: '🔔 الفواتير والإشعارات', ShopReview: '👀 مراجعة الأسعار', PosLink: '🔗 ربط البرنامج', PosConfig: '🔗 ربط البرنامج',
   RandomCount: '🎲 الجرد العشوائي', Receiving: '📥 استلام فواتير المخزن', Spot: '📍 Spot', UsageMeter: '🌐 العداد', 'تاني': '❔ حاجات تانية'
 };
@@ -4041,11 +4048,23 @@ function umHtml() {
     h += '<div class="revbox bad" style="margin-top:10px">🚨 جوجل وقفت طلبات النت من ' + woWhen(um.blocked) + '<br>' +
       'رفع المشتريات ومزامنة الفروع والعروض وصور الأصناف واقفين لحد ما الحد يرجع لوحده (بعد 24 ساعة من أول طلب في اليوم).</div>';
   }
-  const by = Object.keys(um.by || {}).map(k => ({ k, n: um.by[k] })).sort((a, b) => b.n - a.n);
+  // الخدمات اللي ليها مفتاح بتظهر دايمًا (حتى لو لسه ما صرفتش)
+  const sw = um.sw || [], off = um.off || {}, all = Object.assign({}, um.by || {});
+  sw.forEach(k => { if (!(k in all)) all[k] = 0; });
+  const by = Object.keys(all).map(k => ({ k, n: all[k] })).sort((a, b) => b.n - a.n);
   h += '<h4 style="margin:14px 0 4px">مين اللي بيصرف</h4>';
-  h += by.length ? by.map(x => '<div class="umrow"><span>' + esc(UM_NAMES[x.k] || x.k) + '</span><b>' + umN(x.n) + '</b>' +
-    '<span class="umbar" style="--um:' + (um.used ? Math.round(x.n / um.used * 100) : 0) + '%"><i></i></span></div>').join('')
-    : '<div class="umnote">لسه مفيش طلبات اتعدّت.</div>';
+  h += by.length ? by.map(x => {
+    const can = sw.indexOf(x.k) !== -1, o = off[x.k];
+    return '<div class="umrow' + (sw.length ? ' sw' : '') + (o ? ' off' : '') + '"><span>' + esc(UM_NAMES[x.k] || x.k) + '</span><b>' + umN(x.n) + '</b>' +
+      '<span class="umbar" style="--um:' + (um.used ? Math.round(x.n / um.used * 100) : 0) + '%"><i></i></span>' +
+      (!sw.length ? '' : !can ? '<span></span>'
+        : '<button class="umsw' + (o ? ' off' : '') + '"' + (um.boss ? ' onclick="umSw(\'' + x.k + '\',' + (o ? 'false' : 'true') + ')"' : ' disabled') +
+          ' title="' + (um.boss ? (o ? 'دوس علشان تشغّلها' : 'دوس علشان توقفها') : 'الإيقاف والتشغيل للمدير بس') + '">' + (o ? '⛔ واقف' : '✅ شغّال') + '</button>') +
+      (o ? '<div class="umoff">موقوفة من ' + woWhen(o.at) + (o.by ? ' • وقّفها ' + esc(o.by) : '') + '</div>' : '') + '</div>';
+  }).join('') : '<div class="umnote">لسه مفيش طلبات اتعدّت.</div>';
+  if (sw.length) h += '<div class="umnote" style="margin-top:6px">' + (um.boss
+    ? 'الخدمة الموقوفة مابتصرفش من طلبات جوجل، واللي يحاول يستخدمها بتطلعله رسالة إنها موقوفة مؤقتًا.'
+    : 'إيقاف وتشغيل الخدمات للمدير بس.') + '</div>';
   const mx = Math.max(1, ...(um.hours || []));
   h += '<h4 style="margin:14px 0 0">كل ساعة (من 24 ساعة لدلوقتي)</h4><div class="umspark">' +
     (um.hours || []).map(n => '<i style="height:' + Math.max(2, Math.round(n / mx * 100)) + '%" title="' + umN(n) + '"></i>').join('') + '</div>';
@@ -4055,6 +4074,20 @@ function umHtml() {
   return h;
 }
 function umDlg() { dlg('<div id="umBox">' + umHtml() + '</div>'); umLoad(); }
+// إيقاف / تشغيل خدمة (المدير بس)
+let umSwBusy = false;
+async function umSw(key, off) {
+  if (umSwBusy) return;
+  const name = UM_NAMES[key] || key;
+  if (!confirm(off ? 'توقف «' + name + '»؟\nهتفضل واقفة في كل المحلات لحد ما تشغّلها تاني.' : 'تشغّل «' + name + '» تاني؟')) return;
+  umSwBusy = true;
+  try {
+    um = await api('dUsageSet', { token, key, off });
+    umPaint();
+    toast(off ? 'اتوقفت: ' + name : 'اشتغلت: ' + name);
+  } catch (e) { toast(msg(e)); }
+  umSwBusy = false;
+}
 
 // ---------- 🏷️ عروض أبو سمرة الأسبوعية (تاسك دوري) ----------
 // الجمعة 5 الفجر الأصناف بتتنقل لتصنيف العروض في المخزن الرئيسي، والاتنين 1 بالليل بترجع لتصنيفها
