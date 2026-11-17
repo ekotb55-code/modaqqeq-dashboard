@@ -31,7 +31,7 @@
 
   /* ===== الملصق ===== */
   #sheet { display: flex; flex-wrap: wrap; gap: 4mm; justify-content: center; padding: 6mm; }
-  .lbl { width: var(--w); height: var(--h); background: #fff; outline: 1px dashed #9aa8b8; padding: var(--p);
+  .lbl { position: relative; width: var(--w); height: var(--h); background: #fff; outline: 1px dashed #9aa8b8; padding: var(--p);
          display: flex; gap: var(--p); overflow: hidden; break-inside: avoid; page-break-inside: avoid; color: var(--blue); }
   .lbl .qr { flex: none; width: var(--q); height: var(--q); align-self: center; }
   .lbl .qr img, .lbl .qr canvas { width: 100% !important; height: 100% !important; display: block; image-rendering: pixelated; }
@@ -65,9 +65,35 @@
   .lbl.tall .b { width: 100%; }
   .lbl.tall .z { flex: 1; width: 100%; }
 
+  /* اسم المحل */
+  .lbl .s { font-weight: 900; color: var(--blue); text-align: center; white-space: nowrap; overflow: hidden; line-height: 1.2; width: 100%; }
+  /* لوجو أو اسم محل اتحطّوا بالإيد: مكانهم بالنسبة للملصق */
+  .lbl .free { position: absolute !important; margin: 0 !important; }
+  .lbl img.free { height: auto !important; max-width: none !important; }
+  .lbl .s.free { display: flex; align-items: center; justify-content: center; white-space: normal; word-break: break-word; line-height: 1.1; }
+
+  /* شاشة تحريك اللوجو واسم المحل */
+  #ed { position: fixed; inset: 0; background: rgba(10, 30, 55, .55); z-index: 50; display: flex; align-items: flex-start; justify-content: center; overflow: auto; padding: 16px; }
+  #ed[hidden] { display: none; }
+  .edbox { background: #fff; border-radius: 16px; padding: 16px; width: min(760px, 100%); box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+  .edbox h2 { margin: 0 0 4px; font-size: 18px; color: var(--blue); }
+  .edbox p { margin: 0 0 10px; font-size: 13px; color: #556; }
+  #edwarn { min-height: 22px; font-size: 13px; font-weight: 700; color: #c62828; }
+  #edstage { position: relative; margin: 10px auto; direction: ltr; touch-action: none; }
+  #edstage .lbl { position: absolute; left: 0; top: 0; transform-origin: 0 0; direction: rtl; outline: 1px solid #9aa8b8; }
+  #edstage .mv { cursor: move; outline: .25mm dashed #1479D3; outline-offset: .3mm; touch-action: none; user-select: none; -webkit-user-drag: none; }
+  #edstage .hd { position: absolute; right: -1.6mm; bottom: -1.6mm; width: 3.2mm; height: 3.2mm; background: #1479D3; border: .4mm solid #fff; border-radius: 50%; cursor: nwse-resize; touch-action: none; }
+  #edstage .s.ph { color: #9aa8b8; }
+  .edbtns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start; }
+  .edbtns button { font: inherit; font-weight: 900; border: 0; border-radius: 12px; padding: 9px 20px; cursor: pointer; }
+  #edsave { background: var(--blue); color: #fff; }
+  #edreset { background: #eef3f8; color: var(--blue); }
+  #edcancel { background: transparent; color: #556; }
+  .opts .ghost { background: #eef3f8; color: var(--blue); }
+
   @media print {
     body { background: #fff; }
-    .bar, .opts, .note { display: none !important; }
+    .bar, .opts, .note, #ed { display: none !important; }
     #sheet { padding: 0; gap: 2mm; justify-content: flex-start; }
     .lbl { outline: .2mm dashed #c4c4c4; }  /* خط قص خفيف على الورقة العادية */
     body.roll #sheet { display: block; gap: 0; }
@@ -111,12 +137,27 @@
   <label id="ch" hidden>الطول (مم)<input id="h" type="number" min="20" max="280" value="60"></label>
   <label id="rf" hidden>من رقم<input id="from" type="number" min="1" max="9999" value="1"></label>
   <label id="rt" hidden>لحد رقم<input id="to" type="number" min="1" max="9999" value="40"></label>
+  <label>اسم المحل (اختياري)<input id="shop" type="text" maxlength="60" placeholder="مثلاً: ماركت عمرو مصطفى"></label>
   <label>تاريخ الجرد (اختياري)<input id="date" type="date"></label>
   <label>عدد النسخ من كل منطقة<input id="copies" type="number" min="1" max="20" value="1"></label>
+  <button id="edit" class="ghost" type="button">✋ مكان اللوجو واسم المحل</button>
   <button id="go">اطبع</button>
 </div>
 <div class="note" id="note"></div>
 <div id="sheet"></div>
+<div id="ed" hidden>
+  <div class="edbox">
+    <h2>✋ حرّك اللوجو واسم المحل</h2>
+    <p>اسحبهم بالماوس أو بصباعك. الدايرة الزرقا اللي في الركن بتكبّر وتصغّر. المكان بيتحفظ للمقاس ده، وكل الاستيكرات بتتطبع بيه.</p>
+    <div id="edwarn"></div>
+    <div id="edstage"></div>
+    <div class="edbtns">
+      <button id="edsave" type="button">حفظ</button>
+      <button id="edreset" type="button">رجّعهم زي الأول</button>
+      <button id="edcancel" type="button">إلغاء</button>
+    </div>
+  </div>
+</div>
 <script>
   const qs = new URLSearchParams(location.search);
   const branch = qs.get('b') || '';
@@ -141,9 +182,10 @@
     if (o.h) $('h').value = o.h;
     if (o.from) $('from').value = o.from;
     if (o.to) $('to').value = o.to;
+    if (o.shop) $('shop').value = o.shop;
   } catch (_) {}
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify({ mode: $('mode').value, size: $('size').value, w: $('w').value, h: $('h').value, from: $('from').value, to: $('to').value })); } catch (_) {}
+    try { localStorage.setItem(KEY, JSON.stringify({ mode: $('mode').value, size: $('size').value, w: $('w').value, h: $('h').value, from: $('from').value, to: $('to').value, shop: $('shop').value })); } catch (_) {}
   }
 
   const pad = n => String(n).padStart(2, '0');
@@ -174,30 +216,27 @@
     }
   }
 
-  function render() {
-    save();
-    const sheet = $('sheet');
-    sheet.innerHTML = '';
-    const roll = $('mode').value === 'roll';
-    document.body.classList.toggle('roll', roll);
-    $('note').textContent = roll
-      ? 'كل ملصق هيطلع لوحده بمقاس الملصق بالظبط. في شاشة الطباعة اختار طابعة الملصقات وخلّي المقاس زي المقاس هنا والهوامش «بدون».'
-      : 'الملصقات هتترص جنب بعض على الورقة وحواليها خط قص خفيف.';
-    // الملصقات اللي هتتطبع: {n: رقم} أو {z: اسم المنطقة}
-    let list;
+  // ===== أماكن اللوجو واسم المحل اللي اتحطّت بالإيد (لكل مقاس لوحده) =====
+  const LKEY = 'teamPrintLayout';
+  function layouts() { try { return JSON.parse(localStorage.getItem(LKEY) || '{}') || {}; } catch (_) { return {}; } }
+  function saveLayouts(all) { try { localStorage.setItem(LKEY, JSON.stringify(all)); } catch (_) {} }
+  const sizeKey = () => dims().join('x');
+
+  // الملصقات اللي هتتطبع: {n: رقم} أو {z: اسم المنطقة}
+  function items() {
     if (rangeMode) {
       let a = Math.max(1, Math.floor(Number($('from').value) || 1)), b = Math.max(1, Math.floor(Number($('to').value) || a));
       if (b < a) [a, b] = [b, a];
       b = Math.min(b, a + 499);
-      list = [];
+      const list = [];
       for (let i = a; i <= b; i++) list.push({ n: i });
-    } else {
-      list = nums.map(n => ({ n })).concat(branch ? zones.map(z => ({ z })) : []);
+      return list;
     }
-    if (!list.length) {
-      sheet.innerHTML = '<div class="empty">مفيش مناطق تتطبع</div>';
-      return;
-    }
+    return nums.map(n => ({ n })).concat(branch ? zones.map(z => ({ z })) : []);
+  }
+
+  // مقاسات الملصق وأماكن الحاجات جواه
+  function context(list) {
     const [w, h] = dims();
     const p = Math.max(1.2, Math.min(w, h) * 0.04);           // هامش صغير جوه الملصق
     // الاستيكرات المترقّمة بس: الرقم جنب الـQR من أول مقاس شبه مربع (زي 55×45) علشان الرقم يطلع كبير
@@ -212,55 +251,234 @@
       const textH = Math.max(h * 0.22, 9);                       // مكان اسم المنطقة والفرع
       q = Math.min(w - 2 * p, h - 2 * p - lh - textH - 1.2);
     }
-    $('pg').textContent = roll ? '@page { size: ' + w + 'mm ' + h + 'mm; margin: 0; }' : '@page { size: A4; margin: 5mm; }';
-    sheet.style.setProperty('--w', w + 'mm');
-    sheet.style.setProperty('--h', h + 'mm');
-    sheet.style.setProperty('--p', p + 'mm');
-    sheet.style.setProperty('--q', q + 'mm');
-    sheet.style.setProperty('--lh', lh + 'mm');
-    const copies = Math.max(1, Math.min(20, Number($('copies').value) || 1));
     const dt = dateText();
-    const dateHtml = dt ? '<div class="d">جرد <bdi>' + dt + '</bdi></div>' : '';
-    const base = Math.min(w, h);
+    return { w, h, p, q, lh, wide, base: Math.min(w, h), shop: $('shop').value.trim(),
+             dateHtml: dt ? '<div class="d">جرد <bdi>' + dt + '</bdi></div>' : '', lay: layouts()[w + 'x' + h] || {} };
+  }
+
+  function setVars(el, c) {
+    el.style.setProperty('--w', c.w + 'mm');
+    el.style.setProperty('--h', c.h + 'mm');
+    el.style.setProperty('--p', c.p + 'mm');
+    el.style.setProperty('--q', c.q + 'mm');
+    el.style.setProperty('--lh', c.lh + 'mm');
+  }
+
+  function place(el, pos) {
+    el.classList.add('free');
+    el.style.left = pos.x + '%';
+    el.style.top = pos.y + '%';
+    el.style.width = pos.w + '%';
+    if (pos.h != null) el.style.height = pos.h + '%';
+  }
+
+  // ملصق واحد. shopText: اسم المحل (في شاشة التحريك بيبقى فيه كلام تجريبي لو الخانة فاضية)
+  function buildLabel(it, c, shopText) {
+    const d = document.createElement('div');
+    d.className = 'lbl ' + (c.wide ? 'wide' : 'tall');
+    const num = it.n != null;
+    // المترقّم: رقم كبير + «منطقة جرد» (+ اسم المحل) - اللي بالاسم: اسم المنطقة + الفرع
+    const mid = num ? '<div class="n"></div>' : '<div class="z"></div>';
+    const sub = num ? '<div class="k">منطقة جرد</div>' + (shopText ? '<div class="s"></div>' : '') : '<div class="b"></div>';
+    d.innerHTML = c.wide
+      ? '<div class="txt"><img class="logo" src="logo.png" alt="مدقق" draggable="false">' + mid + '<div class="rule"></div>' + sub + c.dateHtml + '</div><div class="qr"></div>'
+      : '<div class="top"><img class="logo" src="logo.png" alt="مدقق" draggable="false">' + c.dateHtml + '</div><div class="qr"></div>' + mid + sub;
+    if (num) {
+      d.querySelector('.n').textContent = it.n;
+      if (shopText) d.querySelector('.s').textContent = shopText;
+    } else {
+      d.querySelector('.z').textContent = it.z;
+      d.querySelector('.b').textContent = branch;
+    }
+    setVars(d, c);
+    // المترقّم: MZ2-رقم (كود قصير = مربعات قليلة وكبيرة، أسهل في الطباعة والقراية)
+    // اللي بالاسم: MZ1|الفرع|المنطقة (الأسامي متشفّرة base64 بحروف إنجليزي علشان أي قارئ يقراها)
+    const text = num ? 'MZ2-' + it.n : 'MZ1|' + b64(branch) + '|' + b64(it.z);
+    new QRCode(d.querySelector('.qr'), { text, width: 504, height: 504, correctLevel: num ? QRCode.CorrectLevel.Q : QRCode.CorrectLevel.M });
+    return d;
+  }
+
+  // اللي اتحرّك بالإيد يتحط في مكانه (لازم الملصق يكون اتضاف للصفحة)
+  function applyLayout(d, lay) {
+    if (lay.logo) place(d.querySelector('.logo'), lay.logo);
+    const s = d.querySelector('.s');
+    if (s && lay.shop) place(s, lay.shop);
+  }
+
+  function fitLabel(d, c) {
+    const n = d.querySelector('.n');
+    if (n) {
+      fit(n, c.base * 1.6, 8);
+      fit(d.querySelector('.k'), c.base * 0.2, 5);
+    } else {
+      fit(d.querySelector('.z'), c.base * 0.62, 6);
+      fit(d.querySelector('.b'), c.base * 0.2, 5);
+    }
+    const s = d.querySelector('.s');
+    if (s) fit(s, c.base * (s.classList.contains('free') ? 0.6 : 0.24), 5);
+    const dd = d.querySelector('.d');
+    if (dd) fit(dd, c.base * (c.wide ? 0.18 : 0.16), 5);
+  }
+
+  function render() {
+    save();
+    const sheet = $('sheet');
+    sheet.innerHTML = '';
+    const roll = $('mode').value === 'roll';
+    document.body.classList.toggle('roll', roll);
+    $('note').textContent = roll
+      ? 'كل ملصق هيطلع لوحده بمقاس الملصق بالظبط. في شاشة الطباعة اختار طابعة الملصقات وخلّي المقاس زي المقاس هنا والهوامش «بدون».'
+      : 'الملصقات هتترص جنب بعض على الورقة وحواليها خط قص خفيف.';
+    const list = items();
+    if (!list.length) {
+      sheet.innerHTML = '<div class="empty">مفيش مناطق تتطبع</div>';
+      return;
+    }
+    const c = context(list);
+    $('pg').textContent = roll ? '@page { size: ' + c.w + 'mm ' + c.h + 'mm; margin: 0; }' : '@page { size: A4; margin: 5mm; }';
+    const copies = Math.max(1, Math.min(20, Number($('copies').value) || 1));
     const labels = [];
     for (const it of list) {
       for (let i = 0; i < copies; i++) {
-        const d = document.createElement('div');
-        d.className = 'lbl ' + (wide ? 'wide' : 'tall');
-        const num = it.n != null;
-        // المترقّم: رقم كبير + «منطقة جرد» - اللي بالاسم: اسم المنطقة + الفرع
-        const mid = num ? '<div class="n"></div>' : '<div class="z"></div>';
-        const sub = num ? '<div class="k">منطقة جرد</div>' : '<div class="b"></div>';
-        d.innerHTML = wide
-          ? '<div class="txt"><img class="logo" src="logo.png" alt="مدقق">' + mid + '<div class="rule"></div>' + sub + dateHtml + '</div><div class="qr"></div>'
-          : '<div class="top"><img class="logo" src="logo.png" alt="مدقق">' + dateHtml + '</div><div class="qr"></div>' + mid + sub;
-        if (num) d.querySelector('.n').textContent = it.n;
-        else { d.querySelector('.z').textContent = it.z; d.querySelector('.b').textContent = branch; }
+        const d = buildLabel(it, c, c.shop);
         sheet.appendChild(d);
-        // المترقّم: MZ2-رقم (كود قصير = مربعات قليلة وكبيرة، أسهل في الطباعة والقراية)
-        // اللي بالاسم: MZ1|الفرع|المنطقة (الأسامي متشفّرة base64 بحروف إنجليزي علشان أي قارئ يقراها)
-        const text = num ? 'MZ2-' + it.n : 'MZ1|' + b64(branch) + '|' + b64(it.z);
-        new QRCode(d.querySelector('.qr'), { text, width: 504, height: 504, correctLevel: num ? QRCode.CorrectLevel.Q : QRCode.CorrectLevel.M });
+        applyLayout(d, c.lay);
         labels.push(d);
       }
     }
-    const fitAll = () => labels.forEach(d => {
-      const n = d.querySelector('.n');
-      if (n) {
-        fit(n, base * 1.6, 8);
-        fit(d.querySelector('.k'), base * 0.2, 5);
-      } else {
-        fit(d.querySelector('.z'), base * 0.62, 6);
-        fit(d.querySelector('.b'), base * 0.2, 5);
-      }
-      const dd = d.querySelector('.d');
-      if (dd) fit(dd, base * (wide ? 0.18 : 0.16), 5);
-    });
+    const fitAll = () => labels.forEach(d => fitLabel(d, c));
     fitAll();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
   }
 
-  ['mode', 'size', 'w', 'h', 'copies', 'date', 'from', 'to'].forEach(id => $(id).addEventListener('input', render));
+  // ===== شاشة تحريك اللوجو واسم المحل =====
+  let ed = null;   // {d, c, logo, shop}
+  const pct = (v, total) => Math.round(v / total * 1000) / 10;
+
+  function posOf(el, lbl) {
+    const r = el.getBoundingClientRect(), L = lbl.getBoundingClientRect();
+    return { x: pct(r.left - L.left, L.width), y: pct(r.top - L.top, L.height), w: pct(r.width, L.width), h: pct(r.height, L.height) };
+  }
+
+  function overlapsQr() {
+    const q = ed.d.querySelector('.qr').getBoundingClientRect();
+    return [ed.logo, ed.shop].filter(Boolean).some(el => {
+      const r = el.getBoundingClientRect();
+      const ix = Math.min(r.right, q.right) - Math.max(r.left, q.left), iy = Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top);
+      return ix > 1 && iy > 1;
+    });
+  }
+
+  function edCheck() {
+    $('edwarn').textContent = overlapsQr() ? '⚠️ فيه حاجة فوق الـQR - ممكن تبوّظ القراية، بعّدها شوية' : '';
+  }
+
+  function makeMovable(el, resizeH) {
+    el.classList.add('mv');
+    const hd = document.createElement('span');
+    hd.className = 'hd';
+    // اللوجو صورة (مينفعش جواها حاجة): الدايرة بتتحط في الملصق وتمشي معاه
+    const holder = el.tagName === 'IMG' ? null : el;
+    if (holder) holder.appendChild(hd); else ed.d.appendChild(hd);
+    const syncHd = () => {
+      if (holder) return;
+      hd.style.left = 'calc(' + (parseFloat(el.style.left) + parseFloat(el.style.width)) + '% - 1.6mm)';
+      hd.style.top = 'calc(' + el.style.top + ' + ' + el.getBoundingClientRect().height / ed.scale + 'px - 1.6mm)';
+      hd.style.right = hd.style.bottom = 'auto';
+    };
+    syncHd();
+    let st = null;
+    const down = (e, resize) => {
+      e.preventDefault(); e.stopPropagation();
+      const L = ed.d.getBoundingClientRect();
+      st = { resize, x0: e.clientX, y0: e.clientY, L, x: parseFloat(el.style.left), y: parseFloat(el.style.top),
+             w: parseFloat(el.style.width), h: parseFloat(el.style.height) || 0 };
+      (resize ? hd : el).setPointerCapture(e.pointerId);
+    };
+    const move = e => {
+      if (!st) return;
+      const dx = (e.clientX - st.x0) / st.L.width * 100, dy = (e.clientY - st.y0) / st.L.height * 100;
+      if (st.resize) {
+        el.style.width = Math.max(8, Math.min(100 - st.x, st.w + dx)) + '%';
+        if (resizeH) el.style.height = Math.max(5, Math.min(100 - st.y, st.h + dy)) + '%';
+      } else {
+        const hh = el.getBoundingClientRect().height / st.L.height * 100;
+        el.style.left = Math.max(0, Math.min(100 - parseFloat(el.style.width), st.x + dx)) + '%';
+        el.style.top = Math.max(0, Math.min(100 - hh, st.y + dy)) + '%';
+      }
+      if (el === ed.shop) fit(el, ed.c.base * 0.6, 5);
+      syncHd();
+      edCheck();
+    };
+    const up = () => { st = null; };
+    el.addEventListener('pointerdown', e => { if (e.target !== hd) down(e, false); });
+    hd.addEventListener('pointerdown', e => down(e, true));
+    [el, hd].forEach(x => {
+      x.addEventListener('pointermove', move);
+      x.addEventListener('pointerup', up);
+      x.addEventListener('pointercancel', up);
+    });
+    if (!holder) el.addEventListener('load', syncHd);
+  }
+
+  function openEditor() {
+    const list = items();
+    const c = context(list.length ? list : [{ n: 1 }]);
+    const it = list.find(x => x.n != null) || list[0] || { n: 1 };
+    const stage = $('edstage');
+    stage.innerHTML = '';
+    $('ed').hidden = false;
+    const d = buildLabel(it, c, it.n != null ? (c.shop || 'اسم المحل') : '');
+    stage.appendChild(d);
+    if (it.n != null && !c.shop) d.querySelector('.s').classList.add('ph');
+    // تكبير الملصق علشان يبان كويس على الشاشة
+    const pxW = d.offsetWidth, pxH = d.offsetHeight;
+    const scale = Math.max(1, Math.min((stage.parentElement.clientWidth - 8) / pxW, (innerHeight * 0.6) / pxH, 8));
+    d.style.transform = 'scale(' + scale + ')';
+    stage.style.width = pxW * scale + 'px';
+    stage.style.height = pxH * scale + 'px';
+    ed = { d, c, scale, logo: d.querySelector('.logo'), shop: d.querySelector('.s') };
+    const start = () => {
+      applyLayout(d, c.lay);
+      fitLabel(d, c);
+      // اللي لسه في مكانه الأصلي: ناخد مكانه الحالي ونخليه يتحرك من هناك
+      const L = d.getBoundingClientRect();
+      const fixPos = el => el.classList.contains('free') ? null : posOf(el, d);
+      const lp = fixPos(ed.logo), sp = ed.shop ? fixPos(ed.shop) : null;
+      if (lp) place(ed.logo, { x: lp.x, y: lp.y, w: lp.w });
+      if (sp) place(ed.shop, sp);
+      fitLabel(d, c);
+      makeMovable(ed.logo, false);
+      if (ed.shop) makeMovable(ed.shop, true);
+      edCheck();
+    };
+    if (ed.logo.complete) start(); else ed.logo.addEventListener('load', start, { once: true });
+  }
+
+  function closeEditor() { $('ed').hidden = true; $('edstage').innerHTML = ''; ed = null; }
+
+  $('edit').onclick = openEditor;
+  $('edcancel').onclick = closeEditor;
+  $('ed').addEventListener('click', e => { if (e.target === $('ed')) closeEditor(); });
+  $('edsave').onclick = () => {
+    if (!ed) return;
+    const all = layouts();
+    const lay = { logo: { x: parseFloat(ed.logo.style.left), y: parseFloat(ed.logo.style.top), w: parseFloat(ed.logo.style.width) } };
+    if (ed.shop) lay.shop = { x: parseFloat(ed.shop.style.left), y: parseFloat(ed.shop.style.top), w: parseFloat(ed.shop.style.width), h: parseFloat(ed.shop.style.height) };
+    all[sizeKey()] = lay;
+    saveLayouts(all);
+    closeEditor();
+    render();
+  };
+  $('edreset').onclick = () => {
+    const all = layouts();
+    delete all[sizeKey()];
+    saveLayouts(all);
+    closeEditor();
+    render();
+  };
+
+  ['mode', 'size', 'w', 'h', 'copies', 'date', 'from', 'to', 'shop'].forEach(id => $(id).addEventListener('input', render));
   $('go').onclick = () => window.print();
 
   // تثبيت الصفحة كتطبيق على الموبايل
