@@ -97,7 +97,8 @@
     <select id="size">
       <option value="100x70">100 × 70 مم</option>
       <option value="100x50">100 × 50 مم</option>
-      <option value="70x50" selected>70 × 50 مم</option>
+      <option value="55x45" selected>55 × 45 مم</option>
+      <option value="70x50">70 × 50 مم</option>
       <option value="60x40">60 × 40 مم</option>
       <option value="50x30">50 × 30 مم</option>
       <option value="40x30">40 × 30 مم</option>
@@ -197,10 +198,12 @@
     }
     const [w, h] = dims();
     const p = Math.max(1.2, Math.min(w, h) * 0.04);           // هامش صغير جوه الملصق
-    const wide = w / h >= 1.25;
+    // الاستيكرات المترقّمة بس: الرقم جنب الـQR من أول مقاس شبه مربع (زي 55×45) علشان الرقم يطلع كبير
+    const allNum = list.every(it => it.n != null);
+    const wide = w / h >= (allNum ? 1.1 : 1.25);
     let q, lh;
     if (wide) {
-      q = Math.min(h - 2 * p, w * 0.5);                          // الـQR ياخد طول الملصق كله
+      q = Math.min(h - 2 * p, w * (allNum ? 0.55 : 0.5));        // الـQR ياخد طول الملصق كله
       lh = Math.min(h * 0.2, 11);
     } else {
       lh = Math.min(h * 0.12, 8);
