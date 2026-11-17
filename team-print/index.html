@@ -34,6 +34,12 @@
   .lbl .b { font-weight: 700; color: #33475e; text-align: center; white-space: nowrap; overflow: hidden; line-height: 1.2; }
   .lbl .d { font-weight: 700; color: #33475e; white-space: nowrap; overflow: hidden; line-height: 1.2; direction: rtl; }
   .lbl .d bdi { direction: ltr; unicode-bidi: isolate; }
+  .lbl .n { font-weight: 900; line-height: 1; text-align: center; overflow: hidden; display: flex; align-items: center; justify-content: center; min-height: 0; font-family: 'Cairo', Arial, sans-serif; }
+  .lbl .k { font-weight: 700; color: #33475e; text-align: center; white-space: nowrap; overflow: hidden; line-height: 1.2; }
+  .lbl.wide .n { flex: 1; width: 100%; }
+  .lbl.wide .k { width: 100%; }
+  .lbl.tall .n { flex: 1; width: 100%; }
+  .lbl.tall .k { width: 100%; }
 
   /* عرضي: الكلام يمين والـQR شمال */
   .lbl.wide { flex-direction: row; align-items: stretch; }
@@ -90,7 +96,9 @@
   </label>
   <label id="cw" hidden>العرض (مم)<input id="w" type="number" min="30" max="200" value="80"></label>
   <label id="ch" hidden>الطول (مم)<input id="h" type="number" min="20" max="280" value="60"></label>
-  <label>تاريخ الجرد<input id="date" type="date"></label>
+  <label id="rf" hidden>من رقم<input id="from" type="number" min="1" max="9999" value="1"></label>
+  <label id="rt" hidden>لحد رقم<input id="to" type="number" min="1" max="9999" value="40"></label>
+  <label>تاريخ الجرد (اختياري)<input id="date" type="date"></label>
   <label>عدد النسخ من كل منطقة<input id="copies" type="number" min="1" max="20" value="1"></label>
   <button id="go">اطبع</button>
 </div>
@@ -100,10 +108,15 @@
   const qs = new URLSearchParams(location.search);
   const branch = qs.get('b') || '';
   const zones = qs.getAll('z').map(z => z.trim()).filter(Boolean);
+  // استيكرات مترقّمة: n=17&n=18 من التطبيق، أو من غير أي حاجة = اطبع من رقم لرقم (استيكرات فاضية قبل ما نروح المحل)
+  const nums = qs.getAll('n').map(Number).filter(n => n > 0 && Number.isInteger(n));
+  const rangeMode = !zones.length && !nums.length;
   const $ = id => document.getElementById(id);
   // UTF-8 → base64url من غير = (نفس اللي في التطبيق)
   const b64 = t => btoa(String.fromCharCode(...new TextEncoder().encode(t))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  $('sub').textContent = branch ? 'فرع: ' + branch + ' • ' + zones.length + ' منطقة' : 'جرد مدقق - الفريق';
+  $('sub').textContent = rangeMode ? 'استيكرات مناطق مترقّمة - الزقها على المناطق وامسحها من التطبيق'
+    : (branch ? 'فرع: ' + branch + ' • ' : '') + (zones.length + nums.length) + ' منطقة';
+  $('rf').hidden = $('rt').hidden = !rangeMode;
 
   // نفتكر اختيارات الطباعة (المقاس ونوع الطابعة) على الجهاز ده
   const KEY = 'teamPrintOpts';
@@ -113,14 +126,17 @@
     if (o.size) $('size').value = o.size;
     if (o.w) $('w').value = o.w;
     if (o.h) $('h').value = o.h;
+    if (o.from) $('from').value = o.from;
+    if (o.to) $('to').value = o.to;
   } catch (_) {}
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify({ mode: $('mode').value, size: $('size').value, w: $('w').value, h: $('h').value })); } catch (_) {}
+    try { localStorage.setItem(KEY, JSON.stringify({ mode: $('mode').value, size: $('size').value, w: $('w').value, h: $('h').value, from: $('from').value, to: $('to').value })); } catch (_) {}
   }
 
   const pad = n => String(n).padStart(2, '0');
   const today = new Date();
-  $('date').value = qs.get('d') || (today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate()));
+  // الاستيكرات المترقّمة بتتطبع قبل الجرد: من غير تاريخ إلا لو اخترته
+  $('date').value = qs.get('d') || (zones.length ? today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate()) : '');
   function dateText() {
     const v = $('date').value;
     if (!v) return '';
@@ -154,8 +170,19 @@
     $('note').textContent = roll
       ? 'كل ملصق هيطلع لوحده بمقاس الملصق بالظبط. في شاشة الطباعة اختار طابعة الملصقات وخلّي المقاس زي المقاس هنا والهوامش «بدون».'
       : 'الملصقات هتترص جنب بعض على الورقة وحواليها خط قص خفيف.';
-    if (!branch || !zones.length) {
-      sheet.innerHTML = '<div class="empty">مفيش مناطق - افتح الصفحة دي من تطبيق «جرد مدقق - الفريق» ← مناطق الجرد ← زرار الطباعة</div>';
+    // الملصقات اللي هتتطبع: {n: رقم} أو {z: اسم المنطقة}
+    let list;
+    if (rangeMode) {
+      let a = Math.max(1, Math.floor(Number($('from').value) || 1)), b = Math.max(1, Math.floor(Number($('to').value) || a));
+      if (b < a) [a, b] = [b, a];
+      b = Math.min(b, a + 499);
+      list = [];
+      for (let i = a; i <= b; i++) list.push({ n: i });
+    } else {
+      list = nums.map(n => ({ n })).concat(branch ? zones.map(z => ({ z })) : []);
+    }
+    if (!list.length) {
+      sheet.innerHTML = '<div class="empty">مفيش مناطق تتطبع</div>';
       return;
     }
     const [w, h] = dims();
@@ -181,24 +208,36 @@
     const dateHtml = dt ? '<div class="d">جرد <bdi>' + dt + '</bdi></div>' : '';
     const base = Math.min(w, h);
     const labels = [];
-    for (const z of zones) {
+    for (const it of list) {
       for (let i = 0; i < copies; i++) {
         const d = document.createElement('div');
         d.className = 'lbl ' + (wide ? 'wide' : 'tall');
+        const num = it.n != null;
+        // المترقّم: رقم كبير + «منطقة جرد» - اللي بالاسم: اسم المنطقة + الفرع
+        const mid = num ? '<div class="n"></div>' : '<div class="z"></div>';
+        const sub = num ? '<div class="k">منطقة جرد</div>' : '<div class="b"></div>';
         d.innerHTML = wide
-          ? '<div class="txt"><img class="logo" src="logo.png" alt="مدقق"><div class="z"></div><div class="rule"></div><div class="b"></div>' + dateHtml + '</div><div class="qr"></div>'
-          : '<div class="top"><img class="logo" src="logo.png" alt="مدقق">' + dateHtml + '</div><div class="qr"></div><div class="z"></div><div class="b"></div>';
-        d.querySelector('.z').textContent = z;
-        d.querySelector('.b').textContent = branch;
+          ? '<div class="txt"><img class="logo" src="logo.png" alt="مدقق">' + mid + '<div class="rule"></div>' + sub + dateHtml + '</div><div class="qr"></div>'
+          : '<div class="top"><img class="logo" src="logo.png" alt="مدقق">' + dateHtml + '</div><div class="qr"></div>' + mid + sub;
+        if (num) d.querySelector('.n').textContent = it.n;
+        else { d.querySelector('.z').textContent = it.z; d.querySelector('.b').textContent = branch; }
         sheet.appendChild(d);
-        // نفس الصيغة اللي التطبيق بيقراها: MZ1|الفرع|المنطقة (الأسامي متشفّرة base64 بحروف إنجليزي علشان أي قارئ يقراها)
-        new QRCode(d.querySelector('.qr'), { text: 'MZ1|' + b64(branch) + '|' + b64(z), width: 512, height: 512, correctLevel: QRCode.CorrectLevel.M });
+        // المترقّم: MZ2-رقم (كود قصير = مربعات قليلة وكبيرة، أسهل في الطباعة والقراية)
+        // اللي بالاسم: MZ1|الفرع|المنطقة (الأسامي متشفّرة base64 بحروف إنجليزي علشان أي قارئ يقراها)
+        const text = num ? 'MZ2-' + it.n : 'MZ1|' + b64(branch) + '|' + b64(it.z);
+        new QRCode(d.querySelector('.qr'), { text, width: 504, height: 504, correctLevel: num ? QRCode.CorrectLevel.Q : QRCode.CorrectLevel.M });
         labels.push(d);
       }
     }
     const fitAll = () => labels.forEach(d => {
-      fit(d.querySelector('.z'), base * 0.62, 6);
-      fit(d.querySelector('.b'), base * 0.2, 5);
+      const n = d.querySelector('.n');
+      if (n) {
+        fit(n, base * 1.6, 8);
+        fit(d.querySelector('.k'), base * 0.2, 5);
+      } else {
+        fit(d.querySelector('.z'), base * 0.62, 6);
+        fit(d.querySelector('.b'), base * 0.2, 5);
+      }
       const dd = d.querySelector('.d');
       if (dd) fit(dd, base * (wide ? 0.18 : 0.16), 5);
     });
@@ -206,7 +245,7 @@
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
   }
 
-  ['mode', 'size', 'w', 'h', 'copies', 'date'].forEach(id => $(id).addEventListener('input', render));
+  ['mode', 'size', 'w', 'h', 'copies', 'date', 'from', 'to'].forEach(id => $(id).addEventListener('input', render));
   $('go').onclick = () => window.print();
   render();
 </script>
