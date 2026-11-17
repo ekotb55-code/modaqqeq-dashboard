@@ -692,6 +692,24 @@
   .ordSw { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 4px; cursor: pointer; } .ordSw input { width: auto; }
   .ordwide .bacts { flex-wrap: wrap; } .ordwide .wobox, .ordwide .isbox { box-shadow: none; padding: 0; margin: 0; }
   .orddays { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+  /* 📋 ملخصي */
+  .sumbtn { position: relative; } .sumbtn .nbadge { position: absolute; top: -6px; inset-inline-start: -6px; }
+  #dlg .box.sumbox { width: min(720px, 100%); padding: 0; overflow: hidden; }
+  .sumhead { background: linear-gradient(120deg, #0B3D6E, #1479D3 60%, #6C4BD8); color: #fff; padding: 18px 20px 16px; }
+  .sumhead h3 { margin: 0; font-size: 22px; color: #fff; } .sumhead p { margin: 4px 0 0; opacity: .92; font-size: 14px; }
+  .sumtiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; padding: 14px 16px 4px; }
+  .sumt { border: 0; border-radius: 14px; padding: 10px 8px; text-align: center; cursor: pointer; font: inherit; background: var(--tb, #EEF4FB); color: var(--tc, #0B3D6E); transition: transform .12s; }
+  .sumt:hover { transform: translateY(-2px); } .sumt.zero { opacity: .45; }
+  .sumt .n { display: block; font-size: 28px; font-weight: 900; line-height: 1.15; } .sumt .l { font-size: 12.5px; font-weight: 800; } .sumt .s { display: block; font-size: 11px; opacity: .85; margin-top: 2px; }
+  .sumsec { padding: 6px 16px; } .sumsec h4 { margin: 8px 0 6px; color: var(--navy); font-size: 15px; }
+  .sumit { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: #F5F8FC; margin-bottom: 6px; cursor: pointer; border-inline-start: 4px solid var(--ic, #1479D3); }
+  .sumit:hover { background: #EAF2FC; } .sumit .ic { font-size: 18px; } .sumit .tx { flex: 1; min-width: 0; } .sumit .tx b { display: block; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sumit .tx small { color: var(--muted); font-size: 12px; } .sumit .tg { font-size: 11.5px; font-weight: 800; white-space: nowrap; color: var(--ic); }
+  .sumst { display: flex; flex-wrap: wrap; gap: 6px; } .sumst button { border: 1px solid #D6DFEA; background: #fff; border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .sumst button b { color: #C62828; margin-inline-start: 3px; }
+  .sumfoot { padding: 10px 16px 16px; display: flex; gap: 8px; justify-content: flex-start; }
+  .sumok { text-align: center; padding: 22px 10px; font-size: 18px; font-weight: 800; color: #1A8A3E; }
+  @media (max-width: 760px) { #dlg .box.sumbox { width: 100%; max-height: 92vh; overflow-y: auto; } .sumtiles { grid-template-columns: 1fr 1fr; } .sumhead h3 { font-size: 19px; } }
   .tkacts { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
   .tkpics { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; } .tkpics img { width: 110px; height: 110px; object-fit: cover; border-radius: 12px; cursor: zoom-in; background: #EEF2F7; }
   .tkguide { background: #F3F7FC; border-radius: 12px; padding: 8px 12px; margin: 8px 0; } .tkguide summary { font-weight: 800; color: var(--navy); cursor: pointer; } .tkguide div { margin-top: 6px; line-height: 1.8; }
@@ -777,7 +795,7 @@
     #toast { bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
     .team-page { height: calc(100dvh - 130px - env(safe-area-inset-bottom) - env(safe-area-inset-top)) !important; }
     #installBtn { font-size: 13px; }
-    .hbar { flex-wrap: nowrap !important; gap: 5px !important; }
+    .hbar { flex-wrap: wrap !important; gap: 5px !important; justify-content: flex-start; }
     .hbar img { height: 28px !important; }
     .hbar .who span { display: none; }
     .hbar .btn { padding: 7px 9px !important; font-size: 14px; }
@@ -893,6 +911,7 @@
       <span class="isp iip hidden" id="iiPill" onclick="iiuDlg()" title="استهلاك سيرفر تطبيق الصور (حساب pos-assist) النهارده"><span class="umico">🖼️</span> <span class="umbar"><i></i></span> <span id="iiTxt"></span></span>
       <span class="isp tsp hidden" id="tsPill" onclick="tsuDlg()" title="طلبات سيرفر تسوية خزنة الدعم (حساب pos-assist) النهارده"><span class="umico">🧾</span> <span id="tsTxt"></span></span>
       <span class="isp hidden" id="isPill" onclick="isDlg()" title="تحديث شيت أصناف المخزن من السيستم">📦 <span id="isTxt">الأصناف...</span></span>
+      <button class="btn soft sumbtn" id="sumBtn" onclick="sumDlg()" title="ملخصي: كل اللي مستنيك دلوقتي">📋<span class="nbadge hidden" id="sumBadge"></span></button>
       <button class="btn soft bell" id="bellBtn" onclick="enableAlerts()" title="الإشعارات والصوت">🔔</button>
       <button class="btn soft" onclick="loadList()" title="تحديث">⟳</button>
       <button class="btn soft hidden" id="installBtn" onclick="installApp()" title="ثبّت الداش بورد كتطبيق على جهازك">📲 ثبّت التطبيق</button>
@@ -1333,7 +1352,7 @@ async function loadList(quiet) {
     all = r.invoices; stores = r.stores;
     tks = (r.tickets || []).map(t => Object.assign(t, { kind: 'tk' })); if (r.storePrio) storePrio = r.storePrio;
     tasks = r.tasks || []; jrs = r.jrs || []; marks = r.marks || []; jardDevs = r.jardDevs || []; if (r.storeColor) storeColor = r.storeColor; if (r.members) members = r.members;
-    tasksAfterLoad(); marksAfterLoad(); setTimeout(() => { try { tpCheck(); } catch (e) {} }, 50);
+    tasksAfterLoad(); marksAfterLoad(); setTimeout(() => { try { tpCheck(); sumAfterLoad(); } catch (e) {} }, 50);
     tkAfterLoad(tks);
     chatSum = r.chat || { threads: [], replies: [] };
     if (r.cm) cmCounts = r.cm;
@@ -4073,6 +4092,102 @@ function taskCard(v, board) {
     '<div class="bm">' + (done ? esc(v.doneBy) + ' • ' + tm(v.doneAt) : 'الميعاد ' + tm(v.due)) + '</div>' + btn +
     '<div class="bx">' + body + '<div style="margin-top:6px">' + shareBtn('task', v.id, '📋 تاسك: ' + v.title + ' - فرع ' + v.store) + cmBtn('task', v.id) + '</div></div></div>';
 }
+// ---------- 📋 ملخصي: كل اللي مستني الموظف (تاسكات، فواتير، تذاكر، جرد، تعليقات) ----------
+// بيظهر لوحده أول مرة في اليوم، وزرار 📋 فوق بيفتحه في أي وقت
+function sumData() {
+  const t = now(), dayEnd = new Date(t); dayEnd.setHours(23, 59, 59, 999);
+  const ago = iso => durTxt(Math.max(0, Math.round((t - new Date(iso).getTime()) / 60000)));
+  const S = { items: [], stores: {} };
+  const add = (rank, x) => { S.items.push(Object.assign({ rank }, x)); if (x.store) S.stores[x.store] = (S.stores[x.store] || 0) + 1; };
+  const qa = isQA();
+  // الفواتير
+  const invP = qa ? all.filter(v => v.status === ST_QA) : all.filter(v => pending(v) && (v.status !== ST_WORK || !v.receivedBy || v.receivedBy === me));
+  const invLate = invP.filter(v => qa ? qaLate(v) : mins(t0(v), t) > SLA_MIN);
+  invP.forEach(v => {
+    const late = invLate.indexOf(v) !== -1, urg = (v.urgeCount || 0) > 0;
+    add(late ? 2 : urg ? 2.5 : 4, { ic: '🧾', c: late ? '#C62828' : '#1479D3', t: 'فاتورة ' + (v.supplier || ''), store: v.store,
+      sub: (v.status === ST_WORK ? 'بتتدخل' : v.status === ST_QA ? 'مستنية الجودة' : 'جديدة') + ' • من ' + ago(v.status === ST_QA ? v.doneAt : t0(v)), tag: late ? '⚠️ متأخرة' : urg ? '📣 الفرع بيستعجل' : '',
+      go: "page('inv');openInv('" + esc(v.id) + "')" });
+  });
+  // التذاكر والشكاوي
+  const tkL = qa ? [] : tks.filter(v => tkOpen(v) && tkDue(v));
+  const tkU = tkL.filter(v => v.priority === TK_URGENT), tkLt = tkL.filter(tkLate);
+  tkL.forEach(v => {
+    const u = v.priority === TK_URGENT, l = tkLate(v);
+    add(u ? 0 : l ? 2 : 4.5, { ic: '🛠️', c: u || l ? '#C62828' : '#546E7A', t: v.title || v.type || 'تذكرة', store: v.store, sub: esc(v.status) + ' • من ' + ago(v.createdAt),
+      tag: u ? '🔴 مستعجلة' : l ? '⚠️ متأخرة' : '', go: "page('inv');openTk('" + esc(v.id) + "')" });
+  });
+  // التاسكات بتاعتي
+  const tkMine = qa ? [] : (tasks || []).filter(v => v.status === TASK_OPEN && (myRole === 'مدير' || tpMine(v)));
+  const tDue = tkMine.filter(taskDue), tUrg = tDue.filter(v => v.prio === 'u'), tLate = tDue.filter(taskLate);
+  const tToday = tkMine.filter(v => !taskDue(v) && new Date(v.due).getTime() <= dayEnd.getTime());
+  const tRec = tkMine.filter(v => v.rec && new Date(v.due || v.createdAt).getTime() <= dayEnd.getTime());
+  const seenG = {};
+  tkMine.filter(v => taskDue(v) || tToday.indexOf(v) !== -1).forEach(v => {
+    const g = v.group || v.id; if (seenG[g]) { if (v.store) S.stores[v.store] = (S.stores[v.store] || 0) + 1; return; } seenG[g] = 1;
+    const n = tkMine.filter(x => (x.group || x.id) === g).length, due = taskDue(v), u = v.prio === 'u', l = taskLate(v);
+    add(!due ? 6 : u ? 1 : l ? 3 : v.prio === 'h' ? 3.5 : 5, { ic: v.rec ? '🔁' : '📋', c: u ? '#C62828' : v.prio === 'h' ? '#E67E00' : l ? '#C62828' : '#6C4BD8', t: v.title,
+      store: n > 1 ? '' : v.store, sub: (n > 1 ? n + ' محل' : esc(v.store)) + ' • ' + (due ? 'معادها من ' + ago(v.due || v.createdAt) : 'النهارده ' + new Date(v.due).toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' })),
+      tag: u ? '🔴 عاجلة' : v.prio === 'h' ? '🟠 مهمة' : l ? '⚠️ متأخرة' : '', go: "goCard('task','" + esc(v.id) + "')" });
+  });
+  // طلبات الجرد
+  const jrL = qa ? [] : (jrs || []).filter(jrOpenSup);
+  jrL.forEach(v => add(4.8, { ic: '📦', c: '#0097A7', t: 'طلب جرد', store: v.store, sub: 'مستني الدعم • من ' + ago(v.createdAt || v.at), tag: '', go: "goCard('jr','" + esc(v.id) + "')" }));
+  // التعليقات الجديدة
+  const cmL = Object.keys(cmCounts || {}).filter(cmNew);
+  cmL.forEach(k => {
+    const i = k.indexOf(':'), kind = k.slice(0, i), id = k.slice(i + 1);
+    const it = kind === 'task' ? (tasks || []).find(x => x.id === id) : all.find(x => x.id === id);
+    add(3.8, { ic: '💬', c: '#00838F', t: 'تعليق جديد' + (cmCounts[k].by ? ' من ' + cmCounts[k].by : ''), store: '', sub: it ? esc((kind === 'task' ? it.title : 'فاتورة ' + it.supplier) + ' - ' + it.store) : '', tag: '', go: "noteGo({cm:'" + esc(k) + "'})" });
+  });
+  S.items.sort((a, b) => a.rank - b.rank);
+  S.tiles = [
+    { k: 'tu', ic: '🔴', l: 'عاجل', n: tkU.length + tUrg.length, s: 'تذاكر وتاسكات', tb: '#FDECEA', tc: '#B3261E' },
+    { k: 'late', ic: '⏰', l: 'متأخر', n: invLate.length + tkLt.length + tLate.length, s: 'كل الأنواع', tb: '#FFF1DE', tc: '#B35C00' },
+    { k: 'task', ic: '📋', l: 'تاسكات', n: Object.keys(seenG).length, s: tToday.length ? tToday.length + ' جاية النهارده' : tRec.length ? tRec.length + ' دورية' : '', tb: '#EDE7F6', tc: '#4527A0' },
+    { k: 'inv', ic: '🧾', l: qa ? 'مستنية الجودة' : 'فواتير', n: invP.length, s: invLate.length ? invLate.length + ' متأخرة' : '', tb: '#E3F0FC', tc: '#0B3D6E' },
+    { k: 'tk', ic: '🛠️', l: 'تذاكر وشكاوي', n: tkL.length, s: tkU.length ? tkU.length + ' مستعجلة' : '', tb: '#ECEFF1', tc: '#37474F' },
+    { k: 'jr', ic: '📦', l: 'جرد', n: jrL.length, s: '', tb: '#E0F7FA', tc: '#006064' },
+    { k: 'cm', ic: '💬', l: 'تعليقات جديدة', n: cmL.length, s: '', tb: '#E0F2F1', tc: '#00695C' }
+  ].filter(x => !qa || x.k === 'inv');
+  S.total = S.items.filter(x => x.rank < 6).length;
+  S.hot = tkU.length + tUrg.length;
+  return S;
+}
+let sumFilter = '';
+function sumDlg(f) {
+  sumFilter = f || '';
+  const S = sumData(), h = new Date(now()).getHours();
+  const hi = (h >= 4 && h < 12 ? 'صباح الخير' : 'مساء الخير') + ' يا ' + esc(String(me || '').split(' ')[0]) + (h >= 4 && h < 12 ? ' ☀️' : ' 🌙');
+  const line = !S.total ? 'مفيش حاجة مستنياك دلوقتي' : 'مستنيك دلوقتي ' + S.total + (S.total === 1 ? ' حاجة' : S.total <= 10 ? ' حاجات' : ' حاجة') + (S.hot ? '، منهم ' + S.hot + ' عاجل 🔴' : '');
+  const pick = {
+    tu: x => /عاجل|مستعجل/.test(x.tag), late: x => /متأخر/.test(x.tag), task: x => x.ic === '📋' || x.ic === '🔁', inv: x => x.ic === '🧾', tk: x => x.ic === '🛠️', jr: x => x.ic === '📦', cm: x => x.ic === '💬'
+  };
+  const L = sumFilter ? S.items.filter(pick[sumFilter]) : S.items.filter(x => x.rank < 6).slice(0, 5);
+  const it = x => '<div class="sumit" style="--ic:' + x.c + '" onclick="closeDlg();' + x.go + '"><span class="ic">' + x.ic + '</span><span class="tx"><b>' + esc(x.t) + (x.store ? ' - ' + esc(x.store) : '') + '</b><small>' + x.sub + '</small></span>' + (x.tag ? '<span class="tg">' + x.tag + '</span>' : '') + '</div>';
+  const st = Object.keys(S.stores).sort((a, b) => S.stores[b] - S.stores[a]).slice(0, 14);
+  const title = sumFilter ? (S.tiles.find(x => x.k === sumFilter) || {}).l : 'ابدأ بدول 👇';
+  dlg('<div class="sumhead"><h3>' + hi + '</h3><p>' + line + '</p></div>' +
+    '<div class="sumtiles">' + S.tiles.map(x => '<button class="sumt' + (x.n ? '' : ' zero') + '" style="--tb:' + x.tb + ';--tc:' + x.tc + (sumFilter === x.k ? ';outline:3px solid ' + x.tc : '') + '" onclick="sumDlg(\'' + (sumFilter === x.k ? '' : x.k) + '\')">' +
+      '<span class="n">' + x.n + '</span><span class="l">' + x.ic + ' ' + x.l + '</span>' + (x.s ? '<span class="s">' + x.s + '</span>' : '') + '</button>').join('') + '</div>' +
+    (S.items.length ? '<div class="sumsec"><h4>' + esc(title) + (sumFilter ? ' <a href="#" style="font-size:12.5px" onclick="event.preventDefault();sumDlg()">← الكل</a>' : '') + '</h4>' +
+      (L.length ? L.map(it).join('') : '<div class="bempty">مفيش هنا حاجة ✅</div>') + '</div>' +
+      (!sumFilter && st.length ? '<div class="sumsec"><h4>🏪 حسب الفرع</h4><div class="sumst">' + st.map(n => '<button onclick="closeDlg();page(\'stores\');setTimeout(()=>{const e=[...document.querySelectorAll(\'#board .bcol\')].find(c=>c.innerText.indexOf(\'' + esc(n) + '\')!==-1);if(e)e.scrollIntoView({behavior:\'smooth\',inline:\'start\',block:\'nearest\'})},400)">' + sdot(n) + esc(n) + '<b>' + S.stores[n] + '</b></button>').join('') + '</div></div>' : '')
+      : '<div class="sumok">مفيش حاجة مستنياك، يومك جميل ✅</div>') +
+    '<div class="sumfoot"><button class="btn" onclick="closeDlg()">يلا نبدأ 💪</button></div>');
+  const box = document.querySelector('#dlg .box'); if (box) box.classList.add('sumbox');
+}
+// بعد كل تحميل: العدد على الزرار + الظهور أول مرة في اليوم
+function sumAfterLoad() {
+  if (!token || !myRole) return;
+  const S = sumData(), b = $('sumBadge');
+  if (b) { b.textContent = S.hot || S.total; b.classList.toggle('hidden', !(S.hot || S.total)); b.style.background = S.hot ? '#C62828' : ''; }
+  const day = new Date(now()).toDateString();
+  if (ls('sumDay') === day || !ls('dashTour1') || $('dlg') || $('tourTip') && $('tourTip').offsetParent) return;
+  ls('sumDay', day);
+  setTimeout(() => { if (!$('dlg')) sumDlg(); }, 900);
+}
+
 // ---------- أهمية التاسك + تكرار النغمة ----------
 // الأهمية: عادية (نغمة هادية) • مهمة (نغمة أعلى مرتين) • عاجلة (إنذار + هزاز) • الدورية (من التاسكات المتكررة): إنذار في معادها
 // التكرار: مرة واحدة • كل 15 دقيقة • كل 5 دقايق (وبانر فوق الصفحة) - لحد ما التاسك تتعمل، في مواعيد الشغل، ولصاحب التاسك بس
