@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>طباعة باركود المناطق - مدقق</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0A2E57">
+<link rel="icon" href="../icon-192.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -20,6 +24,9 @@
   .opts select, .opts input { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; min-width: 120px; background: #fff; }
   .opts button { font: inherit; font-weight: 900; border: 0; border-radius: 12px; padding: 10px 26px; background: var(--blue); color: #fff; cursor: pointer; }
   .note { padding: 10px 16px; font-size: 13px; color: #556; }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  #install { font: inherit; font-weight: 900; font-size: 14px; border: 0; border-radius: 12px; padding: 8px 16px; background: #fff; color: var(--blue); cursor: pointer; white-space: nowrap; }
+  #install[hidden] { display: none; }
   .empty { text-align: center; padding: 60px 16px; color: #556; }
 
   /* ===== الملصق ===== */
@@ -73,8 +80,11 @@
 </head>
 <body>
 <div class="bar">
-  <h1>🖨️ طباعة باركود المناطق</h1>
-  <p id="sub">جرد مدقق - الفريق</p>
+  <div>
+    <h1>🖨️ طباعة باركود المناطق</h1>
+    <p id="sub">جرد مدقق - الفريق</p>
+  </div>
+  <button id="install" hidden>📲 ثبّت على الموبايل</button>
 </div>
 <div class="opts">
   <label>الطابعة
@@ -247,6 +257,19 @@
 
   ['mode', 'size', 'w', 'h', 'copies', 'date', 'from', 'to'].forEach(id => $(id).addEventListener('input', render));
   $('go').onclick = () => window.print();
+
+  // تثبيت الصفحة كتطبيق على الموبايل
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  let installEv = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEv = e; $('install').hidden = false; });
+  window.addEventListener('appinstalled', () => { $('install').hidden = true; });
+  $('install').onclick = async () => {
+    if (!installEv) return;
+    installEv.prompt();
+    try { await installEv.userChoice; } catch (_) {}
+    installEv = null;
+    $('install').hidden = true;
+  };
   render();
 </script>
 </body>
