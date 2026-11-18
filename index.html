@@ -479,7 +479,8 @@
 
   /* الصورة كبيرة جنب الأصناف */
   .compare { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 14px; align-items: start; }
-  @media (max-width: 1250px) { .compare { grid-template-columns: 1fr; } }
+  /* عمود واحد (الموبايل والشاشات الصغيرة): الصورة فوق والأصناف تحتها - الصورة ماتثبتش فوق علشان ماتغطيش جدول الأصناف وانت بتنزل */
+  @media (max-width: 1250px) { .compare { grid-template-columns: 1fr; } .compare .viewer { position: relative; top: auto; } }
   .viewer { position: sticky; top: 90px; background: #1B2430; border-radius: 16px; overflow: hidden; }
   .vstage { height: calc(100vh - 220px); min-height: 420px; overflow: hidden; position: relative; cursor: grab; touch-action: none; }
   .vstage img { position: absolute; top: 50%; left: 50%; transform-origin: center; max-width: none; user-select: none; -webkit-user-drag: none; }
