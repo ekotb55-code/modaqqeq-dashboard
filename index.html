@@ -1042,7 +1042,9 @@ function num(v) { return Number(v || 0).toLocaleString('en-US', { maximumFractio
 function dt(s) { if (!s) return ''; const d = new Date(s); return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric' }) + ' ' + d.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' }); }
 function badge(s) { return '<span class="badge ' + (s === ST_DONE ? 'b-done' : s === ST_WORK ? 'b-work' : s === ST_REJ ? 'b-rej' : s === ST_QA ? 'b-qa' : 'b-new') + '">' + esc(s || ST_NEW) + '</span>'; }
 function isQA() { return myRole === 'جودة'; }
-function canQA() { return myRole === 'جودة' || myRole === 'مدير'; }
+// المراجعة: الجودة والمدير والدعم (الدعم بيراجع لزمايله) - ومفيش حد يراجع فاتورة هو اللي دخّلها
+function canQA() { return myRole === 'جودة' || myRole === 'مدير' || myRole === 'دعم'; }
+function canQAInv(v) { return canQA() && !!v && v.doneBy !== me; }
 function qaLate(v) { return v.status === ST_QA && v.doneAt && mins(v.doneAt, now()) > QA_SLA_MIN; }
 // سجل الجودة: سطور "نوع|وقت|اسم|ملاحظة"
 function qaLogList(v) {
@@ -1118,7 +1120,7 @@ function lnFilter() {
 const LI_TYPES = ['سعر الشراء مختلف عن الفاتورة', 'الصنف مش موجود على السيستم (محتاج تكويد)', 'الكمية أو العبوة مش واضحة', 'الصنف مش ظاهر في صورة الفاتورة', 'الاسم أو الباركود غلط', 'حاجة تانية'];
 const liList = () => (cur && cur.issues) || [];
 function liOpenMap() { const m = {}; liList().filter(x => x.status === 'مفتوحة').forEach(x => { (m[x.n] = m[x.n] || []).push(x); }); return m; }
-function liCanEdit(v) { return ((v.status === ST_NEW || v.status === ST_WORK || !v.status) && !isQA()) || (v.status === ST_QA && canQA()); }
+function liCanEdit(v) { return ((v.status === ST_NEW || v.status === ST_WORK || !v.status) && !isQA()) || (v.status === ST_QA && canQAInv(v)); }
 function liLineHtml(n) {
   return liList().filter(x => x.n === n).map(x => '<div class="liwhy' + (x.status !== 'مفتوحة' ? ' done' : '') + '">' + (x.status !== 'مفتوحة' ? '✓ ' : '⚠️ ') + esc(x.type) +
     (x.note ? ' - ' + esc(x.note) : '') + ' <small>(على ' + esc(x.on) + ' • ' + esc(x.by) + ')</small></div>').join('');
@@ -1503,12 +1505,12 @@ async function loadList(quiet) {
     if (!$('pageStores').classList.contains('hidden')) renderBoard();
     if (fresh.length && !isQA()) { alertNew(fresh); pendAt = now(); }
     // الجودة: فاتورة جديدة وصلت للمراجعة
-    const toQA = Object.keys(oldStatus).length ? r.invoices.filter(v => v.status === ST_QA && oldStatus[v.id] !== ST_QA) : [];
+    const toQA = Object.keys(oldStatus).length ? r.invoices.filter(v => v.status === ST_QA && oldStatus[v.id] !== ST_QA && v.doneBy !== me) : [];
     if (toQA.length && canQA()) {
       ding();
-      notify('🔍 ' + (toQA.length === 1 ? 'فاتورة مستنية مراجعة الجودة' : toQA.length + ' فواتير مستنية مراجعة الجودة'),
+      notify('🔍 ' + (toQA.length === 1 ? 'فاتورة مستنية المراجعة' : toQA.length + ' فواتير مستنية المراجعة'),
         toQA.map(v => v.store + ' - ' + v.supplier + ' (دخّلها ' + v.doneBy + ')').join('\n'), toQA[0].id, 'qa');
-      toast('🔍 فاتورة جديدة للجودة: ' + toQA[0].supplier);
+      toast('🔍 فاتورة مستنية المراجعة: ' + toQA[0].supplier + ' (دخّلها ' + toQA[0].doneBy + ')');
     }
     // الدعم: الجودة رجّعتلي فاتورة
     const back = Object.keys(oldStatus).length ? r.invoices.filter(v => oldStatus[v.id] === ST_QA && v.status === ST_WORK && v.receivedBy === me) : [];
@@ -3030,13 +3032,16 @@ function qaPanel(v) {
       '<br><small>صلّح الغلط على السيستم وارفع سكرين جديد ودوس "تم الإدخال" تاني</small></div>';
   }
   if (v.status === ST_QA) {
-    if (!canQA()) {
-      h += '<div class="qabox"><h3>🔍 الفاتورة عند قسم الجودة</h3>دخّلها ' + esc(v.doneBy) + ' من ' + durTxt(mins(v.doneAt, now())) +
-        ' - مستنية مراجعة الجودة قبل ما تبقى "تم الإدخال" وتوصل للفرع</div>';
+    if (!canQAInv(v)) {
+      h += v.doneBy === me
+        ? '<div class="qabox"><h3>🔍 مستنية مراجعة زميل</h3>إنت اللي دخّلتها من ' + durTxt(mins(v.doneAt, now())) +
+          ' - زميلك في الدعم أو الجودة هو اللي يراجعها (مينفعش حد يراجع على نفسه) قبل ما تبقى "تم الإدخال" وتوصل للفرع</div>'
+        : '<div class="qabox"><h3>🔍 الفاتورة عند المراجعة</h3>دخّلها ' + esc(v.doneBy) + ' من ' + durTxt(mins(v.doneAt, now())) +
+          ' - مستنية المراجعة قبل ما تبقى "تم الإدخال" وتوصل للفرع</div>';
     } else {
       if (!qaChecks._id || qaChecks._id !== v.id) qaChecks = { _id: v.id };
       const items = QA_ITEMS.filter(k => k !== 'أسعار البيع' || v.priceChanges > 0);
-      h += '<div class="qabox"><h3>🔍 مراجعة الجودة</h3>' +
+      h += '<div class="qabox"><h3>🔍 مراجعة الفاتورة <small style="font-weight:600;color:var(--muted)">(دخّلها ' + esc(v.doneBy) + ')</small></h3>' +
         '<small>قارن صورة الفاتورة (الفرع) بسكرين السيستم وجدول الأصناف، وعلّم على كل بند ✓ مظبوط أو ✗ فيه غلط.' +
         (qaLate(v) ? ' <b style="color:#C62828">⚠️ متأخرة - بقالها ' + durTxt(mins(v.doneAt, now())) + '</b>' : ' بقالها ' + durTxt(mins(v.doneAt, now()))) + '</small>' +
         '<div class="qaitems">' + items.map(k => '<div class="qait"><span>' + esc(k) + '</span><span class="tg">' +
@@ -4247,7 +4252,7 @@ function sumData() {
   const invP = qa ? [] : all.filter(v => pending(v) && (v.status !== ST_WORK || !v.receivedBy || v.receivedBy === me || boss));
   const invQA = all.filter(v => v.status === ST_QA), invQALate = invQA.filter(qaLate);
   const invRej = all.filter(cardF(ST_REJ)), invRev = all.filter(cardF('review'));
-  const invLate = invP.filter(v => mins(t0(v), t) > SLA_MIN).concat(qa || boss ? invQALate : []);
+  const invLate = invP.filter(v => mins(t0(v), t) > SLA_MIN).concat(invQALate.filter(v => canQA() && v.doneBy !== me));
   invP.forEach(v => {
     const late = mins(t0(v), t) > SLA_MIN, urg = (v.urgeCount || 0) > 0;
     add(late ? 2 : urg ? 2.5 : 4, { ic: '🧾', c: late ? '#C62828' : '#1479D3', t: 'فاتورة ' + (v.supplier || ''), store: v.store,
@@ -4256,8 +4261,9 @@ function sumData() {
   });
   invQA.forEach(v => {
     const late = qaLate(v);
-    add(qa || boss ? (late ? 2.2 : 4.2) : 7, { ic: '🔍', c: late ? '#C62828' : '#6C4BD8', t: 'فاتورة ' + (v.supplier || ''), store: v.store,
-      sub: 'مستنية الجودة • دخّلها ' + esc(v.doneBy || '') + ' من ' + ago(v.doneAt || t0(v)), tag: late ? '⚠️ متأخرة' : '', go: "page('inv');openInv('" + esc(v.id) + "')", noStore: !(qa || boss) });
+    const mineQ = v.doneBy === me, canR = canQA() && !mineQ;
+    add(canR ? (late ? 2.2 : 4.2) : 7, { ic: '🔍', c: late ? '#C62828' : '#6C4BD8', t: 'فاتورة ' + (v.supplier || ''), store: v.store,
+      sub: (mineQ ? 'مستنية مراجعة زميل (إنت دخّلتها)' : 'مستنية مراجعتك • دخّلها ' + esc(v.doneBy || '')) + ' من ' + ago(v.doneAt || t0(v)), tag: late ? '⚠️ متأخرة' : '', go: "page('inv');openInv('" + esc(v.id) + "')", noStore: !canR });
   });
   if (!qa) {
     invRej.forEach(v => add(8, { ic: '↩️', c: '#8D6E63', t: 'فاتورة ' + (v.supplier || ''), store: v.store, sub: 'مرفوضة - مستنية الفرع يعدّلها', tag: '', go: "page('inv');openInv('" + esc(v.id) + "')", noStore: true }));
@@ -5935,7 +5941,7 @@ function perfCalc_(b, A, reps, SC, TS) {
     p.n++; p.total += v.total; p.mins += m; p.lines += v.count;
     if (m <= SLA_MIN) p.ontime++;
     if (v.receivedAt) { p.pick += mins(start, v.receivedAt); p.pickN++; }
-    if (v.qaBy) { p.qaN++; if (!v.qaRejects) p.firstOk++; }
+    if (v.qaBy) { p.qaN++; if (!v.qaRejects) p.firstOk++; if (v.qaBy !== v.doneBy) P(v.qaBy).rev = (P(v.qaBy).rev || 0) + 1; }
   });
   reps.forEach(x => { const p = P(x.by); p.cr += mins(x.asked, x.at); p.crN++; });
   // ---- تذاكر الدعم: اللي حلّها + تقييم الفرع، والمستعجلة اللي اتأخرت في الاستلام (على اللي كانوا في الوردية)
@@ -6057,6 +6063,7 @@ function drawPerf_() {
       '<div class="kpi"><small>في الميعاد</small><b style="color:' + colors(p.rate) + '">' + Math.round(p.rate * 100) + '%</b></div>' +
       '<div class="kpi"><small>شغّال عليها دلوقتي</small><b>' + p.open + '</b></div>' +
       '<div class="kpi"><small>💬 متوسط الرد على الشات</small><b>' + (p.crN ? durTxt(p.cr / p.crN) + ' (' + p.crN + ')' : '-') + '</b></div>' +
+      '<div class="kpi"><small>🤝 راجع لزمايله</small><b>' + (p.rev || 0) + '</b></div>' +
       '<div class="kpi"><small>🔍 عدّت الجودة من أول مرة</small><b style="color:' + (p.fp === null ? 'inherit' : colors(p.fp)) + '">' + (p.fp === null ? '-' : Math.round(p.fp * 100) + '%') + '</b></div>' +
       '<div class="kpi"><small>↩️ رجوع من الجودة</small><b style="' + (p.ret ? 'color:var(--red);font-size:22px' : '') + '">' + p.ret + '</b></div>' +
       '<div class="kpi"><small>⏱ ساعات الاتصال</small><b>' + (a ? hh_(a.mins) + ' س' : '-') + '</b></div>' +
