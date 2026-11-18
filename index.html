@@ -692,6 +692,24 @@
   .ordSw { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 4px; cursor: pointer; } .ordSw input { width: auto; }
   .ordwide .bacts { flex-wrap: wrap; } .ordwide .wobox, .ordwide .isbox { box-shadow: none; padding: 0; margin: 0; }
   .orddays { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+  /* بحث الأصناف + مشاكل الأصناف */
+  .lnsearch { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .lnsearch input { flex: 1; min-width: 0; padding: 8px 10px; }
+  .lnsearch #lnQn { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+  .lnx { border: 1px solid #D6DFEA; background: #F5F8FC; color: #8696A7; border-radius: 10px; width: 36px; height: 36px; font-size: 16px; font-weight: 900; cursor: pointer; flex: 0 0 36px; }
+  .lnx.on { background: #FDECEA; color: #C62828; border-color: #F5C2BD; }
+  .lib { display: block; margin-top: 4px; border: 1px solid #F5C2BD; background: #fff; color: #C62828; border-radius: 8px; padding: 3px 6px; font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .lib.on { background: #C62828; color: #fff; }
+  tr.liflag td { background: #FFF4F2 !important; }
+  .liwhy { color: #C62828; font-size: 12px; font-weight: 700; margin-top: 3px; } .liwhy.done { color: #1A8A3E; text-decoration: line-through; opacity: .75; }
+  .liwhy small { font-weight: 400; color: var(--muted); }
+  .lisum { color: #C62828; font-weight: 800; font-size: 12px; }
+  .libox { margin-top: 8px; border: 1.5px solid #F5C2BD; border-radius: 12px; padding: 8px 12px; background: #FFF9F8; }
+  .libox summary { font-weight: 800; color: #B3261E; cursor: pointer; }
+  .lirow { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid #F3D9D5; font-size: 13px; }
+  .lirow.done { opacity: .6; } .lirow small { color: var(--muted); } .liacts { display: flex; gap: 4px; } .liacts .btn { padding: 4px 9px; font-size: 12.5px; }
+  .litypes { display: flex; flex-direction: column; gap: 4px; } .litypes .chk { font-size: 14px; }
+  .litab { border-collapse: collapse; width: 100%; font-size: 13px; } .litab th, .litab td { border: 1px solid #E3E9F0; padding: 6px 8px; text-align: center; } .litab th { background: #F5F8FC; } .litab td:first-child { text-align: start; }
   /* 📋 ملخصي */
   .sumbtn { position: relative; } .sumbtn .nbadge { position: absolute; top: -6px; inset-inline-start: -6px; }
   #dlg .box.sumbox { width: min(720px, 100%); padding: 0; overflow: hidden; }
@@ -1072,6 +1090,115 @@ function srFlags(L) {
   });
   return out;
 }
+// ---------- البحث في أصناف الفاتورة (✕ بتمسح الخانة) ----------
+let lnQ = { id: '', q: '' };
+function lnQSet(q, typing) {
+  lnQ = { id: cur ? cur.invoice.id : '', q: String(q || '') };
+  if (!typing && $('lnQ')) { $('lnQ').value = ''; $('lnQ').focus(); }
+  lnFilter();
+}
+function lnFilter() {
+  const q = (lnQ.id === (cur && cur.invoice.id) ? lnQ.q : '').trim().toLowerCase();
+  const rows = document.querySelectorAll('#linesBox tr[data-n]');
+  let n = 0;
+  rows.forEach(tr => { const ok = !q || q.split(/\s+/).every(w => (tr.dataset.q || '').indexOf(w) !== -1); tr.style.display = ok ? '' : 'none'; if (ok) n++; });
+  const c = $('lnQn'); if (c) c.textContent = q ? n + ' من ' + rows.length : '';
+  const x = document.querySelector('#linesBox .lnx'); if (x) x.classList.toggle('on', !!q);
+}
+// ---------- ⚠️ مشاكل الأصناف (الدعم وهو بيدخّل، والجودة وهي بتراجع) ----------
+const LI_TYPES = ['سعر الشراء مختلف عن الفاتورة', 'الصنف مش موجود على السيستم (محتاج تكويد)', 'الكمية أو العبوة مش واضحة', 'الصنف مش ظاهر في صورة الفاتورة', 'الاسم أو الباركود غلط', 'حاجة تانية'];
+const liList = () => (cur && cur.issues) || [];
+function liOpenMap() { const m = {}; liList().filter(x => x.status === 'مفتوحة').forEach(x => { (m[x.n] = m[x.n] || []).push(x); }); return m; }
+function liCanEdit(v) { return ((v.status === ST_NEW || v.status === ST_WORK || !v.status) && !isQA()) || (v.status === ST_QA && canQA()); }
+function liLineHtml(n) {
+  return liList().filter(x => x.n === n).map(x => '<div class="liwhy' + (x.status !== 'مفتوحة' ? ' done' : '') + '">' + (x.status !== 'مفتوحة' ? '✓ ' : '⚠️ ') + esc(x.type) +
+    (x.note ? ' - ' + esc(x.note) : '') + ' <small>(على ' + esc(x.on) + ' • ' + esc(x.by) + ')</small></div>').join('');
+}
+function liBoxHtml(can) {
+  const L = liList(); if (!L.length) return '';
+  const open = L.filter(x => x.status === 'مفتوحة');
+  return '<details class="libox"' + (open.length ? ' open' : '') + '><summary>⚠️ مشاكل الأصناف: ' + open.length + ' مفتوحة' + (L.length > open.length ? ' • ' + (L.length - open.length) + ' اتحلت' : '') + '</summary>' +
+    L.map(x => '<div class="lirow' + (x.status !== 'مفتوحة' ? ' done' : '') + '"><span><b>صنف ' + x.n + ' - ' + esc(x.name) + ':</b> ' + esc(x.type) + (x.note ? ' - ' + esc(x.note) : '') +
+      '<br><small>على ' + esc(x.on) + ' • كتبها ' + esc(x.by) + ' ' + dt(x.at) + (x.status !== 'مفتوحة' ? ' • ✓ حلّها ' + esc(x.solvedBy) : '') + '</small></span>' +
+      (can ? '<span class="liacts"><button class="btn ghost" onclick="liSet(\'' + esc(x.id) + '\',\'' + (x.status === 'مفتوحة' ? 'solve' : 'undo') + '\')">' + (x.status === 'مفتوحة' ? '✓ اتحلت' : '↩️ لسه') + '</button>' +
+        (x.email === ls('dashEmail') || myRole === 'مدير' ? '<button class="btn ghost" onclick="liSet(\'' + esc(x.id) + '\',\'del\')" title="امسح">🗑</button>' : '') + '</span>' : '') + '</div>').join('') + '</details>';
+}
+// النص اللي بيتكتب لوحده في سبب الرجوع: مشاكل الفرع (رفض للفرع) أو مشاكل الدعم (رجوع من الجودة)
+function liText(on) {
+  return liList().filter(x => x.status === 'مفتوحة' && x.on === on).map(x => 'صنف ' + x.n + ' (' + x.name + '): ' + x.type + (x.note ? ' - ' + x.note : '')).join(' • ');
+}
+function liFill() {
+  [['rejReason', 'الفرع'], ['qaNotes', 'الدعم']].forEach(([id, on]) => {
+    const el = $(id); if (!el) return;
+    const t = liText(on);
+    if (el.value === '' || el.value === (el.dataset.auto || '')) { el.value = t; el.dataset.auto = t; }
+    if (t && id === 'rejReason') { const d = el.closest('details'); if (d && !d.dataset.liOpened) { d.open = true; d.dataset.liOpened = '1'; } }
+  });
+}
+function liDlg(n) {
+  const l = (cur.lines || []).find(x => x.n === n); if (!l) return;
+  const qaNow = cur.invoice.status === ST_QA;
+  dlg('<h3>⚠️ مشكلة في صنف ' + n + '</h3><p style="margin:0 0 8px;color:var(--muted)">' + esc(l.name) + (l.barcode ? ' • ' + esc(l.barcode) : '') + '</p>' +
+    '<label class="fl">نوع المشكلة</label><div class="litypes">' + LI_TYPES.map((t, i) => '<label class="chk"><input type="radio" name="liT" value="' + esc(t) + '"' + (i === 0 ? ' checked' : '') + '> ' + esc(t) + '</label>').join('') + '</div>' +
+    '<label class="fl" style="margin-top:8px">ملاحظة</label><textarea id="liNote" placeholder="مثلاً: السعر في الورقة 42.5 والفرع كاتب 45" style="width:100%;min-height:60px"></textarea>' +
+    '<label class="fl" style="margin-top:8px">المشكلة على مين؟</label><div class="litypes">' +
+    ['الفرع', 'الدعم'].map(o => '<label class="chk"><input type="radio" name="liOn" value="' + o + '"' + ((qaNow ? 'الدعم' : 'الفرع') === o ? ' checked' : '') + '> ' + (o === 'الفرع' ? '🏪 الفرع (هيتكتب في سبب الرفض)' : '🧑‍💻 الدعم (هيتكتب في ملاحظة الجودة)') + '</label>').join('') + '</div>' +
+    '<div class="err" id="liErr"></div><div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="closeDlg()">رجوع</button></div>');
+  $('dlgOk').onclick = async () => {
+    const type = (document.querySelector('input[name=liT]:checked') || {}).value, on = (document.querySelector('input[name=liOn]:checked') || {}).value, note = $('liNote').value.trim();
+    if (type === 'حاجة تانية' && !note) return $('liErr').textContent = 'اكتب المشكلة في الملاحظة';
+    $('dlgOk').disabled = true;
+    try {
+      const r = await api('dLiAdd', { token, id: cur.invoice.id, n, type, note, on }, true);
+      cur.issues = r.issues || []; closeDlg(); renderLines(); toast('⚠️ اتسجلت المشكلة');
+    } catch (e) { $('dlgOk').disabled = false; $('liErr').textContent = msg(e); }
+  };
+}
+async function liSet(lid, what) {
+  if (what === 'del' && !confirm('تمسح المشكلة دي؟')) return;
+  try {
+    const r = await api(what === 'del' ? 'dLiDel' : 'dLiSolve', { token, lid, undo: what === 'undo' }, true);
+    cur.issues = r.issues || []; renderLines();
+  } catch (e) { toast(msg(e)); }
+}
+// التقرير (تقارير الفروع + أداء الدعم)
+let liRepCache = {};
+async function liRepGet(from, to) {
+  const k = from + '|' + to;
+  if (!liRepCache[k]) liRepCache[k] = api('dLiReport', { token, from, to }).catch(e => ({ err: msg(e) }));
+  return liRepCache[k];
+}
+function liRepTable(B, title, who) {
+  const keys = Object.keys(B || {}).sort((a, b) => B[b].n - B[a].n);
+  if (!keys.length) return '<p style="color:var(--muted)">' + title + ': مفيش مشاكل في الفترة دي ✅</p>';
+  const T = LI_TYPES.filter(t => keys.some(k => B[k].types[t]));
+  const sh = t => t.replace(' (محتاج تكويد)', '').replace('سعر الشراء مختلف عن الفاتورة', 'سعر الشراء').replace('الصنف مش موجود على السيستم', 'مش على السيستم');
+  return '<h4 style="margin:10px 0 6px;color:var(--navy)">' + title + '</h4><div style="overflow:auto"><table class="litab"><thead><tr><th>' + who + '</th><th>الإجمالي</th>' + T.map(t => '<th>' + esc(sh(t)) + '</th>').join('') + '</tr></thead><tbody>' +
+    keys.map(k => '<tr><td><b>' + esc(k) + '</b></td><td><b>' + B[k].n + '</b></td>' + T.map(t => '<td>' + (B[k].types[t] || '') + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
+}
+function liRepHtml(r, mode) {
+  if (!r) return '<div class="empty"><span class="spin"></span></div>';
+  if (r.err) return '<div class="err">' + esc(r.err) + '</div>';
+  return '<div style="color:var(--muted);font-size:13px">إجمالي ' + r.total + ' مشكلة' + (r.open ? ' • ' + r.open + ' لسه مفتوحة' : '') + '</div>' +
+    (mode !== 'support' ? liRepTable(r.branch, '🏪 المشاكل اللي على الفروع', 'الفرع') : '') +
+    (mode !== 'branch' ? liRepTable(r.support, '🧑‍💻 المشاكل اللي على الدعم', 'الموظف') : '');
+}
+async function liRepShow() {
+  const box = $('liRepBox'); if (!box) return;
+  box.innerHTML = liRepHtml(null);
+  const r = await liRepGet($('repFrom').value, $('repTo').value);
+  if ($('liRepBox')) $('liRepBox').innerHTML = '<div class="pane" style="margin-top:12px"><h3 style="margin-top:0;color:var(--navy)">⚠️ مشاكل الأصناف من ' + esc($('repFrom').value) + ' لـ ' + esc($('repTo').value) + '</h3>' + liRepHtml(r) + '</div>';
+}
+let liPerfKey = '', liPerfData = null;
+function liPerfHtml() {
+  const b = perfBounds_(), k = b.fromKey + '|' + b.toKey;
+  if (liPerfKey !== k) {
+    liPerfKey = k; liPerfData = null;
+    liRepGet(b.fromKey, b.toKey).then(r => { if (liPerfKey === k) { liPerfData = r; if ($('liPerfBox')) $('liPerfBox').innerHTML = liRepHtml(r, 'support'); } });
+  }
+  return '<div class="pane" style="margin-top:14px"><h3 style="margin-top:0;color:var(--navy)">⚠️ مشاكل الأصناف اللي على الدعم</h3><div id="liPerfBox">' + liRepHtml(liPerfData, 'support') + '</div></div>';
+}
+
 // زرار "راجعت" لكل صنف (المحلات المربوطة ببرنامج البيع): بيتحفظ على الجهاز ده
 let revOk = {};
 try { revOk = JSON.parse(localStorage.getItem('mdq-revok') || '{}') || {}; } catch (e) { revOk = {}; }
@@ -1967,20 +2094,23 @@ function renderLines() {
   // (ولما الفاتورة تتحدّث لوحدها من السيرفر برضه - المكان محفوظ لكل فاتورة)
   if (lnScroll.id !== v.id) lnScroll = { id: v.id, top: 0 };
   const oldTb = box.querySelector('.tablebox'), keepTop = oldTb ? oldTb.scrollTop : lnScroll.top, keepLeft = oldTb ? oldTb.scrollLeft : 0;
-  box.innerHTML = '<div class="tablebox' + (lk && canWork ? ' linked' : '') + '" onscroll="lnScroll.top=this.scrollTop"><table><thead><tr><th class="mvc" title="رتّب الأصناف زي ترتيبها في الورقة">↕</th><th>م</th><th>اسم الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>سعر البيع</th><th class="rvc">مراجعة</th></tr></thead><tbody>' +
-    L.map((l, k) => '<tr data-n="' + l.n + '" class="' + (fl[l.n] ? 'flag' : l.newSale !== null ? 'pchg' : '') + (rv[l.n] ? ' rvd' : '') + '" ondragover="loOver(event,this)" ondragleave="loLeave(this)" ondrop="loDrop(event,this)">' +
+  const LI = liOpenMap(), liCan = liCanEdit(v);
+  box.innerHTML = '<div class="lnsearch"><button class="lnx" onclick="lnQSet(\'\')" title="امسح البحث">✕</button><input id="lnQ" placeholder="🔍 دوّر في أصناف الفاتورة (الاسم أو الباركود)" value="' + esc(lnQ.id === v.id ? lnQ.q : '') + '" oninput="lnQSet(this.value, true)"><span id="lnQn"></span></div>' +
+    '<div class="tablebox' + (lk && canWork ? ' linked' : '') + '" onscroll="lnScroll.top=this.scrollTop"><table><thead><tr><th class="mvc" title="رتّب الأصناف زي ترتيبها في الورقة">↕</th><th>م</th><th>اسم الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>سعر البيع</th><th class="rvc">مراجعة</th></tr></thead><tbody>' +
+    L.map((l, k) => '<tr data-n="' + l.n + '" data-q="' + esc((l.name + ' ' + (l.barcode || '')).toLowerCase()) + '" class="' + (LI[l.n] ? 'liflag ' : '') + (fl[l.n] ? 'flag' : l.newSale !== null ? 'pchg' : '') + (rv[l.n] ? ' rvd' : '') + '" ondragover="loOver(event,this)" ondragleave="loLeave(this)" ondrop="loDrop(event,this)">' +
       '<td class="mvc"><span class="mvh" draggable="true" ondragstart="loStart(event,' + l.n + ')" ondragend="loEnd()" title="اسحب علشان تحرّك الصنف">⠿</span>' +
       '<button class="mvb" onclick="loMove(' + l.n + ',-1)"' + (k === 0 ? ' disabled' : '') + ' title="لفوق">▲</button>' +
       '<button class="mvb" onclick="loMove(' + l.n + ',1)"' + (k === L.length - 1 ? ' disabled' : '') + ' title="لتحت">▼</button></td>' +
       '<td>' + (k + 1) + '</td><td>' + esc(l.name) + (l.isNew ? ' <span class="new-item">🆕 جديد ' + esc(l.barcode) + '</span>' : '') +
       (l.unit === 'كرتونة' ? '<div style="color:var(--muted);font-size:12px">' + num(l.qty) + ' كرتونة × ' + esc(l.cartonSize) + '</div>' : '') +
-      (fl[l.n] ? '<div class="flagwhy">⚠️ ' + fl[l.n].map(w => esc(w.s)).join(' • ') + '</div>' : '') +
+      (fl[l.n] ? '<div class="flagwhy">⚠️ ' + fl[l.n].map(w => esc(w.s)).join(' • ') + '</div>' : '') + liLineHtml(l.n) +
       '</td><td class="num">' + num(l.pieces) + '</td><td class="num">' + money(l.piecePrice) +
       (Math.abs(pDiff(l)) >= 0.01 ? '<div class="' + (pDiff(l) > 0 ? 'up' : 'down') + '">' + (pDiff(l) > 0 ? '▲' : '▼') + ' كان ' + money(l.oldPrice) + '</div>' : '') +
       '</td><td class="num">' + money(l.total) + '</td><td class="num">' +
       (l.newSale !== null ? '<span class="sale">🏷 ' + money(l.oldSale) + ' ← ' + money(l.newSale) + '</span>' : (l.oldSale !== null ? money(l.oldSale) : '')) + '</td>' +
-      '<td class="rvc"><button class="rvb' + (rv[l.n] ? ' on' : '') + '" onclick="revTog(' + l.n + ')">' + (rv[l.n] ? '✓ راجعت' : 'راجعت') + '</button></td></tr>').join('') +
-    '<tr class="total-row"><td class="mvc"></td><td></td><td>الإجمالي</td><td></td><td></td><td class="num">' + money(v.total) + '</td><td></td><td class="rvc">' + (L.length - revLeft()) + '/' + L.length + '</td></tr></tbody></table></div>' +
+      '<td class="rvc"><button class="rvb' + (rv[l.n] ? ' on' : '') + '" onclick="revTog(' + l.n + ')">' + (rv[l.n] ? '✓ راجعت' : 'راجعت') + '</button>' +
+      (liCan ? '<button class="lib' + (LI[l.n] ? ' on' : '') + '" onclick="liDlg(' + l.n + ')" title="الصنف ده فيه مشكلة">⚠️ مشكلة</button>' : '') + '</td></tr>').join('') +
+    '<tr class="total-row"><td class="mvc"></td><td></td><td>الإجمالي</td><td></td><td></td><td class="num">' + money(v.total) + '</td><td></td><td class="rvc">' + (L.length - revLeft()) + '/' + L.length + (Object.keys(LI).length ? '<div class="lisum">⚠️ ' + Object.keys(LI).length + '</div>' : '') + '</td></tr></tbody></table></div>' + liBoxHtml(liCan) +
     '<div class="loinfo">' + (lo
       ? '<span>↕️ الترتيب اتعدّل' + (lo.by ? ' - رتّبها ' + esc(lo.by) : '') + (lo.at ? ' • ' + dt(lo.at) : '') + (loPend[v.id] ? ' • بيتحفظ...' : '') + '</span><button class="mvb" onclick="loReset()">↩️ رجّع الترتيب الأصلي</button>'
       : '<span>↕️ اسحب ⠿ أو دوس ▲▼ علشان ترتّب الأصناف زي ترتيبها في الورقة. و«راجعت» اختيارية' + (lk && canWork ? ' (إلزامية هنا لأن المحل مربوط بالبرنامج)' : '') + '.</span>') + '</div>';
@@ -1991,6 +2121,7 @@ function renderLines() {
     requestAnimationFrame(put); // لو الصفحة لسه بتترسم
   }
   srRender(fl, canWork);
+  lnFilter(); liFill();
 }
 function srRender(fl, canWork) {
   const box = $('srBox');
@@ -2626,8 +2757,9 @@ function renderRepForm() {
     '<div><small>من</small><input type="date" id="repFrom" value="' + isoDay(first) + '"></div>' +
     '<div><small>إلى</small><input type="date" id="repTo" value="' + isoDay(today) + '"></div>' +
     '<button class="btn" style="padding:12px 20px" onclick="makeReport(\'perf\')">📄 تقرير الأداء</button>' +
-    '<button class="btn" style="padding:12px 20px;background:#6C4BD8" onclick="makeReport(\'price\')">📊 تقرير أسعار الشراء</button></div>' +
-    '<p style="color:var(--muted);margin:10px 0 0;font-size:13px">📄 <b>الأداء:</b> الفواتير اللي دخلت ووقت الإدخال والموردين + التاسكات وتذاكر الدعم وطلبات الجرد &nbsp;•&nbsp; 📊 <b>أسعار الشراء:</b> الأصناف اللي اتشرت وزيادة ونقص أسعارها وأثرها على التكلفة (لصناع القرار)</p></div>';
+    '<button class="btn" style="padding:12px 20px;background:#6C4BD8" onclick="makeReport(\'price\')">📊 تقرير أسعار الشراء</button>' +
+    '<button class="btn" style="padding:12px 20px;background:#C62828" onclick="liRepShow()">⚠️ مشاكل الأصناف</button></div>' +
+    '<p style="color:var(--muted);margin:10px 0 0;font-size:13px">📄 <b>الأداء:</b> الفواتير اللي دخلت ووقت الإدخال والموردين + التاسكات وتذاكر الدعم وطلبات الجرد &nbsp;•&nbsp; 📊 <b>أسعار الشراء:</b> الأصناف اللي اتشرت وزيادة ونقص أسعارها وأثرها على التكلفة (لصناع القرار) &nbsp;•&nbsp; ⚠️ <b>مشاكل الأصناف:</b> المشاكل اللي اتعلّمت على أصناف الفواتير، على كل فرع وعلى كل موظف دعم</p></div><div id="liRepBox"></div>';
 }
 // kind: 'perf' = تقرير الأداء (الفواتير)، 'price' = تقرير أسعار الشراء (الأصناف)
 async function makeReport(kind) {
@@ -5943,6 +6075,7 @@ function drawPerf_() {
   if (sl.length) h += '<div class="pane stores-perf"><h3 style="margin-top:0;color:var(--navy)">🏪 الفروع</h3><table><thead><tr><th>الفرع</th><th>فواتير</th><th>دخلت</th><th>متوسط وقت الإدخال</th><th>قيمة الفواتير</th></tr></thead><tbody>' +
     sl.map(([n, s]) => '<tr><td>' + esc(n) + '</td><td class="num">' + s.n + '</td><td class="num">' + s.done + '</td><td>' + (s.done ? durTxt(s.mins / s.done) : '-') + '</td><td class="num">' + money(s.total) + '</td></tr>').join('') + '</tbody></table></div>';
   if (TSr && TSr.err) h = '<div class="warnbox">تعذر تحميل التاسكات: ' + esc(TSr.err.indexOf('مفتاح غلط') !== -1 ? 'السكريبت لسه ما اتحدّثش - انشر النسخة الجديدة' : TSr.err) + '</div>' + h;
+  h += liPerfHtml();
   $('pagePerf').innerHTML = h;
 }
 
