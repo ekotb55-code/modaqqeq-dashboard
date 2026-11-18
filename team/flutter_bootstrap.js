@@ -43,6 +43,8 @@ _flutter.buildConfig = {"engineRevision":"371f77202a73e8dff57a8b3bff75bca55c090a
 
 // من غير service worker بتاع فلاتر - بنستخدم sw.js بتاعنا (للإشعارات والفتح من غير نت)
 _flutter.loader.load({
+  // المحرّك من موقعنا (مش من جوجل) علشان يتخزن على الموبايل مع التطبيق ويفتح من غير ما يتحمّل كل مرة
+  config: { canvasKitBaseUrl: 'canvaskit/' },
   onEntrypointLoaded: async function (engineInitializer) {
     const appRunner = await engineInitializer.initializeEngine();
     const s = document.getElementById('splash');
