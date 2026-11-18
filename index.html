@@ -117,6 +117,16 @@
   .tsbox .umrow .umbar { color: #00897B; }
   .tsbox .umspark i { background: #80CBC4; }
   .tsbox .iitag { display: inline-block; background: #E0F2F1; color: #00695C; border: 1px solid #B2DFDB; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700; }
+  .isp.pap { background: #E8EAF6; color: #283593; border-color: #C5CAE9; font-weight: 800; }
+  .isp.pap .umbar i { background: #3949AB; }
+  .isp.pap.warn { background: #FFF6E0; color: #9A6700; border-color: #F5DD9C; } .isp.pap.warn .umbar i { background: #E0A100; }
+  .isp.pap.bad { background: #FDECEA; color: #B3261E; border-color: #F5C2BD; } .isp.pap.bad .umbar i { background: #D93025; }
+  .pabox h3 { color: #283593; } .pabox .iitag { display: inline-block; background: #E8EAF6; color: #283593; border: 1px solid #C5CAE9; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700; }
+  .pasrv { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #EEF1F6; font-size: 13.5px; }
+  .pasrv .umbar { width: 100%; } .pasrv .umbar i { background: var(--pc, #3949AB); }
+  .pasec { margin-top: 10px; border: 1px solid #E3E6EA; border-radius: 12px; padding: 4px 12px 10px; }
+  .pasec > summary { cursor: pointer; font-weight: 800; padding: 6px 0; color: #283593; }
+  .pasec h3 { display: none; } .pasec .iitag, .pasec .isbig + .umbig { display: none; }
   .patot { margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: #F6F8FA; border: 1px solid var(--line, #E3E6EA); font-size: 12.5px; line-height: 1.7; }
   .umnote { font-size: 12px; color: var(--muted); line-height: 1.7; }
   .isbox h3 { margin: 0 0 10px; }
@@ -855,9 +865,8 @@
     .ordchip { font-size: 11.5px; padding: 2px 7px; } .ordbr { padding: 6px 7px; } .ordbr .btn, .ordwide .btn { padding: 4px 8px !important; font-size: 11.5px !important; }
     #umPill { padding: 4px 7px; font-size: 11px; gap: 0; }
     #umPill .umbar, #umPill .umico { display: none; }
-    #iiPill { padding: 4px 7px; font-size: 11px; gap: 0; }
-    #iiPill .umbar, #iiPill .umico { display: none; }
-    #tsPill { padding: 4px 7px; font-size: 11px; gap: 0; }
+    #paPill { padding: 4px 7px; font-size: 11px; gap: 3px; }
+    #paPill .umbar, #paPill .pal { display: none; }
     html, body { overflow-x: clip; }
     /* الموبايل: عمودين جنب بعض (نص العرض) والكروت أصغر */
     .board { gap: 8px; }
@@ -927,8 +936,7 @@
       <span class="sp"></span>
       <span class="net good" id="netPill" onclick="netInfo()" title="سرعة النت"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><span id="netTxt">النت...</span></span>
       <span class="isp hidden" id="umPill" onclick="umDlg()" title="استهلاك جوجل لطلبات النت من السكريبت (آخر 24 ساعة)"><span class="umico">🌐</span> <span class="umbar"><i></i></span> <span id="umTxt"></span></span>
-      <span class="isp iip hidden" id="iiPill" onclick="iiuDlg()" title="استهلاك سيرفر تطبيق الصور (حساب pos-assist) النهارده"><span class="umico">🖼️</span> <span class="umbar"><i></i></span> <span id="iiTxt"></span></span>
-      <span class="isp tsp hidden" id="tsPill" onclick="tsuDlg()" title="طلبات سيرفر تسوية خزنة الدعم (حساب pos-assist) النهارده"><span class="umico">🧾</span> <span id="tsTxt"></span></span>
+      <span class="isp pap hidden" id="paPill" onclick="paDlg()" title="كل اللي بيتصرف النهارده من حساب pos-assist@modaqqeq.com (الصور + تسوية الخزنة + الورديات) من 100 ألف"><span class="umico">🏢</span> <span class="pal">pos-assist</span> <span class="umbar"><i></i></span> <span id="paTxt"></span></span>
       <span class="isp hidden" id="isPill" onclick="isDlg()" title="تحديث شيت أصناف المخزن من السيستم">📦 <span id="isTxt">الأصناف...</span></span>
       <button class="btn soft sumbtn" id="sumBtn" onclick="sumDlg()" title="ملخصي: كل اللي مستنيك دلوقتي">📋<span class="nbadge hidden" id="sumBadge"></span></button>
       <button class="btn soft bell" id="bellBtn" onclick="enableAlerts()" title="الإشعارات والصوت">🔔</button>
@@ -5001,7 +5009,7 @@ const UM_NAMES = {
 };
 function umStart() { umLoad(); setInterval(umLoad, 5 * 60000); }
 async function umLoad() {
-  try { um = await api('dUsage', { token }); umPaint(); iiuLoad(); tsuLoad(); } catch (e) { /* السكريبت لسه ما اتحدّثش: العداد يفضل مستخبي */ }
+  try { um = await api('dUsage', { token }); umPaint(); iiuLoad(); tsuLoad(); shuLoad(); } catch (e) { /* السكريبت لسه ما اتحدّثش: العداد يفضل مستخبي */ }
 }
 function umPct() { return um && um.limit ? Math.round(um.used / um.limit * 100) : 0; }
 function umCls() { const p = umPct(); return um.blocked || p >= 90 ? 'bad' : p >= 70 ? 'warn' : ''; }
@@ -5089,16 +5097,7 @@ async function iiuLoad() {
   try { iiu = await iiApi('imgUsage'); iiuPaint(); } catch (e) { /* سيرفر الصور ما ردّش: العداد يفضل زي ما هو */ }
 }
 function iiuPct() { return iiu && iiu.limit ? Math.round(iiu.used / iiu.limit * 100) : 0; }
-function iiuPaint() {
-  const p = $('iiPill');
-  if (!p || !iiu) return;
-  const pc = iiuPct();
-  p.className = 'isp iip' + (pc >= 90 ? ' bad' : pc >= 70 ? ' warn' : '');
-  p.style.setProperty('--um', Math.min(100, pc) + '%');
-  $('iiTxt').textContent = pc + '%';
-  if ($('iiBox')) $('iiBox').innerHTML = iiuHtml();
-  if ($('tsBox') && tsu) $('tsBox').innerHTML = tsuHtml(); // الإجمالي اللي في نافذة التسوية
-}
+function iiuPaint() { paPaint(); }
 function iiuHtml() {
   if (!iiu) return '<div class="empty"><span class="spin"></span></div>';
   const pc = iiuPct(), col = pc >= 90 ? '#D93025' : pc >= 70 ? '#E0A100' : '#8E24AA', boss = !!(um && um.boss);
@@ -5131,7 +5130,7 @@ function iiuHtml() {
   h += '<div class="umnote" style="margin-top:10px">ده رصيد سيرفر تطبيق الصور لوحده - مش من رصيد «دليل الموظفين» (عداد 🌐). التفصيل بالخدمة شغال من 17/11.</div>';
   return h;
 }
-function iiuDlg() { dlg('<div id="iiBox" class="iibox">' + iiuHtml() + '</div>'); iiuLoad(); tsuLoad(); }
+function iiuDlg() { paDlg(); }
 async function iiuSw(key, off) {
   if (iiuBusy) return;
   const name = II_NAMES[key] || key;
@@ -5144,6 +5143,82 @@ async function iiuSw(key, off) {
   } catch (e) { toast(msg(e)); }
   iiuBusy = false;
 }
+
+// ---------- 🔄 عداد سيرفر الورديات (حساب pos-assist@modaqqeq.com) ----------
+const SH_API = 'https://script.google.com/macros/s/AKfycbwOUayDsXPiUJPCXfE6JQWzMfKdWXbaDHNbvKv7qhrEkzcGSLHervdq5NzDZirfFg/exec';
+const SH_NAMES = { push: '🔔 الإشعارات (كل دقيقة)', photos: '🖼️ نقل صور الورديات للدرايف', sms: '💬 رسايل البنك والمحفظة', img: '👀 عرض الصور في التطبيق', other: '❔ حاجات تانية' };
+let shu = null, shuBusy = false;
+async function shApi(a, data) {
+  let res;
+  try { res = await fetch(SH_API + '?a=' + a + (data ? '&data=' + encodeURIComponent(JSON.stringify(data)) : '')); }
+  catch (e) { throw new Error('سيرفر الورديات ما ردّش - حاول تاني كمان شوية'); }
+  let j = null;
+  try { j = await res.json(); } catch (e) { throw new Error('سيرفر الورديات ما ردّش صح - حاول تاني كمان شوية'); }
+  if (!j.ok) throw new Error(j.error || 'حصلت مشكلة في سيرفر الورديات');
+  return j;
+}
+async function shuLoad() { try { shu = await shApi('usage'); paPaint(); } catch (e) { /* السيرفر ما ردّش: العداد يفضل زي ما هو */ } }
+function shuHtml() {
+  if (!shu) return '<div class="empty"><span class="spin"></span></div>';
+  const boss = !!(um && um.boss), sw = shu.sw || [], off = shu.off || {}, all = Object.assign({}, shu.by || {});
+  sw.forEach(k => { if (!(k in all)) all[k] = 0; });
+  const tot = Object.keys(all).reduce((t, k) => t + all[k], 0);
+  let h = Object.keys(all).map(k => ({ k, n: all[k] })).sort((a, b) => b.n - a.n).map(x => {
+    const can = sw.indexOf(x.k) !== -1, o = off[x.k];
+    return '<div class="umrow sw' + (o ? ' off' : '') + '"><span>' + esc(SH_NAMES[x.k] || x.k) + '</span><b>' + umN(x.n) + '</b>' +
+      '<span class="umbar" style="--um:' + (tot ? Math.round(x.n / tot * 100) : 0) + '%"><i></i></span>' +
+      (!can ? '<span title="مابتتقفلش علشان الكاشير مايضيعش عليه تحويلات أو تنبيهات">🔒</span>'
+        : '<button class="umsw' + (o ? ' off' : '') + '"' + (boss ? ' onclick="shuSw(\'' + x.k + '\',' + (o ? 'false' : 'true') + ')"' : ' disabled') + '>' + (o ? '⛔ واقف' : '✅ شغّال') + '</button>') +
+      (o ? '<div class="umoff">موقوفة من ' + woWhen(o.at) + (o.by ? ' • وقّفها ' + esc(o.by) : '') + '</div>' : '') + '</div>';
+  }).join('');
+  const mx = Math.max(1, ...(shu.hours || []));
+  h += '<h4 style="margin:12px 0 0">كل ساعة</h4><div class="umspark">' + (shu.hours || []).map(n => '<i style="height:' + Math.max(2, Math.round(n / mx * 100)) + '%" title="' + umN(n) + '"></i>').join('') + '</div>';
+  h += '<div class="umnote" style="margin-top:6px">الإشعارات ورسايل البنك مابتتقفلش 🔒. ' + (shu.since ? 'العدّ شغال من ' + woWhen(shu.since) + '.' : '') + '</div>';
+  return h;
+}
+async function shuSw(key, off) {
+  if (shuBusy) return;
+  const name = SH_NAMES[key] || key;
+  if (!confirm(off ? 'توقف «' + name + '»؟\nالصور هتفضل مستنية لحد ما تشغّلها تاني.' : 'تشغّل «' + name + '» تاني؟')) return;
+  shuBusy = true;
+  try { shu = await shApi('usageSet', { token, key, off, by: me }); paPaint(); toast(off ? 'اتوقفت: ' + name : 'اشتغلت: ' + name); } catch (e) { toast(msg(e)); }
+  shuBusy = false;
+}
+// ---------- 🏢 عداد حساب pos-assist كله: كل السيرفرات اللي على الحساب في عداد واحد ----------
+// علشان تزوّد سيرفر جديد على نفس الحساب: ضيفه في PA_SERVERS
+const PA_SERVERS = [
+  { k: 'sh', name: '🔄 الورديات', color: '#3949AB', get: () => shu, html: () => shuHtml() },
+  { k: 'ii', name: '🖼️ صور الأصناف', color: '#8E24AA', get: () => iiu, html: () => iiuHtml() },
+  { k: 'ts', name: '🧾 تسوية خزنة الدعم', color: '#00897B', get: () => tsu, html: () => tsuHtml() }
+];
+function paSum() {
+  let used = 0, known = 0;
+  PA_SERVERS.forEach(s => { const d = s.get(); if (d) { used += Number(d.used) || 0; known++; } });
+  return { used, known, pct: Math.round(used / PA_LIMIT * 100) };
+}
+function paPaint() {
+  const p = $('paPill'), S = paSum();
+  if (p && S.known) {
+    p.className = 'isp pap' + (S.pct >= 90 ? ' bad' : S.pct >= 70 ? ' warn' : '');
+    p.style.setProperty('--um', Math.min(100, Math.max(S.pct, S.used ? 2 : 0)) + '%');
+    $('paTxt').textContent = S.pct + '%';
+  }
+  if ($('paBox')) { const o = {}; document.querySelectorAll('#paBox details[data-k]').forEach(d => { o[d.dataset.k] = d.open; }); $('paBox').innerHTML = paHtml(o); }
+}
+function paHtml(openState) {
+  const S = paSum(), col = S.pct >= 90 ? '#D93025' : S.pct >= 70 ? '#E0A100' : '#3949AB';
+  let h = '<h3>🏢 حساب pos-assist</h3><div style="text-align:center"><span class="iitag">pos-assist@modaqqeq.com</span></div>' +
+    '<div class="isbig">' + umN(S.used) + ' <small style="font-size:14px;color:var(--muted)">من ' + umN(PA_LIMIT) + ' • ' + S.pct + '%</small></div>' +
+    '<div class="umbig"><i style="width:' + Math.min(100, S.pct) + '%;background:' + col + '"></i></div>' +
+    '<div class="umnote">النهارده (بيتصفّر 12 بالليل) • فاضل تقريباً <b>' + umN(Math.max(0, PA_LIMIT - S.used)) + '</b> طلب • ده حد جوجل للحساب كله، وكل السيرفرات اللي تحت بتاكل منه</div>' +
+    '<h4 style="margin:14px 0 4px">مين اللي بيصرف</h4>';
+  h += PA_SERVERS.map(s => { const d = s.get(), n = d ? Number(d.used) || 0 : null;
+    return '<div class="pasrv" style="--pc:' + s.color + '"><b>' + s.name + '</b><span class="umbar" style="--um:' + (n && S.used ? Math.round(n / S.used * 100) : 0) + '%"><i></i></span><b>' + (n === null ? '…' : umN(n)) + '</b></div>'; }).join('');
+  h += PA_SERVERS.map((s, i) => '<details class="pasec" data-k="' + s.k + '"' + ((openState && s.k in openState ? openState[s.k] : i === 0) ? ' open' : '') + '><summary>' + s.name + ' - الخدمات</summary>' + s.html() + '</details>').join('');
+  h += '<div class="umnote" style="margin-top:10px">ده مش من رصيد «دليل الموظفين» (عداد 🌐 - حساب تاني). مفاتيح الإيقاف للمدير بس.</div>';
+  return h;
+}
+function paDlg() { dlg('<div id="paBox" class="iibox pabox">' + paHtml() + '</div>'); iiuLoad(); tsuLoad(); shuLoad(); }
 
 // ---------- 🧾 عداد سيرفر تسوية خزنة الدعم (سكريبت لوحده على حساب pos-assist@modaqqeq.com) ----------
 // بيعدّ كل طلب بيروح لبرنامج البيع. نفس حساب سيرفر الصور، فالاتنين بياكلوا من نفس حد جوجل اليومي (100 ألف).
@@ -5167,22 +5242,8 @@ async function tsuLoad() {
   try { tsu = await tsApi('tsUsage'); tsuPaint(); } catch (e) { /* السيرفر ما ردّش: العداد يفضل زي ما هو */ }
 }
 // إجمالي حساب pos-assist النهارده (الصور + التسوية)
-function paTotHtml() {
-  if (!iiu && !tsu) return '';
-  const a = iiu ? Number(iiu.used) || 0 : 0, b = tsu ? Number(tsu.used) || 0 : 0, t = a + b;
-  const pc = Math.round(t / PA_LIMIT * 100);
-  return '<div class="patot">📊 <b>إجمالي حساب pos-assist النهارده:</b><br>🖼️ الصور ' + (iiu ? umN(a) : '؟') + ' + 🧾 التسوية ' + (tsu ? umN(b) : '؟') +
-    ' = <b>' + umN(t) + '</b> من ' + umN(PA_LIMIT) + ' • ' + pc + '%</div>';
-}
-function tsuPaint() {
-  const p = $('tsPill');
-  if (!p || !tsu) return;
-  const pc = Math.round((Number(tsu.used) || 0) / (tsu.limit || PA_LIMIT) * 100);
-  p.className = 'isp tsp' + (pc >= 90 ? ' bad' : pc >= 70 ? ' warn' : '');
-  $('tsTxt').textContent = umN(tsu.used);
-  if ($('tsBox')) $('tsBox').innerHTML = tsuHtml();
-  if ($('iiBox') && iiu) $('iiBox').innerHTML = iiuHtml(); // الإجمالي اللي في نافذة الصور
-}
+function paTotHtml() { return ''; }
+function tsuPaint() { paPaint(); }
 function tsuHtml() {
   if (!tsu) return '<div class="empty"><span class="spin"></span></div>';
   const boss = !!(um && um.boss);
@@ -5213,7 +5274,7 @@ function tsuHtml() {
   h += '<div class="umnote" style="margin-top:10px">ده مش من رصيد «دليل الموظفين» (عداد 🌐). العداد شغال من 17/11.</div>';
   return h;
 }
-function tsuDlg() { dlg('<div id="tsBox" class="iibox tsbox">' + tsuHtml() + '</div>'); tsuLoad(); iiuLoad(); }
+function tsuDlg() { paDlg(); }
 async function tsuSw(key, off) {
   if (tsuBusy) return;
   const name = TS_NAMES[key] || key;
