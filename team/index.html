@@ -273,19 +273,23 @@
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('message', ev => { if (ev.data && ev.data.type === 'mdq-updated') ready(); });
       }
-      const tick = async () => {
+      const tick = async (force) => {
         // التطبيق شغال بالنظام الجديد: الـ service worker هو اللي بيجيب التحديث
-        if (navigator.serviceWorker && navigator.serviceWorker.controller) { if (await mdq.swCheck(false, 180000)) ready(); return; }
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) { if (await mdq.swCheck(force, 180000)) ready(); return; }
         // أول فتحة خالص: الـ service worker لسه متسطب - يخزّن النسخة دي علشان المرة الجاية تفتح على طول
         try {
           const reg = navigator.serviceWorker && await navigator.serviceWorker.ready;
-          if (reg && reg.active) reg.active.postMessage({ type: 'mdq-check' });
+          if (reg && reg.active) reg.active.postMessage({ type: 'mdq-check', force: true });
         } catch (e) {}
         check();
       };
-      tick();
-      setInterval(tick, 5 * 60 * 1000);
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') tick(); });
+      // بعد ما التطبيق يفتح بس (علشان التنزيل ما يبطّأش الفتح)
+      let started = false;
+      const start = () => { if (started) return; started = true; setTimeout(() => tick(true), 3000); };
+      window.addEventListener('flutter-first-frame', start, { once: true });
+      setTimeout(start, 300000);
+      setInterval(() => { if (started) tick(false); }, 5 * 60 * 1000);
+      document.addEventListener('visibilitychange', () => { if (started && document.visibilityState === 'visible') tick(false); });
     })();
 
     // ---- زرار "ثبّت التطبيق" تحت (بيختفي لو التطبيق متثبت أو الموظف قفله) ----

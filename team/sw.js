@@ -44,6 +44,7 @@ self.addEventListener('activate', e => {
 });
 
 // النسخة الجديدة: بتتنزل كلها في كاش لوحدها، ولما تكمل بس بتبقى هي اللي شغالة
+// (الصفحة بتطلبها بعد ما التطبيق يفتح، علشان التنزيل ما يزاحمش الفتح)
 let checking = null, lastCheck = 0;
 function checkUpdate(force) {
   if (checking) return checking;
@@ -132,17 +133,13 @@ self.addEventListener('fetch', e => {
     const name = await current();
     let hit = name ? await (await caches.open(name)).match(key) : null;
     if (!hit) hit = await (await caches.open(BOOT)).match(key);
-    if (hit) {
-      if (nav) e.waitUntil(checkUpdate(false));
-      return hit;
-    }
+    if (hit) return hit;
     try {
       const r = await fetch(req);
       if (r.ok && (nav || r.type === 'basic')) {
         const c = r.clone();
         e.waitUntil(caches.open(name || BOOT).then(x => x.put(key, c)).catch(() => {}));
       }
-      if (nav) e.waitUntil(checkUpdate(false));
       return r;
     } catch (err) {
       const any = await caches.match(key) || (nav ? await caches.match(new URL('index.html', sc).href) : null);
