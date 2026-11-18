@@ -4098,17 +4098,30 @@ function sumData() {
   const t = now(), dayEnd = new Date(t); dayEnd.setHours(23, 59, 59, 999);
   const ago = iso => durTxt(Math.max(0, Math.round((t - new Date(iso).getTime()) / 60000)));
   const S = { items: [], stores: {} };
-  const add = (rank, x) => { S.items.push(Object.assign({ rank }, x)); if (x.store) S.stores[x.store] = (S.stores[x.store] || 0) + 1; };
+  const add = (rank, x) => { S.items.push(Object.assign({ rank }, x)); if (x.store && !x.noStore) S.stores[x.store] = (S.stores[x.store] || 0) + 1; };
   const qa = isQA();
-  // الفواتير
-  const invP = qa ? all.filter(v => v.status === ST_QA) : all.filter(v => pending(v) && (v.status !== ST_WORK || !v.receivedBy || v.receivedBy === me));
-  const invLate = invP.filter(v => qa ? qaLate(v) : mins(t0(v), t) > SLA_MIN);
+  // الفواتير (نفس تعريفات الكروت اللي فوق في الداش بورد)
+  const boss = myRole === 'مدير';
+  const cardF = k => (CARD_TABS.find(x => x.k === k) || { f: () => false }).f;
+  const invP = qa ? [] : all.filter(v => pending(v) && (v.status !== ST_WORK || !v.receivedBy || v.receivedBy === me || boss));
+  const invQA = all.filter(v => v.status === ST_QA), invQALate = invQA.filter(qaLate);
+  const invRej = all.filter(cardF(ST_REJ)), invRev = all.filter(cardF('review'));
+  const invLate = invP.filter(v => mins(t0(v), t) > SLA_MIN).concat(qa || boss ? invQALate : []);
   invP.forEach(v => {
-    const late = invLate.indexOf(v) !== -1, urg = (v.urgeCount || 0) > 0;
+    const late = mins(t0(v), t) > SLA_MIN, urg = (v.urgeCount || 0) > 0;
     add(late ? 2 : urg ? 2.5 : 4, { ic: '🧾', c: late ? '#C62828' : '#1479D3', t: 'فاتورة ' + (v.supplier || ''), store: v.store,
-      sub: (v.status === ST_WORK ? 'بتتدخل' : v.status === ST_QA ? 'مستنية الجودة' : 'جديدة') + ' • من ' + ago(v.status === ST_QA ? v.doneAt : t0(v)), tag: late ? '⚠️ متأخرة' : urg ? '📣 الفرع بيستعجل' : '',
+      sub: (v.status === ST_WORK ? 'بتتدخل' + (v.receivedBy ? ' مع ' + esc(v.receivedBy) : '') : 'جديدة') + ' • من ' + ago(t0(v)), tag: late ? '⚠️ متأخرة' : urg ? '📣 الفرع بيستعجل' : '',
       go: "page('inv');openInv('" + esc(v.id) + "')" });
   });
+  invQA.forEach(v => {
+    const late = qaLate(v);
+    add(qa || boss ? (late ? 2.2 : 4.2) : 7, { ic: '🔍', c: late ? '#C62828' : '#6C4BD8', t: 'فاتورة ' + (v.supplier || ''), store: v.store,
+      sub: 'مستنية الجودة • دخّلها ' + esc(v.doneBy || '') + ' من ' + ago(v.doneAt || t0(v)), tag: late ? '⚠️ متأخرة' : '', go: "page('inv');openInv('" + esc(v.id) + "')", noStore: !(qa || boss) });
+  });
+  if (!qa) {
+    invRej.forEach(v => add(8, { ic: '↩️', c: '#8D6E63', t: 'فاتورة ' + (v.supplier || ''), store: v.store, sub: 'مرفوضة - مستنية الفرع يعدّلها', tag: '', go: "page('inv');openInv('" + esc(v.id) + "')", noStore: true }));
+    invRev.forEach(v => add(8.5, { ic: '👀', c: '#00897B', t: 'فاتورة ' + (v.supplier || ''), store: v.store, sub: 'اتدخلت - مستنية الفرع يراجعها', tag: '', go: "page('inv');openInv('" + esc(v.id) + "')", noStore: true }));
+  }
   // التذاكر والشكاوي
   const tkL = qa ? [] : tks.filter(v => tkOpen(v) && tkDue(v));
   const tkU = tkL.filter(v => v.priority === TK_URGENT), tkLt = tkL.filter(tkLate);
@@ -4145,11 +4158,13 @@ function sumData() {
     { k: 'tu', ic: '🔴', l: 'عاجل', n: tkU.length + tUrg.length, s: 'تذاكر وتاسكات', tb: '#FDECEA', tc: '#B3261E' },
     { k: 'late', ic: '⏰', l: 'متأخر', n: invLate.length + tkLt.length + tLate.length, s: 'كل الأنواع', tb: '#FFF1DE', tc: '#B35C00' },
     { k: 'task', ic: '📋', l: 'تاسكات', n: Object.keys(seenG).length, s: tToday.length ? tToday.length + ' جاية النهارده' : tRec.length ? tRec.length + ' دورية' : '', tb: '#EDE7F6', tc: '#4527A0' },
-    { k: 'inv', ic: '🧾', l: qa ? 'مستنية الجودة' : 'فواتير', n: invP.length, s: invLate.length ? invLate.length + ' متأخرة' : '', tb: '#E3F0FC', tc: '#0B3D6E' },
+    { k: 'inv', ic: '🧾', l: 'فواتير للإدخال', n: invP.length, s: invP.filter(v => v.status === ST_WORK).length ? invP.filter(v => v.status === ST_WORK).length + ' بتتدخل' : '', tb: '#E3F0FC', tc: '#0B3D6E' },
+    { k: 'qa', ic: '🔍', l: 'قسم الجودة', n: invQA.length, s: invQALate.length ? invQALate.length + ' متأخرة' : '', tb: '#EDE7F6', tc: '#5E35B1' },
+    { k: 'br', ic: '↩️', l: 'عند الفرع', n: invRej.length + invRev.length, s: (invRej.length ? invRej.length + ' مرفوضة' : '') + (invRej.length && invRev.length ? ' • ' : '') + (invRev.length ? invRev.length + ' مراجعة' : ''), tb: '#EFEBE9', tc: '#5D4037' },
     { k: 'tk', ic: '🛠️', l: 'تذاكر وشكاوي', n: tkL.length, s: tkU.length ? tkU.length + ' مستعجلة' : '', tb: '#ECEFF1', tc: '#37474F' },
     { k: 'jr', ic: '📦', l: 'جرد', n: jrL.length, s: '', tb: '#E0F7FA', tc: '#006064' },
     { k: 'cm', ic: '💬', l: 'تعليقات جديدة', n: cmL.length, s: '', tb: '#E0F2F1', tc: '#00695C' }
-  ].filter(x => !qa || x.k === 'inv');
+  ].filter(x => !qa || x.k === 'qa');
   S.total = S.items.filter(x => x.rank < 6).length;
   S.hot = tkU.length + tUrg.length;
   return S;
@@ -4161,7 +4176,7 @@ function sumDlg(f) {
   const hi = (h >= 4 && h < 12 ? 'صباح الخير' : 'مساء الخير') + ' يا ' + esc(String(me || '').split(' ')[0]) + (h >= 4 && h < 12 ? ' ☀️' : ' 🌙');
   const line = !S.total ? 'مفيش حاجة مستنياك دلوقتي' : 'مستنيك دلوقتي ' + S.total + (S.total === 1 ? ' حاجة' : S.total <= 10 ? ' حاجات' : ' حاجة') + (S.hot ? '، منهم ' + S.hot + ' عاجل 🔴' : '');
   const pick = {
-    tu: x => /عاجل|مستعجل/.test(x.tag), late: x => /متأخر/.test(x.tag), task: x => x.ic === '📋' || x.ic === '🔁', inv: x => x.ic === '🧾', tk: x => x.ic === '🛠️', jr: x => x.ic === '📦', cm: x => x.ic === '💬'
+    tu: x => /عاجل|مستعجل/.test(x.tag), late: x => /متأخر/.test(x.tag), task: x => x.ic === '📋' || x.ic === '🔁', inv: x => x.ic === '🧾', qa: x => x.ic === '🔍', br: x => x.ic === '↩️' || x.ic === '👀', tk: x => x.ic === '🛠️', jr: x => x.ic === '📦', cm: x => x.ic === '💬'
   };
   const L = sumFilter ? S.items.filter(pick[sumFilter]) : S.items.filter(x => x.rank < 6).slice(0, 5);
   const it = x => '<div class="sumit" style="--ic:' + x.c + '" onclick="closeDlg();' + x.go + '"><span class="ic">' + x.ic + '</span><span class="tx"><b>' + esc(x.t) + (x.store ? ' - ' + esc(x.store) : '') + '</b><small>' + x.sub + '</small></span>' + (x.tag ? '<span class="tg">' + x.tag + '</span>' : '') + '</div>';
@@ -4170,12 +4185,20 @@ function sumDlg(f) {
   dlg('<div class="sumhead"><h3>' + hi + '</h3><p>' + line + '</p></div>' +
     '<div class="sumtiles">' + S.tiles.map(x => '<button class="sumt' + (x.n ? '' : ' zero') + '" style="--tb:' + x.tb + ';--tc:' + x.tc + (sumFilter === x.k ? ';outline:3px solid ' + x.tc : '') + '" onclick="sumDlg(\'' + (sumFilter === x.k ? '' : x.k) + '\')">' +
       '<span class="n">' + x.n + '</span><span class="l">' + x.ic + ' ' + x.l + '</span>' + (x.s ? '<span class="s">' + x.s + '</span>' : '') + '</button>').join('') + '</div>' +
+    sumCards() +
     (S.items.length ? '<div class="sumsec"><h4>' + esc(title) + (sumFilter ? ' <a href="#" style="font-size:12.5px" onclick="event.preventDefault();sumDlg()">← الكل</a>' : '') + '</h4>' +
       (L.length ? L.map(it).join('') : '<div class="bempty">مفيش هنا حاجة ✅</div>') + '</div>' +
       (!sumFilter && st.length ? '<div class="sumsec"><h4>🏪 حسب الفرع</h4><div class="sumst">' + st.map(n => '<button onclick="closeDlg();page(\'stores\');setTimeout(()=>{const e=[...document.querySelectorAll(\'#board .bcol\')].find(c=>c.innerText.indexOf(\'' + esc(n) + '\')!==-1);if(e)e.scrollIntoView({behavior:\'smooth\',inline:\'start\',block:\'nearest\'})},400)">' + sdot(n) + esc(n) + '<b>' + S.stores[n] + '</b></button>').join('') + '</div></div>' : '')
       : '<div class="sumok">مفيش حاجة مستنياك، يومك جميل ✅</div>') +
     '<div class="sumfoot"><button class="btn" onclick="closeDlg()">يلا نبدأ 💪</button></div>');
   const box = document.querySelector('#dlg .box'); if (box) box.classList.add('sumbox');
+}
+// نفس كروت الفواتير اللي فوق في الداش بورد بأرقامها - لما تدوس تروح عليها
+function sumCards() {
+  const keys = [ST_NEW, ST_WORK, ST_QA, 'late', 'urge', ST_REJ, 'review', 'chat', TAB_NOTES];
+  const L = keys.map(k => CARD_TABS.find(x => x.k === k)).filter(Boolean).map(x => ({ x, n: all.filter(x.f).length })).filter(o => o.n);
+  if (!L.length) return '';
+  return '<div class="sumsec"><h4>🧾 الفواتير دلوقتي</h4><div class="sumst">' + L.map(o => '<button onclick="closeDlg();page(\'inv\');pickTab(\'' + esc(o.x.k) + '\')">' + o.x.t + '<b>' + o.n + '</b></button>').join('') + '</div></div>';
 }
 // بعد كل تحميل: العدد على الزرار + الظهور أول مرة في اليوم
 function sumAfterLoad() {
