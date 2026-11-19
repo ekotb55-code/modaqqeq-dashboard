@@ -135,6 +135,39 @@
         location.replace(u.toString());
       },
       // يسأل الـ service worker يشوف فيه نسخة جديدة وينزّلها: true = اتنزلت، false = مفيش جديد، null = مش متاح / النت وقع
+      // الدخول بالبصمة (WebAuthn): البصمة بتتأكد على الموبايل نفسه، والتطبيق بيفتح الحساب المحفوظ عليه
+      async bioCan() {
+        try { return window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable() ? 'yes' : 'no'; }
+        catch (e) { return 'no'; }
+      },
+      bioHas(u) { try { return localStorage.getItem('mdqBio:' + u) ? '1' : ''; } catch (e) { return ''; } },
+      bioOff(u) { try { localStorage.removeItem('mdqBio:' + u); } catch (e) {} },
+      async bioEnable(u, name) {
+        try {
+          const rnd = n => crypto.getRandomValues(new Uint8Array(n));
+          const cred = await navigator.credentials.create({ publicKey: {
+            challenge: rnd(32), rp: { name: 'مدقق' },
+            user: { id: rnd(16), name: u, displayName: name || u },
+            pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+            authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
+            timeout: 60000, attestation: 'none' } });
+          const id = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+          localStorage.setItem('mdqBio:' + u, id);
+          return 'ok';
+        } catch (e) { return (e && e.name === 'NotAllowedError') ? 'cancel' : 'error:' + (e && e.name || e); }
+      },
+      async bioCheck(u) {
+        try {
+          const id = localStorage.getItem('mdqBio:' + u);
+          if (!id) return 'none';
+          const raw = Uint8Array.from(atob(id), c => c.charCodeAt(0));
+          await navigator.credentials.get({ publicKey: {
+            challenge: crypto.getRandomValues(new Uint8Array(32)),
+            allowCredentials: [{ type: 'public-key', id: raw, transports: ['internal'] }],
+            userVerification: 'required', timeout: 60000 } });
+          return 'ok';
+        } catch (e) { return (e && e.name === 'NotAllowedError') ? 'cancel' : 'error:' + (e && e.name || e); }
+      },
       swCheck(force, ms) {
         return new Promise(res => {
           const c = navigator.serviceWorker && navigator.serviceWorker.controller;
