@@ -148,16 +148,54 @@
         }
         return null;
       },
-      // {w,h,zmin,zmax,zoom,focus} أو '' لو الكاميرا لسه ما فتحتش
+      // {w,h,zmin,zmax,zoom,focus,dev,saved} أو '' لو الكاميرا لسه ما فتحتش
       camInfo() {
         try {
           const t = mdq._camTrack(); if (!t) return '';
           const s = t.getSettings ? t.getSettings() : {};
           const c = t.getCapabilities ? t.getCapabilities() : {};
+          let saved = ''; try { saved = localStorage.getItem('mdqCamDev') || ''; } catch (e) {}
           return JSON.stringify({ w: s.width || 0, h: s.height || 0,
             zmin: c.zoom ? c.zoom.min : 0, zmax: c.zoom ? c.zoom.max : 0, zoom: s.zoom || 1,
-            focus: (c.focusMode || []).join(',') });
+            focus: (c.focusMode || []).join(','), dev: s.deviceId || '', saved });
         } catch (e) { return ''; }
+      },
+      // كاميرات الموبايل اللي ورا: [{id,label}]
+      async camList() {
+        try {
+          const ds = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+          const back = ds.filter(d => /back|rear|environment|خلف/i.test(d.label || ''));
+          const list = back.length ? back : ds.filter(d => !/front|user|أمام/i.test(d.label || ''));
+          return JSON.stringify(list.map(d => ({ id: d.deviceId, label: d.label || '' })));
+        } catch (e) { return '[]'; }
+      },
+      // نفتح كاميرا معينة ونحطها مكان اللي شغالة في نفس شاشة القراية (اللي بتقرا الباركود من الفيديو نفسه)
+      async camUse(id, save) {
+        try {
+          const old = mdq._camTrack(); if (!old) return 'no';
+          let v = null;
+          const walk = r => { if (!r || v) return; r.querySelectorAll('video').forEach(x => { if (!v && x.srcObject && x.srcObject.getVideoTracks && x.srcObject.getVideoTracks()[0] === old) v = x; });
+            r.querySelectorAll('*').forEach(e => { if (e.shadowRoot) walk(e.shadowRoot); }); };
+          walk(document);
+          if (!v) return 'no';
+          old.stop();
+          const st = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: id }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+          const t = st.getVideoTracks()[0];
+          try {
+            const f = (t.getCapabilities && t.getCapabilities().focusMode) || [];
+            if (f.includes('continuous')) await t.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+          } catch (e) {}
+          mdq._camExtra = st;
+          v.srcObject = st;
+          try { await v.play(); } catch (e) {}
+          if (save) try { localStorage.setItem('mdqCamDev', id); } catch (e) {}
+          return 'ok';
+        } catch (e) { return 'no'; }
+      },
+      // نقفل الكاميرا اللي إحنا فتحناها (لما الشاشة تتقفل أو قبل كاميرا الموبايل)
+      camRelease() {
+        try { if (mdq._camExtra) mdq._camExtra.getTracks().forEach(t => t.stop()); } catch (e) {}
+        mdq._camExtra = null;
       },
       async camZoom(z) {
         try {
