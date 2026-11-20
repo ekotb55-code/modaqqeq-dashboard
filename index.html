@@ -903,6 +903,23 @@
   .spin { display: inline-block; width: 16px; height: 16px; border: 2.5px solid currentColor; border-left-color: transparent; border-radius: 50%; animation: s .8s linear infinite; vertical-align: middle; }
   @keyframes s { to { transform: rotate(360deg); } }
 .tkitems td,.tkitems th{border:1px solid #DCE6F2;padding:6px 8px;vertical-align:top;font-size:13px}.tkitems th{background:#EEF4FB}
+  /* 📣 طلبات الجرد (فريق مدقق تيم) */
+  .jigrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 14px; }
+  .jicard { background: var(--card); border-radius: 18px; padding: 16px; box-shadow: var(--shadow); border-top: 5px solid var(--green); }
+  .jicard.closed { border-top-color: #78909C; } .jicard.cancel, .jicard.past { opacity: .62; border-top-color: #B0BEC5; }
+  .jihead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; } .jihead b { font-size: 18px; color: var(--navy); flex: 1; }
+  .jipill { padding: 3px 10px; border-radius: 20px; font-size: 12.5px; font-weight: 700; background: #E8F5E9; color: var(--green); }
+  .jipill.closed { background: #ECEFF1; color: #546E7A; } .jipill.cancel { background: #FFEBEE; color: var(--red); } .jipill.past { background: #F1F1F1; color: #777; }
+  .jiline { font-size: 14px; margin: 3px 0; } .jiline a { color: var(--blue); }
+  .jiprog { margin: 10px 0 6px; font-size: 13.5px; } .jibar { height: 9px; border-radius: 9px; background: #E3EAF3; overflow: hidden; margin-bottom: 5px; }
+  .jibar i { display: block; height: 100%; background: linear-gradient(90deg, #22A04B, #4CC06A); border-radius: 9px; }
+  .jirep { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin: 6px 0; } .jirep select { padding: 4px 6px; border-radius: 8px; }
+  .jiacts { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; } .jiacts .btn { padding: 6px 12px; font-size: 13px; }
+  .jippl { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 6px; } .jippl td { padding: 6px 4px; border-top: 1px solid var(--line); }
+  .jippl .btn { padding: 4px 10px; font-size: 12.5px; } .jist { font-weight: 700; font-size: 12.5px; }
+  .jinote { font-size: 12.5px; color: var(--muted); margin-top: 6px; line-height: 1.7; }
+  .jilogin { max-width: 380px; margin: 40px auto; } .jilogin input { width: 100%; margin-bottom: 8px; }
+  .jiusers { max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; padding: 6px; margin-top: 6px; } .jiusers label { display: block; padding: 3px 0; }
 </style>
 </head>
 <body>
@@ -932,6 +949,7 @@
         <button id="navPerf" onclick="page('perf')"><i>🏆</i><span>أداء الدعم</span></button>
         <button id="navRep" onclick="page('rep')"><i>📊</i><span>تقارير الفروع</span></button>
         <button id="navOrd" onclick="page('ord')"><i>🔁</i><span>الطلبات الدورية</span></button>
+        <button id="navJinv" onclick="page('jinv')"><i>📣</i><span>طلبات الجرد</span><span class="nbadge hidden" id="jinvBadge"></span></button>
       </div>
       <span class="sp"></span>
       <span class="net good" id="netPill" onclick="netInfo()" title="سرعة النت"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><span id="netTxt">النت...</span></span>
@@ -992,6 +1010,7 @@
   </div>
   <div class="main hidden" id="pageRep"></div>
   <div class="main hidden" id="pageOrd"></div>
+  <div class="main hidden" id="pageJinv"></div>
   <div class="team-page hidden" id="pageTeam">
     <div class="tside" id="tSide"><div class="empty"><span class="spin"></span></div></div>
     <div class="tmain" id="tMain"><div class="empty">👈 اختار محادثة</div></div>
@@ -1291,6 +1310,7 @@ function showApp() {
   isStart();
   woStart();
   umStart();
+  jinvBg();
   if ('Notification' in window && Notification.permission === 'granted') setupPush();
 }
 function page(p) {
@@ -1306,6 +1326,9 @@ function page(p) {
   $('pageOrd').classList.toggle('hidden', p !== 'ord');
   $('navOrd').classList.toggle('on', p === 'ord');
   if (p === 'ord') ordLoad(); else ordStop();
+  $('pageJinv').classList.toggle('hidden', p !== 'jinv');
+  $('navJinv').classList.toggle('on', p === 'jinv');
+  if (p === 'jinv') jinvLoad(); else jinvStop();
   $('pageInv').classList.toggle('hidden', p !== 'inv');
   $('pagePerf').classList.toggle('hidden', p !== 'perf');
   $('pageStores').classList.toggle('hidden', p !== 'stores');
@@ -2019,7 +2042,7 @@ function renderDetail() {
 // ---------- ترتيب أصناف الفاتورة (سحب أو أسهم) - بيتحفظ على السيرفر علشان الجودة تشوفه ----------
 let loPend = {}, loTimer = 0, loDragN = null, lnScroll = { id: '', top: 0 };
 // رقم نسخة الداش بورد (بيظهر جنب «بتعرض» علشان نعرف التحديث وصل ولا لأ) - زوّده مع كل تعديل
-const DASH_BUILD = '16/11 - 3';
+const DASH_BUILD = '20/11 - 1';
 function loApplyLocal(lines, order) {
   const pos = {};
   order.forEach((n, i) => { pos[String(n)] = i; });
@@ -5292,6 +5315,199 @@ async function tsuSw(key, off) {
     toast(off ? 'اتوقفت: ' + name : 'اشتغلت: ' + name);
   } catch (e) { toast(msg(e)); }
   tsuBusy = false;
+}
+
+// ---------- 📣 طلبات الجرد (فريق «مدقق تيم» - سكريبت لوحده) ----------
+// المدير بيطلب ناس لجرد جاي، والطلب بيوصل إشعار على تطبيق الفريق، وبيتكرر للي ما ردوش لحد ما عدد «هحضر» يكمل
+// الدخول هنا بحساب مدير الفريق (من شيت «مدقق تيم») - مرة واحدة على الجهاز
+const JINV_API = 'https://script.google.com/macros/s/AKfycbwxVVxwQf6cSgb4nur9AXvC2HO98AyObiqbT-bqsjbk3Go644QcWW4uVch7y8VA9bjq/exec';
+const JINV_KEY = 'b4d1771abd401101';
+const JINV_REP = [[0, 'من غير تكرار'], [1, 'كل ساعة'], [2, 'كل ساعتين'], [3, 'كل 3 ساعات']];
+let jinv = null, jinvTimer = null, jinvBusy = false, jinvBgT = null;
+function jinvAuth() { try { return JSON.parse(localStorage.getItem('mdqTeamAuth') || 'null'); } catch (e) { return null; } }
+async function jinvApi(action, data, noAuth) {
+  const a = noAuth ? null : jinvAuth();
+  const body = Object.assign(a ? { email: a.email, password: a.token } : {}, data || {});
+  let res, j = null;
+  try { res = await fetch(JINV_API + '?key=' + JINV_KEY + '&action=' + action, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) }); }
+  catch (e) { throw new Error('سيرفر «مدقق تيم» ما ردّش - حاول تاني كمان شوية'); }
+  try { j = await res.json(); } catch (e) { throw new Error('سيرفر «مدقق تيم» ما ردّش صح - حاول تاني كمان شوية'); }
+  if (!j.ok) {
+    if (!noAuth && /كلمة السر اتغيرت|الحساب ده موقوف|أو كلمة السر غلط|لمدير الفريق بس/.test(j.error || '')) { localStorage.removeItem('mdqTeamAuth'); jinv = null; }
+    throw new Error(j.error || 'حصلت مشكلة');
+  }
+  return j;
+}
+function jinvStop() { clearInterval(jinvTimer); jinvTimer = null; }
+// الرقم اللي على التاب: ناس مستنية ردك
+function jinvBadge() {
+  let n = 0;
+  (jinv && jinv.invites || []).forEach(x => { if (x.status === 'مفتوح') n += (x.counts && x.counts.wait) || 0; });
+  const b = $('jinvBadge'); if (!b) return;
+  b.textContent = n; b.classList.toggle('hidden', !n);
+}
+// في الخلفية كل 3 دقايق (لو داخل بحساب الفريق على الجهاز ده)
+function jinvBg() {
+  if (jinvBgT) return;
+  const go = async () => { if (!jinvAuth() || !$('pageJinv').classList.contains('hidden')) return; try { jinv = await jinvApi('invList'); jinvBadge(); } catch (e) {} };
+  go(); jinvBgT = setInterval(go, 180000);
+}
+async function jinvLoad(quiet) {
+  if (!jinvAuth()) return jinvLoginView();
+  if (!quiet && !jinv) $('pageJinv').innerHTML = '<div class="pane"><div class="empty"><span class="spin"></span></div></div>';
+  try { jinv = await jinvApi('invList'); jinvRender(); }
+  catch (e) { if (!jinvAuth()) return jinvLoginView(msg(e)); if (!quiet) $('pageJinv').innerHTML = '<div class="pane"><div class="empty">' + esc(msg(e)) + ' <button class="btn soft" onclick="jinvLoad()">حاول تاني</button></div></div>'; }
+  if (!jinvTimer) jinvTimer = setInterval(() => { if ($('pageJinv').classList.contains('hidden')) jinvStop(); else if (!jinvBusy && !$('dlg')) jinvLoad(true); }, 30000);
+}
+function jinvLoginView(err) {
+  $('pageJinv').innerHTML = '<div class="pane jilogin"><h3 style="margin-top:0;color:var(--navy)">📣 طلبات الجرد</h3>' +
+    '<div class="jinote" style="margin-bottom:10px">ادخل بحساب <b>مدير الفريق</b> في «مدقق تيم» (نفس اللي بتدخل بيه تطبيق الفريق). الدخول ده مرة واحدة على الجهاز ده.</div>' +
+    '<input id="jiUser" placeholder="الاسم أو الموبايل" autocomplete="username"><input id="jiPass" type="password" placeholder="كلمة السر" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')jinvLogin()">' +
+    (err ? '<div style="color:var(--red);font-size:13px;margin-bottom:8px">' + esc(err) + '</div>' : '') +
+    '<button class="btn" style="width:100%" id="jiGo" onclick="jinvLogin()">دخول</button></div>';
+}
+async function jinvLogin() {
+  const u = $('jiUser').value.trim(), p = $('jiPass').value.trim();
+  if (!u || !p) return toast('اكتب الاسم وكلمة السر');
+  $('jiGo').disabled = true;
+  try {
+    const r = await jinvApi('login', { email: u, password: p, inv: true }, true);
+    if (!r.teamManager) throw new Error('الحساب ده مش مدير فريق - ادخل بحساب المدير');
+    localStorage.setItem('mdqTeamAuth', JSON.stringify({ email: r.email, token: r.token, name: r.name }));
+    jinvLoad();
+  } catch (e) { jinvLoginView(msg(e)); }
+}
+function jinvLogout() { if (!confirm('تخرج من حساب الفريق على الجهاز ده؟')) return; localStorage.removeItem('mdqTeamAuth'); jinv = null; jinvBadge(); jinvLoginView(); }
+
+function jinvToday() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function jinvDay(k) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(k || '')) return esc(k);
+  const t = jinvToday(), base = dayName_(k) + ' ' + dayShort_(k);
+  if (k === t) return 'النهارده (' + base + ')';
+  if (k === dayAdd_(t, 1)) return 'بكرة (' + base + ')';
+  return base;
+}
+function jinvTime(t) { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); if (!m) return esc(t); const h = +m[1]; return ((h % 12) || 12) + ':' + m[2] + (h < 12 ? ' ص' : ' م'); }
+function jinvAgo(iso) {
+  if (!iso) return '';
+  const d = new Date(iso), mins = Math.round((Date.now() - d.getTime()) / 60000);
+  if (mins < 1) return 'دلوقتي'; if (mins < 60) return 'من ' + mins + ' دقيقة';
+  return d.toLocaleString('ar-EG', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+}
+function jinvRender() {
+  if (!jinv) return;
+  const a = jinvAuth() || {};
+  const list = jinv.invites || [];
+  $('pageJinv').innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px"><div><h2 style="margin:0;color:var(--navy)">📣 طلبات الجرد</h2>' +
+    '<div style="color:var(--muted);font-size:13px;margin-top:4px">اطلب ناس من فريق الجرد لجرد جاي - الطلب بيوصلهم إشعار على تطبيق الفريق، ولو العدد ما كملش الإشعار بيتكرر للي لسه ما ردوش (مفيش إشعارات من 11 بالليل لـ9 الصبح).</div></div>' +
+    '<div style="display:flex;gap:8px;align-items:center"><button class="btn" style="padding:8px 14px" onclick="jinvNewDlg()">＋ طلب جديد</button><button class="btn soft" style="padding:8px 14px" onclick="jinvLoad()">🔄 تحديث</button>' +
+    '<span style="font-size:12px;color:var(--muted)">' + esc(a.name || '') + ' • <a href="#" onclick="jinvLogout();return false">خروج من حساب الفريق</a></span></div></div>' +
+    (list.length ? '<div class="jigrid">' + list.map(jinvCard).join('') + '</div>' : '<div class="pane"><div class="empty">لسه مفيش طلبات - دوس «＋ طلب جديد»</div></div>');
+  jinvBadge();
+}
+function jinvCard(x) {
+  const t = jinvToday(), past = x.date < t, cancel = x.status === 'ملغي', closed = x.status === 'مقفول';
+  const c = x.counts || {}, need = x.need || 0, yes = c.yes || 0;
+  const cls = cancel ? 'cancel' : past ? 'past' : closed ? 'closed' : '';
+  const pill = cancel ? '<span class="jipill cancel">اتلغى</span>' : past ? '<span class="jipill past">فات</span>' : closed ? '<span class="jipill closed">مقفول</span>' : '<span class="jipill">مفتوح</span>';
+  const id = esc(x.id), live = !cancel && !past;
+  const reps = (x.replies || []).filter(r => r.ans === 'yes');
+  const ord = { wait: 0, basic: 1, extra: 2, rej: 3 };
+  reps.sort((p, q) => (ord[p.st] ?? 9) - (ord[q.st] ?? 9));
+  const no = (x.replies || []).filter(r => r.ans === 'no').map(r => r.name);
+  const stT = st => st === 'basic' ? '<span class="jist" style="color:var(--green)">أساسي • ' + esc(x.pay) + ' ج</span>' : st === 'extra' ? '<span class="jist" style="color:#5E35B1">زيادة • ' + esc(x.payExtra) + ' ج</span>' : st === 'rej' ? '<span class="jist" style="color:#888">اترفض</span>' : '<span class="jist" style="color:#E65100">مستني ردك</span>';
+  const rows = reps.map(r => {
+    const w = esc(r.id).replace(/'/g, '&#39;');
+    const btn = (lbl, st, soft) => '<button class="btn' + (soft ? ' soft' : '') + '" onclick="jinvDecide(\'' + id + '\',\'' + w + '\',\'' + st + '\')">' + lbl + '</button>';
+    const acts = !live ? '' : r.st === 'wait' ? btn('قبول', 'ok') + ' ' + btn('رفض', 'rej', 1)
+      : (r.st !== 'basic' ? btn('أساسي', 'basic', 1) + ' ' : '') + (r.st !== 'extra' ? btn('زيادة', 'extra', 1) + ' ' : '') + (r.st !== 'rej' ? btn('رفض', 'rej', 1) : btn('رجّعه مستني', 'wait', 1));
+    return '<tr><td><b>' + esc(r.name) + '</b></td><td>' + stT(r.st) + '</td><td style="text-align:left;white-space:nowrap">' + acts + '</td></tr>';
+  }).join('');
+  const pct = need ? Math.min(100, Math.round(yes / need * 100)) : 0;
+  const rp = x.repeat || 0;
+  return '<div class="jicard ' + cls + '"><div class="jihead"><b>📅 ' + jinvDay(x.date) + '</b>' + pill + '</div>' +
+    (x.place ? '<div class="jiline">🏪 ' + esc(x.place) + '</div>' : '') +
+    (x.addr ? '<div class="jiline">📍 ' + (/^https?:\/\//.test(x.addr) ? '<a href="' + esc(x.addr) + '" target="_blank">اللوكيشن</a>' : '<a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(x.addr) + '" target="_blank">' + esc(x.addr) + '</a>') + '</div>' : '') +
+    (x.arrive ? '<div class="jiline">🕘 الحضور ' + jinvTime(x.arrive) + '</div>' : '') +
+    (x.dur ? '<div class="jiline">⏱ الوقت المقدر: ' + esc(x.dur) + '</div>' : '') +
+    '<div class="jiline">💰 ' + esc(x.pay) + ' جنيه للأساسي (محتاجين ' + need + ')' + (x.payExtra ? ' • الزيادة ' + esc(x.payExtra) + ' جنيه' : '') + '</div>' +
+    (x.note ? '<div class="jiline">📝 ' + esc(x.note) + '</div>' : '') +
+    '<div class="jiline" style="color:var(--muted);font-size:12.5px">' + (x.toAll ? 'متبعت لكل الفريق' : 'متبعت لـ ' + (x.toCount || 0) + ' من الفريق') + (x.by ? ' • عمله ' + esc(x.by) : '') + '</div>' +
+    '<div class="jiprog"><div class="jibar"><i style="width:' + pct + '%"></i></div>قالوا هحضر <b>' + yes + ' من ' + need + '</b>' +
+      ' • اتقبل أساسي ' + (c.basic || 0) + (c.extra ? ' • زيادة ' + c.extra : '') + (c.wait ? ' • <b style="color:#E65100">مستنيين ردك ' + c.wait + '</b>' : '') + '</div>' +
+    (live ? '<div class="jirep">🔁 تكرار الإشعار للي ما ردوش: <select onchange="jinvRepeat(\'' + id + '\',this.value)"' + (closed ? ' disabled' : '') + '>' +
+      JINV_REP.map(o => '<option value="' + o[0] + '"' + (o[0] === rp ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select>' +
+      (yes >= need && rp ? '<span style="color:var(--green)">✓ العدد كمل - التكرار وقف</span>' : '') +
+      (x.lastPush ? '<span>• آخر إشعار ' + esc(jinvAgo(x.lastPush)) + '</span>' : '') + '</div>' +
+      '<div class="jiacts">' + (closed ? '' : '<button class="btn soft" onclick="jinvNudge(\'' + id + '\')">🔔 ابعت تذكير دلوقتي' + ((x.noReply || []).length ? ' (' + x.noReply.length + ')' : '') + '</button>') +
+      (closed ? '<button class="btn soft" onclick="jinvStatus(\'' + id + '\',\'open\')">افتح الطلب تاني</button>' : '<button class="btn soft" onclick="jinvStatus(\'' + id + '\',\'close\')">اقفل الطلب</button>') +
+      '<button class="btn soft" style="color:var(--red)" onclick="jinvStatus(\'' + id + '\',\'cancel\')">إلغاء الجرد</button></div>' : '') +
+    (rows ? '<table class="jippl">' + rows + '</table>' : '<div class="jinote">لسه محدش قال «هحضر»</div>') +
+    ((x.noReply || []).length && live ? '<div class="jinote">⏳ لسه ما ردوش (' + x.noReply.length + '): ' + x.noReply.map(esc).join('، ') + '</div>' : '') +
+    (no.length ? '<div class="jinote">🙅 مش هيقدروا (' + no.length + '): ' + no.map(esc).join('، ') + '</div>' : '') +
+    '</div>';
+}
+async function jinvDo(action, data, ok) {
+  if (jinvBusy) return;
+  jinvBusy = true;
+  try { const r = await jinvApi(action, data); jinv = r; jinvRender(); if (ok) toast(typeof ok === 'function' ? ok(r) : ok); }
+  catch (e) { toast(msg(e)); if (!jinvAuth()) jinvLoginView(msg(e)); }
+  jinvBusy = false;
+}
+function jinvDecide(id, who, st) { jinvDo('invDecide', { id, who, st }, st === 'ok' ? 'اتقبل ✅ ووصله إشعار' : st === 'rej' ? 'اترفض' : 'اتغير ✅'); }
+function jinvRepeat(id, v) { jinvDo('invRepeat', { id, repeat: +v }, +v ? 'الإشعار هيتكرر ' + JINV_REP.find(o => o[0] === +v)[1] + ' للي لسه ما ردوش' : 'التكرار اتقفل'); }
+function jinvNudge(id) {
+  if (!confirm('تبعت إشعار تاني دلوقتي للي لسه ما ردوش على الطلب ده؟')) return;
+  jinvDo('invNudge', { id }, r => r.sent ? 'الإشعار اتبعت لـ ' + r.sent + ' ✅' : 'كلهم ردوا - مفيش حد يتبعتله');
+}
+function jinvStatus(id, st) {
+  if (st === 'cancel' && !confirm('تلغي الجرد ده؟\nكل اللي قالوا هيحضروا هيوصلهم إشعار إن الجرد اتلغى.')) return;
+  if (st === 'close' && !confirm('تقفل الطلب؟ محدش هيقدر يطلب يحضر تاني، والإشعار مش هيتكرر.')) return;
+  jinvDo('invStatus', { id, st }, st === 'cancel' ? 'الجرد اتلغى' : st === 'close' ? 'الطلب اتقفل' : 'الطلب اتفتح تاني');
+}
+async function jinvNewDlg() {
+  const t = jinvToday();
+  dlg('<h3>📣 طلب ناس لجرد</h3>' +
+    '<div class="tprow"><div><label class="fl">يوم الجرد</label><input type="date" id="jiDate" min="' + t + '" value="' + dayAdd_(t, 1) + '" style="width:100%"></div>' +
+    '<div><label class="fl">وقت الحضور</label><input type="time" id="jiArr" value="09:00" style="width:100%"></div></div>' +
+    '<label class="fl" style="margin-top:8px">الوقت المقدر للجرد</label><input id="jiDur" placeholder="مثلًا: 4 ساعات" style="width:100%">' +
+    '<label class="fl" style="margin-top:8px">اسم المكان (اختياري)</label><input id="jiPlace" style="width:100%">' +
+    '<label class="fl" style="margin-top:8px">العنوان (اختياري)</label><input id="jiAddr" placeholder="المنطقة والشارع أو لينك اللوكيشن" style="width:100%">' +
+    '<div class="tprow"><div><label class="fl" style="margin-top:8px">العدد المطلوب</label><input type="number" id="jiNeed" value="5" min="1" style="width:100%"></div>' +
+    '<div><label class="fl" style="margin-top:8px">الأجر (جنيه)</label><input type="number" id="jiPay" min="0" style="width:100%"></div></div>' +
+    '<div class="tprow"><div><label class="fl" style="margin-top:8px">أجر الزيادة (اللي بعد العدد)</label><input type="number" id="jiPayX" min="0" style="width:100%"></div>' +
+    '<div><label class="fl" style="margin-top:8px">تكرار الإشعار لو العدد ما كملش</label><select id="jiRep" style="width:100%">' + JINV_REP.map(o => '<option value="' + o[0] + '"' + (o[0] === 2 ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></div></div>' +
+    '<label class="fl" style="margin-top:8px">ملحوظات (اختياري)</label><textarea id="jiNote" rows="2" style="width:100%"></textarea>' +
+    '<label class="fl" style="margin-top:8px">يتبعت لمين؟</label><label class="chk"><input type="radio" name="jiTo" value="all" checked onchange="jinvToChange()"> كل الفريق</label> &nbsp; ' +
+    '<label class="chk"><input type="radio" name="jiTo" value="some" onchange="jinvToChange()"> ناس معينة</label><div id="jiUsers"></div>' +
+    '<div class="acts"><button class="btn" id="jiSend">ابعت الطلب</button><button class="btn soft" onclick="closeDlg()">رجوع</button></div>');
+  $('jiSend').onclick = jinvSend;
+}
+async function jinvToChange() {
+  const some = document.querySelector('input[name=jiTo]:checked').value === 'some', box = $('jiUsers');
+  if (!some) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="empty"><span class="spin"></span></div>';
+  try {
+    const r = await jinvApi('users', { store: '' });
+    const me = (jinvAuth() || {}).email;
+    const us = (r.users || []).filter(u => u.active && u.role !== 'أونر' && u.email !== me);
+    box.innerHTML = '<div class="jiusers">' + us.map(u => '<label><input type="checkbox" value="' + esc(u.email) + '"> ' + esc(u.name) + (u.role === 'مدير' ? ' <small style="color:var(--muted)">(مدير)</small>' : '') + '</label>').join('') + '</div>';
+  } catch (e) { box.innerHTML = '<div style="color:var(--red);font-size:13px">' + esc(msg(e)) + '</div>'; }
+}
+async function jinvSend() {
+  const v = id => $(id).value.trim();
+  const some = document.querySelector('input[name=jiTo]:checked').value === 'some';
+  const to = some ? [...document.querySelectorAll('#jiUsers input:checked')].map(x => x.value) : [];
+  if (!v('jiDate')) return toast('اختار يوم الجرد');
+  if (!(+v('jiNeed') >= 1)) return toast('اكتب العدد المطلوب');
+  if (!(+v('jiPay') > 0)) return toast('اكتب الأجر');
+  if (some && !to.length) return toast('علّم على الناس اللي هيوصلهم الطلب');
+  $('jiSend').disabled = true;
+  try {
+    jinv = await jinvApi('invNew', { inv: { date: v('jiDate'), arrive: v('jiArr'), dur: v('jiDur'), place: v('jiPlace'), addr: v('jiAddr'),
+      need: +v('jiNeed'), pay: +v('jiPay'), payExtra: +v('jiPayX') || 0, note: v('jiNote'), repeat: +v('jiRep'), to } });
+    closeDlg(); jinvRender(); toast('الطلب اتبعت ✅ هيوصلهم إشعار');
+  } catch (e) { toast(msg(e)); $('jiSend').disabled = false; }
 }
 
 // ---------- 🏷️ عروض أبو سمرة الأسبوعية (تاسك دوري) ----------
