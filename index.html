@@ -2042,7 +2042,7 @@ function renderDetail() {
 // ---------- ترتيب أصناف الفاتورة (سحب أو أسهم) - بيتحفظ على السيرفر علشان الجودة تشوفه ----------
 let loPend = {}, loTimer = 0, loDragN = null, lnScroll = { id: '', top: 0 };
 // رقم نسخة الداش بورد (بيظهر جنب «بتعرض» علشان نعرف التحديث وصل ولا لأ) - زوّده مع كل تعديل
-const DASH_BUILD = '20/11 - 1';
+const DASH_BUILD = '20/11 - 2';
 function loApplyLocal(lines, order) {
   const pos = {};
   order.forEach((n, i) => { pos[String(n)] = i; });
@@ -5319,21 +5319,20 @@ async function tsuSw(key, off) {
 
 // ---------- 📣 طلبات الجرد (فريق «مدقق تيم» - سكريبت لوحده) ----------
 // المدير بيطلب ناس لجرد جاي، والطلب بيوصل إشعار على تطبيق الفريق، وبيتكرر للي ما ردوش لحد ما عدد «هحضر» يكمل
-// الدخول هنا بحساب مدير الفريق (من شيت «مدقق تيم») - مرة واحدة على الجهاز
+// بيشتغل بدخول الداش بورد نفسه (الدعم والجودة والمدير) - سيرفر «مدقق تيم» بيتأكد من الجلسة من «دليل الموظفين»
 const JINV_API = 'https://script.google.com/macros/s/AKfycbwxVVxwQf6cSgb4nur9AXvC2HO98AyObiqbT-bqsjbk3Go644QcWW4uVch7y8VA9bjq/exec';
 const JINV_KEY = 'b4d1771abd401101';
 const JINV_REP = [[0, 'من غير تكرار'], [1, 'كل ساعة'], [2, 'كل ساعتين'], [3, 'كل 3 ساعات']];
 let jinv = null, jinvTimer = null, jinvBusy = false, jinvBgT = null;
-function jinvAuth() { try { return JSON.parse(localStorage.getItem('mdqTeamAuth') || 'null'); } catch (e) { return null; } }
-async function jinvApi(action, data, noAuth) {
-  const a = noAuth ? null : jinvAuth();
-  const body = Object.assign(a ? { email: a.email, password: a.token } : {}, data || {});
+function jinvAuth() { return token ? { name: me } : null; }
+async function jinvApi(action, data) {
+  const body = Object.assign({ dtoken: token, dname: me }, data || {});
   let res, j = null;
   try { res = await fetch(JINV_API + '?key=' + JINV_KEY + '&action=' + action, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) }); }
   catch (e) { throw new Error('سيرفر «مدقق تيم» ما ردّش - حاول تاني كمان شوية'); }
   try { j = await res.json(); } catch (e) { throw new Error('سيرفر «مدقق تيم» ما ردّش صح - حاول تاني كمان شوية'); }
   if (!j.ok) {
-    if (!noAuth && /كلمة السر اتغيرت|الحساب ده موقوف|أو كلمة السر غلط|لمدير الفريق بس/.test(j.error || '')) { localStorage.removeItem('mdqTeamAuth'); jinv = null; }
+    if ((j.error || '').indexOf('انتهت الجلسة') !== -1) { toast(j.error); setTimeout(logout, 1500); }
     throw new Error(j.error || 'حصلت مشكلة');
   }
   return j;
@@ -5353,32 +5352,12 @@ function jinvBg() {
   go(); jinvBgT = setInterval(go, 180000);
 }
 async function jinvLoad(quiet) {
-  if (!jinvAuth()) return jinvLoginView();
+  if (!jinvAuth()) return;
   if (!quiet && !jinv) $('pageJinv').innerHTML = '<div class="pane"><div class="empty"><span class="spin"></span></div></div>';
   try { jinv = await jinvApi('invList'); jinvRender(); }
-  catch (e) { if (!jinvAuth()) return jinvLoginView(msg(e)); if (!quiet) $('pageJinv').innerHTML = '<div class="pane"><div class="empty">' + esc(msg(e)) + ' <button class="btn soft" onclick="jinvLoad()">حاول تاني</button></div></div>'; }
+  catch (e) { if (!quiet) $('pageJinv').innerHTML = '<div class="pane"><div class="empty">' + esc(msg(e)) + ' <button class="btn soft" onclick="jinvLoad()">حاول تاني</button></div></div>'; }
   if (!jinvTimer) jinvTimer = setInterval(() => { if ($('pageJinv').classList.contains('hidden')) jinvStop(); else if (!jinvBusy && !$('dlg')) jinvLoad(true); }, 30000);
 }
-function jinvLoginView(err) {
-  $('pageJinv').innerHTML = '<div class="pane jilogin"><h3 style="margin-top:0;color:var(--navy)">📣 طلبات الجرد</h3>' +
-    '<div class="jinote" style="margin-bottom:10px">ادخل بحساب <b>مدير الفريق</b> في «مدقق تيم» (نفس اللي بتدخل بيه تطبيق الفريق). الدخول ده مرة واحدة على الجهاز ده.</div>' +
-    '<input id="jiUser" placeholder="الاسم أو الموبايل" autocomplete="username"><input id="jiPass" type="password" placeholder="كلمة السر" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')jinvLogin()">' +
-    (err ? '<div style="color:var(--red);font-size:13px;margin-bottom:8px">' + esc(err) + '</div>' : '') +
-    '<button class="btn" style="width:100%" id="jiGo" onclick="jinvLogin()">دخول</button></div>';
-}
-async function jinvLogin() {
-  const u = $('jiUser').value.trim(), p = $('jiPass').value.trim();
-  if (!u || !p) return toast('اكتب الاسم وكلمة السر');
-  $('jiGo').disabled = true;
-  try {
-    const r = await jinvApi('login', { email: u, password: p, inv: true }, true);
-    if (!r.teamManager) throw new Error('الحساب ده مش مدير فريق - ادخل بحساب المدير');
-    localStorage.setItem('mdqTeamAuth', JSON.stringify({ email: r.email, token: r.token, name: r.name }));
-    jinvLoad();
-  } catch (e) { jinvLoginView(msg(e)); }
-}
-function jinvLogout() { if (!confirm('تخرج من حساب الفريق على الجهاز ده؟')) return; localStorage.removeItem('mdqTeamAuth'); jinv = null; jinvBadge(); jinvLoginView(); }
-
 function jinvToday() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function jinvDay(k) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(k || '')) return esc(k);
@@ -5396,12 +5375,11 @@ function jinvAgo(iso) {
 }
 function jinvRender() {
   if (!jinv) return;
-  const a = jinvAuth() || {};
   const list = jinv.invites || [];
   $('pageJinv').innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px"><div><h2 style="margin:0;color:var(--navy)">📣 طلبات الجرد</h2>' +
     '<div style="color:var(--muted);font-size:13px;margin-top:4px">اطلب ناس من فريق الجرد لجرد جاي - الطلب بيوصلهم إشعار على تطبيق الفريق، ولو العدد ما كملش الإشعار بيتكرر للي لسه ما ردوش (مفيش إشعارات من 11 بالليل لـ9 الصبح).</div></div>' +
     '<div style="display:flex;gap:8px;align-items:center"><button class="btn" style="padding:8px 14px" onclick="jinvNewDlg()">＋ طلب جديد</button><button class="btn soft" style="padding:8px 14px" onclick="jinvLoad()">🔄 تحديث</button>' +
-    '<span style="font-size:12px;color:var(--muted)">' + esc(a.name || '') + ' • <a href="#" onclick="jinvLogout();return false">خروج من حساب الفريق</a></span></div></div>' +
+    '</div></div>' +
     (list.length ? '<div class="jigrid">' + list.map(jinvCard).join('') + '</div>' : '<div class="pane"><div class="empty">لسه مفيش طلبات - دوس «＋ طلب جديد»</div></div>');
   jinvBadge();
 }
@@ -5451,7 +5429,7 @@ async function jinvDo(action, data, ok) {
   if (jinvBusy) return;
   jinvBusy = true;
   try { const r = await jinvApi(action, data); jinv = r; jinvRender(); if (ok) toast(typeof ok === 'function' ? ok(r) : ok); }
-  catch (e) { toast(msg(e)); if (!jinvAuth()) jinvLoginView(msg(e)); }
+  catch (e) { toast(msg(e)); }
   jinvBusy = false;
 }
 function jinvDecide(id, who, st) { jinvDo('invDecide', { id, who, st }, st === 'ok' ? 'اتقبل ✅ ووصله إشعار' : st === 'rej' ? 'اترفض' : 'اتغير ✅'); }
@@ -5489,8 +5467,7 @@ async function jinvToChange() {
   box.innerHTML = '<div class="empty"><span class="spin"></span></div>';
   try {
     const r = await jinvApi('users', { store: '' });
-    const me = (jinvAuth() || {}).email;
-    const us = (r.users || []).filter(u => u.active && u.role !== 'أونر' && u.email !== me);
+    const us = (r.users || []).filter(u => u.active && u.role !== 'أونر');
     box.innerHTML = '<div class="jiusers">' + us.map(u => '<label><input type="checkbox" value="' + esc(u.email) + '"> ' + esc(u.name) + (u.role === 'مدير' ? ' <small style="color:var(--muted)">(مدير)</small>' : '') + '</label>').join('') + '</div>';
   } catch (e) { box.innerHTML = '<div style="color:var(--red);font-size:13px">' + esc(msg(e)) + '</div>'; }
 }
