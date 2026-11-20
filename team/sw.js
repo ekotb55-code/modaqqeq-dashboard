@@ -153,11 +153,11 @@ self.addEventListener('push', e => {
   let p = {};
   try { p = e.data ? e.data.json() : {}; } catch (_) {}
   const d = p.data || {}, n = p.notification || {};
-  const target = d.tk ? 'tk:' + d.tk : d.type === 'chat' ? 'chat:' + (d.invoiceId || '') : (d.invoiceId || '');
+  const target = d.jinv ? 'jinv:' + d.jinv : d.tk ? 'tk:' + d.tk : d.type === 'chat' ? 'chat:' + (d.invoiceId || '') : (d.invoiceId || '');
   // الأيقونة الصغيرة (badge) لازم تبقى أبيض على شفاف عشان أندرويد ما يطلعهاش مربع أبيض
   e.waitUntil(self.registration.showNotification(n.title || d.title || 'مدقق', {
     body: n.body || d.body || 'عندك إشعار جديد - افتح التطبيق', icon: 'icons/Icon-192.png', badge: 'icons/badge-96.png', dir: 'rtl', lang: 'ar',
-    tag: d.invoiceId ? 'inv-' + d.invoiceId : d.tk ? 'tk-' + d.tk : d.jr ? 'jr-' + d.jr : undefined, data: { target }
+    tag: d.jinv ? 'jinv-' + d.jinv : d.invoiceId ? 'inv-' + d.invoiceId : d.tk ? 'tk-' + d.tk : d.jr ? 'jr-' + d.jr : undefined, data: { target }
   }));
 });
 self.addEventListener('notificationclick', e => {
