@@ -273,8 +273,8 @@
   .bcard.wocard .bacts .btn { padding: 5px 10px; font-size: 12.5px; }
   .cnt { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px; border-radius: 999px; font-weight: 800; font-size: 13.5px; white-space: nowrap;
     background: #EEF1F6; color: #2D3B4E; border: 1.5px solid #D5DCE6; vertical-align: middle; }
-  .cnt.new { background: #E6F0FD; color: #0E4F99; border-color: #A9C8F2; }
-  .cnt.back { background: #FFF1E0; color: #9A4A00; border-color: #F5C58A; }
+  .cnt.cn-new { background: #E6F0FD; color: #0E4F99; border-color: #A9C8F2; }
+  .cnt.cn-back { background: #FFF1E0; color: #9A4A00; border-color: #F5C58A; }
   .worem { font-size: 12.5px; color: #8A5300; margin-top: 4px; }
   .worem a { color: #1460A8; font-weight: 700; text-decoration: none; margin-inline-start: 4px; }
   /* 🔔 البوكس الكبير للشغل الدوري */
@@ -1127,7 +1127,7 @@ function srAnswered(v) { return !!(v && v.shopRev && !v.shopRev.open && v.shopRe
 // عدد الأصناف في كارت الفاتورة: شارة واضحة (أزرق = جديدة • برتقاني = راجعة / اتبعتت تاني • رمادي = الباقي)
 function cntTxt(n) { n = Number(n) || 0; return n === 1 ? 'صنف واحد' : n === 2 ? 'صنفين' : n >= 3 && n <= 10 ? n + ' أصناف' : n + ' صنف'; }
 function cntBadge(v) {
-  const c = v.rejectCount || v.status === ST_REJ || (v.status === ST_WORK && v.qaRejects) ? ' back' : v.status === 'جديدة' ? ' new' : '';
+  const c = v.rejectCount || v.status === ST_REJ || (v.status === ST_WORK && v.qaRejects) ? ' cn-back' : v.status === 'جديدة' ? ' cn-new' : '';
   return '<span class="cnt' + c + '">📦 ' + cntTxt(v.count) + '</span>';
 }
 function vbadge(v) { return srOpen(v) ? '<span class="badge b-sr">👀 مستنية الفرع يراجع الأسعار</span>' : badge(v.status); }
