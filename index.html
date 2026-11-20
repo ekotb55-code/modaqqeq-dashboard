@@ -271,6 +271,28 @@
   .bcard.wocard.on { border-inline-start-color: #2BB45A; }
   .bcard.wocard .bacts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
   .bcard.wocard .bacts .btn { padding: 5px 10px; font-size: 12.5px; }
+  .worem { font-size: 12.5px; color: #8A5300; margin-top: 4px; }
+  .worem a { color: #1460A8; font-weight: 700; text-decoration: none; margin-inline-start: 4px; }
+  /* 🔔 البوكس الكبير للشغل الدوري */
+  #dutyBox { position: fixed; inset: 0; background: rgba(8,25,45,.62); z-index: 54; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  #dutyBox .dbox { background: #fff; border-radius: 20px; width: min(640px, 100%); max-height: 90vh; overflow-y: auto; padding: 20px 22px; border-top: 9px solid #6C4BD8; box-shadow: 0 20px 60px rgba(0,0,0,.35); animation: dpop .25s ease-out; }
+  #dutyBox .dbox.wo { border-top-color: #E53935; } #dutyBox .dbox.ok { border-top-color: #2BB45A; } #dutyBox .dbox.warn { border-top-color: #E0A100; }
+  @keyframes dpop { from { transform: scale(.92); opacity: 0; } to { transform: none; opacity: 1; } }
+  #dutyBox h2 { margin: 0 0 6px; font-size: 22px; color: var(--navy); line-height: 1.5; }
+  #dutyBox .dbox.wo h2 { color: #C62828; } #dutyBox .dbox.ok h2 { color: #1A7A36; }
+  #dutyBox h4 { margin: 14px 0 6px; color: #4B2FB0; }
+  #dutyBox .dmeta { color: var(--muted); font-size: 13.5px; line-height: 1.7; }
+  #dutyBox ol.dsteps { margin: 10px 0 0; padding-inline-start: 24px; font-size: 15.5px; line-height: 1.95; }
+  #dutyBox ol.dsteps li { margin-bottom: 4px; }
+  #dutyBox .dins { white-space: pre-wrap; background: #F5F1FF; border: 1.5px solid #D8CCFA; border-radius: 12px; padding: 12px 14px; font-size: 15.5px; line-height: 1.85; }
+  #dutyBox .dacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  #dutyBox .dacts .btn { padding: 10px 16px; font-size: 15px; }
+  #dutyBox .dst { margin-top: 10px; border: 1px solid var(--line); border-radius: 12px; max-height: 260px; overflow: auto; }
+  #dutyBox .dstr { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid #EEF2F7; font-weight: 700; }
+  #dutyBox .dstr .btn { padding: 5px 12px; font-size: 13px; }
+  #dutyBox .derr { margin-top: 10px; background: #FDECEC; color: #B3261E; border-radius: 10px; padding: 8px 12px; font-weight: 700; }
+  #dutyBox .dbusy { margin-top: 12px; background: #EEF5FF; border-radius: 12px; padding: 12px; font-weight: 800; color: #1460A8; }
+  #dutyBox .dn { font-size: 12.5px; color: var(--muted); margin-inline-start: auto; align-self: center; }
   .shr { border: 1.5px solid #CFE0F2; background: #fff; color: #1460A8; border-radius: 10px; padding: 3px 9px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
   .shr:hover { background: #EAF3FD; }
   /* 💬 التعليقات */
@@ -1513,7 +1535,7 @@ async function loadList(quiet) {
     all = r.invoices; stores = r.stores;
     tks = (r.tickets || []).map(t => Object.assign(t, { kind: 'tk' })); if (r.storePrio) storePrio = r.storePrio;
     tasks = r.tasks || []; jrs = r.jrs || []; marks = r.marks || []; jardDevs = r.jardDevs || []; if (r.storeColor) storeColor = r.storeColor; if (r.members) members = r.members;
-    tasksAfterLoad(); marksAfterLoad(); setTimeout(() => { try { tpCheck(); sumAfterLoad(); } catch (e) {} }, 50);
+    tasksAfterLoad(); marksAfterLoad(); setTimeout(() => { try { tpCheck(); sumAfterLoad(); dutyCheck(); } catch (e) {} }, 50);
     tkAfterLoad(tks);
     chatSum = r.chat || { threads: [], replies: [] };
     if (r.cm) cmCounts = r.cm;
@@ -2701,8 +2723,28 @@ function ordColReps() {
       '<div class="ordSch">📅 ' + (x.repeat === 'أسبوعي' ? 'كل ' + days[x.weekday] : 'كل يوم') + ' الساعة ' + esc(x.time) +
       (x.prio && x.prio !== 'n' ? ' • ' + TP_LBL[x.prio] : '') + (x.tone && x.tone !== 1 ? ' • 🔔 ' + TN_LBL[x.tone] : '') + '</div>' +
       '<div class="ordchips">' + st.slice(0, 8).map(n => '<span class="ordchip">' + sdot(n) + esc(n) + '</span>').join('') + (st.length > 8 ? '<span class="ordchip">و' + (st.length - 8) + ' كمان</span>' : '') + '</div>' +
-      (x.details ? '<div class="ordSch" style="margin-top:6px">' + esc(x.details).slice(0, 160) + '</div>' : '') + '</div>';
+      (x.details ? '<div class="ordSch" style="margin-top:6px">' + esc(x.details).slice(0, 160) + '</div>' : '') +
+      '<div class="ordSch" style="margin-top:6px">' + (x.ins ? '📝 ' + esc(x.ins).slice(0, 120) + (x.ins.length > 120 ? '…' : '') : '<span style="color:var(--muted)">📝 من غير تعليمات</span>') +
+      (!isQA() ? ' <a href="#" onclick="event.preventDefault();tiEdit(\'\',\'' + esc(x.id) + '\')">✏️</a>' : '') + '</div></div>';
   });
+}
+// 📝 تعديل التعليمات: لتاسك (ومجموعتها المفتوحة + المتكررة اللي جاية منها) أو لتاسك متكررة
+function tiEdit(id, rep) {
+  const v = id ? (tasks || []).find(x => x.id === id) : null, r = rep ? (ordReps || []).find(x => x.id === rep) : null;
+  const cur = (v && v.ins) || (r && r.ins) || '';
+  dlg('<h3>📝 التعليمات - ' + esc((v || r || {}).title || '') + '</h3>' +
+    '<p style="margin:0 0 8px;color:var(--muted);line-height:1.7">اكتب الشغل ده بيتعمل إزاي خطوة بخطوة. لما ييجي ميعاده هيطلع للدعم بوكس كبير في نص الشاشة بالتعليمات دي.' +
+    (r || (v && /^R\d+-/.test(v.group || '')) ? ' (هتتعدّل للتاسك المتكررة كلها والمفتوح منها)' : '') + '</p>' +
+    '<textarea id="tiT" rows="8" style="width:100%;font:inherit;padding:10px;border-radius:10px;border:1.5px solid var(--line)">' + esc(cur) + '</textarea>' +
+    '<div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="closeDlg()">رجوع</button></div>');
+  $('dlgOk').onclick = async () => {
+    $('dlgOk').disabled = true;
+    try {
+      const res = await api('dTaskIns', { token, id: id || '', rep: rep || '', ins: $('tiT').value }, true);
+      closeDlg(); if (res.repeats) ordReps = res.repeats; taskApply(res); if (ordData && !$('pageOrd').classList.contains('hidden')) ordRender();
+      toast('✅ التعليمات اتحفظت');
+    } catch (e) { $('dlgOk').disabled = false; toast(/غير معروف/.test(msg(e)) ? 'السكريبت لسه ما اتحدّثش - كلّم المدير' : msg(e)); }
+  };
 }
 function ordRender() {
   if (!ordData) return;
@@ -4522,8 +4564,10 @@ function renderTaskPane() {
       (done ? i(v.status === 'اتلغت' ? 'اتلغت' : 'خلصها', (v.doneBy || '') + (v.doneAt ? ' - ' + tm(v.doneAt) : '')) : '') +
       (done && v.data && v.data.progTotal !== undefined ? i('البرنامج', money(v.data.progTotal)) + i('الجرد', money(v.data.appTotal)) : '') + '</div>';
     h += v.details ? '<div class="pane tpbox"><b>التفاصيل:</b><br>' + esc(v.details) + '</div>' : '<div class="tpnone">التاسك دي من غير تفاصيل.</div>';
+    if (v.ins) h += '<div class="pane tpbox" style="background:#F5F1FF;border-color:#D8CCFA;white-space:pre-wrap"><b>📝 التعليمات:</b><br>' + esc(v.ins) + '</div>';
     if (!done) h += '<div class="tpacts"><button class="btn" onclick="taskDone(\'' + id + '\')">' + (v.step === 'upload' ? '📤 ارفع على البرنامج وطابق' : '✓ اتعملت') + '</button>' +
       '<button class="btn soft" onclick="tpEdit(\'' + id + '\')">⚡ الأهمية والنغمة</button>' +
+      '<button class="btn soft" onclick="tiEdit(\'' + id + '\',\'\')">📝 التعليمات</button>' +
       (boss ? '<button class="btn soft" onclick="taskCancel(\'' + id + '\')">إلغاء</button>' : '') + '</div>';
   }
   $('detailPane').innerHTML = h;
@@ -4671,6 +4715,7 @@ function taskApply(r) {
   if (curTask) renderTaskPane();
   renderList(); if (!$('pageStores').classList.contains('hidden')) renderBoard();
   if ($('dlg') && $('dlg').dataset.k === 'tasks') tasksDlg();
+  try { dutyCheck(); } catch (e) {}
 }
 // تاسك جديدة: لمحل أو لكذا محل، مرة واحدة أو مكررة
 function taskNewDlg() {
@@ -4679,6 +4724,8 @@ function taskNewDlg() {
   const days = ['الحد', 'الاتنين', 'التلات', 'الأربع', 'الخميس', 'الجمعة', 'السبت'];
   dlg('<h3>＋ تاسك جديدة</h3><input id="kT" placeholder="عنوان التاسك (مثلاً: تحديث أسعار الزيت)">' +
     '<label class="fl" style="margin-top:8px">التفاصيل</label><textarea id="kD" rows="3" style="width:100%;font:inherit;padding:8px;border-radius:10px;border:1.5px solid var(--line)"></textarea>' +
+    '<label class="fl" style="margin-top:8px">📝 التعليمات (اختياري)</label><textarea id="kIns" rows="4" placeholder="الشغل ده بيتعمل إزاي خطوة بخطوة - مثلاً: ده بقى يتعمل من الداش بورد: افتح... ودوس..." style="width:100%;font:inherit;padding:8px;border-radius:10px;border:1.5px solid var(--line)"></textarea>' +
+    '<small style="color:var(--muted)">لو كتبت تعليمات: لما ييجي ميعاد التاسك هيطلع للدعم بوكس كبير في نص الشاشة بالتعليمات دي ومش هيختفي غير لما تتعمل</small>' +
     '<label class="fl" style="margin-top:8px">المحلات</label><div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><label class="chk"><input type="checkbox" id="kAll" onchange="document.querySelectorAll(\'.stpick input\').forEach(x=>x.checked=this.checked)"> كل المحلات</label>' +
     '<input id="kQ" placeholder="🔍 دوّر على محل" style="flex:1" oninput="document.querySelectorAll(\'.stpick label\').forEach(l=>l.style.display=l.textContent.indexOf(this.value)!==-1?\'\':\'none\')"></div>' +
     '<div class="stpick">' + stores.map(s => '<label><input type="checkbox" value="' + esc(s) + '">' + sdot(s) + esc(s) + '</label>').join('') + '</div>' +
@@ -4698,7 +4745,7 @@ function taskNewDlg() {
   $('dlgOk').onclick = async () => {
     const sel = [...document.querySelectorAll('.stpick input:checked')].map(x => x.value);
     const t = { title: $('kT').value, details: $('kD').value, stores: sel, all: $('kAll').checked, repeat: $('kR').value, to: $('kTo').value,
-      due: $('kDue').value ? new Date($('kDue').value).toISOString() : '', time: $('kTime').value, weekday: Number($('kWday').value), est: Math.round(Number($('kEst').value)), prio: $('kPr').value, tone: Number($('kTn').value) };
+      due: $('kDue').value ? new Date($('kDue').value).toISOString() : '', time: $('kTime').value, weekday: Number($('kWday').value), est: Math.round(Number($('kEst').value)), prio: $('kPr').value, tone: Number($('kTn').value), ins: $('kIns').value };
     if (!t.title.trim()) return toast('اكتب عنوان التاسك');
     if (!(t.est >= 1 && t.est <= 480)) return toast('اكتب الوقت المتوقع للتاسك بالدقايق (من 1 لـ 480)');
     if (!t.all && !sel.length) return toast('اختار محل واحد على الأقل');
@@ -5495,7 +5542,7 @@ function woStart() {
   woLoad();
   setInterval(woLoad, 2 * 60000);
   // مفيش ملف في وقت العروض: إنذار بالصوت كل 30 ثانية لحد ما حد يرد
-  setInterval(() => { if (wo && wo.missing && !isQA() && !document.hidden) alarm(4); }, 30000);
+  setInterval(() => { if (wo && wo.missing && !isQA() && !document.hidden && !dutySnoozed('wo-' + (wo.week ? wo.week.key : ''))) alarm(4); }, 30000);
 }
 async function woLoad() {
   try { wo = await api('dWo', { token }); woRender(); } catch (e) { /* السكريبت لسه ما اتحدّثش */ }
@@ -5528,7 +5575,7 @@ function woHtml() {
   let cls = '', h = '', acts = '';
   if (wo.missing) {
     cls = ' miss';
-    h = '<h4>🚨 مفيش ملف عروض الأسبوع ده!</h4><div class="wot">المفروض العروض تتفعّل من الجمعة 5 الفجر. ارفع ملف العروض دلوقتي (هيتفعّل على طول)، أو دوس «مفيش عروض الأسبوع ده» علشان الإنذار يقف.</div>';
+    h = '<h4>🚨 جه ميعاد رفع ملف العروض!</h4><div class="wot">ارفع ملف العروض اللي المخزن بعته دلوقتي (هيتفعّل على طول وإنت قاعد)، أو دوس «مفيش عروض الأسبوع ده» علشان الإنذار يقف.</div>';
     acts = up + btn('🚫 مفيش عروض الأسبوع ده', 'woNone()', 'red');
   } else if (m.state === 'active') {
     cls = ' on';
@@ -5537,8 +5584,8 @@ function woHtml() {
       '<br>هتتلغي لوحدها ' + esc(woWhen(m.endAt)) + '</div>';
     acts = btn('⏹ الغي دلوقتي', 'woCancel()', 'red') + btn('📋 الأصناف اللي في العروض', 'woList()');
   } else if (m.state === 'pending') {
-    h = '<h4>الملف جاهز ⏳</h4><div class="wot">«' + esc(m.file || 'ملف العروض') + '» • <b>' + (m.count || rows.length) + '</b> صنف • رفعه ' + esc(m.by || '') + ' ' + esc(woWhen(m.at)) +
-      '<br>هيتفعّل لوحده ' + esc(woWhen(wo.week && wo.week.start)) + '</div>';
+    h = '<h4>الملف اترفع وما اتفعّلش ⚠️</h4><div class="wot">«' + esc(m.file || 'ملف العروض') + '» • <b>' + (m.count || rows.length) + '</b> صنف • رفعه ' + esc(m.by || '') + ' ' + esc(woWhen(m.at)) +
+      '<br>دوس «▶️ فعّل دلوقتي» وخليك لحد ما النتيجة تظهر</div>';
     acts = btn('▶️ فعّل دلوقتي', 'woActivate()', '') + up + btn('📋 الأصناف اللي في العروض', 'woList()');
   } else {
     const l = m.last;
@@ -5546,13 +5593,14 @@ function woHtml() {
       (m.state === 'manual' ? 'ℹ️ عروض الأسبوع ده اتعملت بإيدك قبل السكريبت - السكريبت مش عارف تصنيفاتها الأصلية، رجّعها من «📋 الأصناف اللي في العروض» أو بإيدك زي كل أسبوع<br>'
         : m.state === 'skipped' || (m.noOffers && wo.week && m.noOffers === wo.week.key) ? '🚫 مفيش عروض الأسبوع ده (' + esc(m.noOffersBy || '') + ')<br>' : '') +
       (l ? 'آخر عملية: ' + esc(l.what) + ' ' + esc(woWhen(l.at)) + ' - ' + l.ok + ' صنف' + (l.bad ? ' • ' + l.bad + ' فيهم مشكلة' : '') + '<br>' : '') +
-      'ارفع ملف عروض الأسبوع الجاي - هيتفعّل الجمعة 5 الفجر</div>';
+      'ملف عروض الأسبوع الجاي هيتفعّل أول ما يترفع</div>';
     acts = up + btn('📋 الأصناف اللي في العروض', 'woList()');
   }
   if (rows.length) acts += btn('📄 تقرير الأصناف' + (bad ? ' (⚠️ ' + bad + ')' : ''), 'woReport()', bad ? 'red' : 'ghost');
   if (m.error) h += '<div class="wot" style="color:#C62828">⚠️ ' + esc(m.error) + '</div>';
   if (m.sync && !m.sync.ok) h += '<div class="wot" style="color:#8A5300">🔄 تحديث الفروع ما بدأش (' + esc(m.sync.error || '') + ') - هيتجرّب تاني لوحده</div>';
   if (!wo.triggers) h += '<div class="wot" style="color:#C62828">⚠️ المواعيد التلقائية مش متظبطة - كلّم المدير</div>';
+  h += woRemLine();
   return '<div class="wobox' + cls + '">' + h + '<div class="bacts">' + acts + '<button class="btn ghost" onclick="closeDlg()">قفل</button></div></div>';
 }
 // كارت صغير جوه عمود «نسخة المخزن» في صفحة المحلات
@@ -5568,7 +5616,7 @@ function woBoardCard() {
     x = 'ارفع ملف العروض أو قول إن مفيش عروض الأسبوع ده';
     acts = btn('⬆️ ارفع الملف', "$('woFile').click()", '') + btn('🚫 مفيش عروض', 'woNone()', 'red');
   } else if (m.state === 'pending') {
-    t = '🏷️ تفعيل العروض الأسبوعية'; x = (m.count || '') + ' صنف • هتتفعّل ' + woWhen(wo.week && wo.week.start);
+    t = '🏷️ ملف العروض ما اتفعّلش'; x = (m.count || '') + ' صنف • دوس «فعّل دلوقتي»';
     acts = btn('▶️ فعّل دلوقتي', 'woActivate()', '');
   } else if (m.state === 'active') {
     cls = ' on'; t = '🏷️ العروض الأسبوعية شغالة';
@@ -5579,7 +5627,7 @@ function woBoardCard() {
   }
   if (bad) acts += btn('⚠️ ' + bad + ' صنف فيهم مشكلة', 'woReport()', 'red');
   if (m.error) x += ' • ⚠️ ' + m.error;
-  return '<div class="bcard wocard' + cls + '"><div class="bt"><b>' + esc(t) + '</b></div><div class="bm">' + esc(x) + '</div>' +
+  return '<div class="bcard wocard' + cls + '"><div class="bt"><b>' + esc(t) + '</b></div><div class="bm">' + esc(x) + '</div>' + woRemLine() +
     '<div class="bacts">' + acts + btn('تفاصيل', 'woDlg()', 'ghost') + '</div></div>';
 }
 function woDlg() { dlg('<h3>🏷️ عروض أبو سمرة الأسبوعية</h3><div id="woDlgBox">' + woHtml() + '</div>'); woLoad(); }
@@ -5589,12 +5637,15 @@ function woRender() {
   const nav = $('navStores'); if (nav) nav.classList.toggle('woalarm', !!(wo && wo.missing && !isQA()));
   if (!$('pageStores').classList.contains('hidden') && typeof renderBoard === 'function') renderBoard();
   if (ordData && !$('pageOrd').classList.contains('hidden') && !$('dlg')) ordRender();
+  try { dutyCheck(); } catch (e) {}
 }
 async function woRun(action, data, okMsg) {
   woBusy = true; woRender();
-  try { wo = await api(action, Object.assign({ token }, data || {}), true); if (okMsg) toast(okMsg); }
+  let ok = false;
+  try { wo = await api(action, Object.assign({ token }, data || {}), true); ok = true; if (okMsg) toast(okMsg); }
   catch (e) { toast(/غير معروف/.test(msg(e)) ? 'السكريبت لسه ما اتحدّثش - كلّم المدير' : msg(e)); }
   woBusy = false; woRender();
+  return ok;
 }
 // قراءة ملف الإكسل: أول عمود اسم الصنف (والتاني لو كلام = التصنيف الأصلي)
 async function woPick(f) {
@@ -5614,14 +5665,17 @@ async function woPick(f) {
     items.push({ name: n, cat: c && isNaN(Number(c.replace(/,/g, ''))) ? c : '' });
   });
   if (!items.length) return toast('الملف مفيهوش أسماء أصناف في أول عمود');
-  const inWin = wo && wo.week && wo.week.inWin;
   if (!confirm('ملف العروض: ' + f.name + '\n' + items.length + ' صنف، أولهم:\n• ' + items.slice(0, 5).map(x => x.name).join('\n• ') +
-    '\n\n' + (inWin ? 'إحنا في وقت العروض دلوقتي - هيتفعّل على طول بعد الرفع.' : 'هيتفعّل لوحده الجمعة 5 الفجر.') + '\nنرفعه؟')) return;
-  await woRun('dWoUpload', { file: f.name, items }, inWin ? 'الملف اترفع والعروض بتتفعّل ✅' : 'الملف اترفع ✅ هيتفعّل الجمعة 5 الفجر');
+    '\n\nالعروض هتتفعّل على طول بعد الرفع (ممكن تاخد دقيقتين) - خليك لحد ما النتيجة تظهر.\nنرفعه؟')) return;
+  dutyRes = { at: now() };
+  const ok = await woRun('dWoUpload', { file: f.name, items }, '');
+  if (!ok) dutyRes = null;
+  woRender();
 }
 function woActivate() {
   if (!confirm('هتتنقل أصناف ملف العروض لتصنيف «' + (wo ? wo.cat : '') + '» في المخزن الرئيسي دلوقتي، وبعدها تحديث الفروع.\nوهتتلغي لوحدها الاتنين 1 بالليل. نفعّل؟')) return;
-  woRun('dWoActivate', {}, 'العروض اتفعّلت ✅');
+  dutyRes = { at: now() };
+  woRun('dWoActivate', {}, 'العروض اتفعّلت ✅').then(ok => { if (!ok) dutyRes = null; woRender(); });
 }
 function woCancel() {
   if (!confirm('كل أصناف العروض هترجع لتصنيفها الأصلي دلوقتي، وبعدها تحديث الفروع. نلغي؟')) return;
@@ -5631,6 +5685,135 @@ function woNone() {
   if (!confirm('متأكد إن مفيش عروض الأسبوع ده؟ الإنذار هيقف.')) return;
   woRun('dWoNone', {}, 'تمام - مفيش عروض الأسبوع ده');
 }
+// ---------- ميعاد تنبيه رفع ملف العروض (بيتغيّر من هنا) ----------
+const WO_DAYN = { 1: 'الاتنين', 2: 'التلات', 3: 'الأربع', 4: 'الخميس', 5: 'الجمعة', 6: 'السبت', 7: 'الحد' };
+// الساعة قبل 5 الفجر بتتحسب على اليوم اللي قبلها (الوردية بتخلص 1 بالليل): الجمعة 00:30 = الخميس 12:30 بالليل
+function woRemTxt(r) {
+  r = r || (wo && wo.remind) || { dow: 5, hm: '00:30' };
+  const p = String(r.hm || '00:30').split(':').map(Number), h = p[0], mi = p[1] || 0, night = h < 5;
+  const day = WO_DAYN[night ? (r.dow === 1 ? 7 : r.dow - 1) : r.dow];
+  return day + ' ' + (h % 12 || 12) + ':' + String(mi).padStart(2, '0') + ' ' + (night || h >= 17 ? 'بالليل' : h < 12 ? 'الصبح' : 'الضهر');
+}
+function woRemLine() {
+  if (!wo || isQA()) return '';
+  return '<div class="worem">⏰ تنبيه رفع الملف: <b>' + esc(woRemTxt()) + '</b> كل أسبوع<a href="#" onclick="event.preventDefault();woRemDlg()">✏️ غيّر الميعاد</a></div>';
+}
+function woRemDlg() {
+  const r = (wo && wo.remind) || { dow: 5, hm: '00:30' }, night = r.hm < '05:00';
+  const uiDay = night ? (r.dow === 1 ? 7 : r.dow - 1) : r.dow;
+  const opts = [3, 4, 5, 6, 7, 1].map(d => '<option value="' + d + '"' + (d === uiDay ? ' selected' : '') + '>' + WO_DAYN[d] + '</option>').join('');
+  dlg('<h3>⏰ ميعاد تنبيه رفع ملف العروض</h3>' +
+    '<p style="margin:0 0 8px;color:var(--muted);line-height:1.7">في الميعاد ده هيطلع بوكس كبير بالصوت للدعم لحد ما حد يرفع ملف العروض (أو يقول مفيش عروض). العروض بتتفعّل أول ما الملف يترفع، وبتتلغي لوحدها الاتنين 1 بالليل.</p>' +
+    '<div class="tprow"><div><label class="fl">اليوم</label><select id="wrD" style="width:100%" onchange="woRemPrev()">' + opts + '</select></div>' +
+    '<div><label class="fl">الساعة</label><input type="time" id="wrT" value="' + esc(r.hm) + '" style="width:100%" oninput="woRemPrev()"></div></div>' +
+    '<small style="color:var(--muted)">الدعم شغال لحد 1 بالليل - لو الساعة بعد 12 بالليل اختار اليوم اللي الوردية بدأت فيه (مثلاً الخميس 00:30 = آخر الخميس بالليل).</small>' +
+    '<div id="wrP" style="margin-top:8px;font-weight:800;color:#8A5300"></div>' +
+    '<div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="closeDlg()">رجوع</button></div>');
+  woRemPrev();
+  $('dlgOk').onclick = async () => {
+    const v = woRemVal();
+    if (!v) return toast('اختار الساعة');
+    $('dlgOk').disabled = true;
+    try { wo = await api('dWoRemind', Object.assign({ token }, v), true); closeDlg(); woRender(); toast('✅ التنبيه بقى ' + woRemTxt()); }
+    catch (e) { $('dlgOk').disabled = false; toast(/غير معروف/.test(msg(e)) ? 'السكريبت لسه ما اتحدّثش - كلّم المدير' : msg(e)); }
+  };
+}
+function woRemVal() {
+  const d = Number(($('wrD') || {}).value), t = ($('wrT') || {}).value || '';
+  if (!/^\d{2}:\d{2}$/.test(t)) return null;
+  return { dow: t < '05:00' ? (d % 7) + 1 : d, hm: t };
+}
+function woRemPrev() { const v = woRemVal(); if ($('wrP')) $('wrP').textContent = v ? '⏰ التنبيه: ' + woRemTxt(v) + ' كل أسبوع' : ''; }
+
+// ---------- 🔔 البوكس الكبير للشغل الدوري ----------
+// بيطلع في نص الشاشة لما ييجي ميعاد شغل دوري ليه تعليمات: ملف العروض الأسبوعية، أو تاسك (متكررة أو لا) فيها «التعليمات».
+// بيفضل ظاهر (ومعاه الصوت) لحد ما الشغل يتعمل - أو «فكرني بعد 10 دقايق».
+let dutySnooze = {}; try { dutySnooze = JSON.parse(localStorage.getItem('mdq-duty-snz') || '{}') || {}; } catch (e) {}
+let dutyKey = '', dutyHtmlLast = '', dutyRes = null;
+function dutySnoozed(key) { return (dutySnooze[key] || 0) > now(); }
+function dutySnz(key, min) {
+  dutySnooze[key] = now() + min * 60000;
+  const keep = {}; Object.keys(dutySnooze).forEach(k => { if (dutySnooze[k] > now()) keep[k] = dutySnooze[k]; }); dutySnooze = keep;
+  try { localStorage.setItem('mdq-duty-snz', JSON.stringify(dutySnooze)); } catch (e) {}
+  toast('⏰ هفكرك بعد ' + min + ' دقايق');
+  dutyCheck();
+}
+function dutyItems() {
+  if (!token || !myRole || isQA()) return [];
+  const L = [];
+  if (dutyRes && wo) L.push({ key: 'wo-res', kind: 'wores' });
+  else if (wo && wo.week && (wo.missing || (wo.week.inWin && wo.meta && wo.meta.state === 'pending'))) L.push({ key: 'wo-' + wo.week.key, kind: 'wo' });
+  const groups = {};
+  (tasks || []).forEach(v => {
+    if (v.status !== TASK_OPEN || !v.ins || !taskDue(v) || !tpMine(v)) return;
+    const g = v.group || v.id; (groups[g] = groups[g] || []).push(v);
+  });
+  Object.keys(groups).map(g => groups[g]).sort((a, b) => tpLv(b[0]) - tpLv(a[0]) || String(a[0].due).localeCompare(String(b[0].due)))
+    .forEach(G => L.push({ key: 'tk-' + (G[0].group || G[0].id), kind: 'task', list: G }));
+  return L.filter(x => x.kind === 'wores' || !dutySnoozed(x.key));
+}
+function dutyCheck() {
+  const L = dutyItems();
+  if (!L.length) { const b = $('dutyBox'); if (b) b.remove(); dutyKey = ''; dutyHtmlLast = ''; return; }
+  const x = L[0], html = dutyHtml(x, L.length);
+  if (!$('dutyBox')) document.body.insertAdjacentHTML('beforeend', '<div id="dutyBox"><div class="dbox"></div></div>');
+  const box = $('dutyBox').querySelector('.dbox');
+  if (html !== dutyHtmlLast) { box.className = 'dbox ' + (x.kind === 'wo' ? 'wo' : x.kind === 'wores' ? (dutyResBad() ? 'warn' : 'ok') : ''); box.innerHTML = html; dutyHtmlLast = html; }
+  if (x.key !== dutyKey) {
+    dutyKey = x.key;
+    if (x.kind === 'wo') alarm(4);
+    else if (x.kind === 'task') tpTone(Math.max(2, tpLv(x.list[0])));
+  }
+}
+function dutyResBad() { const m = (wo && wo.meta) || {}; return m.state !== 'active' || (wo.rows || []).some(r => WO_OK.indexOf(r.st) === -1); }
+function dutyHtml(x, n) {
+  const more = n > 1 ? '<span class="dn">وفيه ' + (n - 1) + ' كمان بعده</span>' : '';
+  const b = (t, f, cls, dis) => '<button class="btn ' + (cls || '') + '"' + (dis ? ' disabled' : '') + ' onclick="' + f + '">' + t + '</button>';
+  if (x.kind === 'wo' || x.kind === 'wores') {
+    const m = wo.meta || {}, rows = wo.rows || [];
+    if (woBusy) return '<h2>🏷️ عروض أبو سمرة الأسبوعية</h2><div class="dbusy"><span class="spin"></span> بنرفع الملف ونفعّل العروض في المخزن الرئيسي... ممكن تاخد دقيقتين - ما تقفلش الصفحة</div>';
+    if (x.kind === 'wores') {
+      const on = rows.filter(r => r.st === 'في العروض ✓').length, bad = rows.filter(r => WO_OK.indexOf(r.st) === -1);
+      if (m.state !== 'active') {
+        return '<h2>⚠️ الملف اترفع بس العروض ما اتفعّلتش</h2><div class="derr">' + esc(m.error || 'حصلت مشكلة في التفعيل') + '</div>' +
+          '<div class="dmeta" style="margin-top:8px">جرّب «▶️ فعّل دلوقتي» تاني، ولو المشكلة فضلت كلّم المدير.</div>' +
+          '<div class="dacts">' + b('▶️ فعّل دلوقتي', 'woActivate()', '') + b('قفل', 'dutyRes=null;dutyCheck()', 'ghost') + '</div>';
+      }
+      return '<h2>' + (bad.length ? '🏷️ العروض اتفعّلت - وفيه أصناف محتاجة مراجعة' : '✅ العروض اتفعّلت') + '</h2>' +
+        '<div class="dmeta"><b style="font-size:17px;color:#1A7A36">' + on + '</b> صنف اتنقل لتصنيف «' + esc(wo.cat) + '» في المخزن الرئيسي • وبعدها تحديث الفروع' +
+        '<br>هتتلغي لوحدها ' + esc(woWhen(m.endAt)) + '</div>' +
+        (bad.length ? '<h4 style="color:#C62828">⚠️ ' + bad.length + ' صنف فيهم مشكلة (عدّلهم بإيدك في السيستم):</h4><div class="dst">' +
+          bad.slice(0, 30).map(r => '<div class="dstr"><span>' + esc(r.name) + '</span><small style="color:#B3261E">' + esc(r.st) + (r.note ? ' - ' + esc(r.note) : '') + '</small></div>').join('') +
+          (bad.length > 30 ? '<div class="dstr">و' + (bad.length - 30) + ' كمان في التقرير</div>' : '') + '</div>' : '') +
+        (m.sync && !m.sync.ok ? '<div class="derr">🔄 تحديث الفروع ما بدأش - هيتجرّب تاني لوحده</div>' : '') +
+        '<div class="dacts">' + b('✓ تمام', 'dutyRes=null;dutyCheck()', '') + b('📄 تقرير الأصناف', 'woReport()', 'soft') + '</div>';
+    }
+    const pend = m.state === 'pending' && wo.week && m.week === wo.week.key;
+    return '<h2>🏷️ ارفع دلوقتي ملف العروض الأسبوعية</h2>' +
+      '<div class="dmeta">جه ميعاد عروض أبو سمرة • ميعاد التنبيه: ' + esc(woRemTxt()) + ' <a href="#" onclick="event.preventDefault();woRemDlg()">✏️ غيّر</a></div>' +
+      (pend ? '<div class="derr">الملف «' + esc(m.file || '') + '» اترفع بس ما اتفعّلش' + (m.error ? ': ' + esc(m.error) : '') + ' - دوس «▶️ فعّل دلوقتي»</div>' : '') +
+      '<ol class="dsteps">' +
+      '<li>هات ملف الإكسل اللي <b>المخزن بعته لك</b> (واتساب أو إيميل).</li>' +
+      '<li>اتأكد إن <b>أول عمود</b> فيه <b>اسم الصنف</b> زي ما هو مكتوب في السيستم بالظبط، والأصناف تحت بعض (صف العناوين مش مشكلة).</li>' +
+      '<li>دوس <b>«⬆️ ارفع الملف»</b> واختار الملف، وراجع عدد الأصناف ودوس «موافق».</li>' +
+      '<li>العروض هتتفعّل على طول: الأصناف هتتنقل لتصنيف «' + esc(wo.cat || 'العروض الاسبوعية') + '» في المخزن الرئيسي وبعدها تحديث الفروع - <b>استنى النتيجة هنا</b>.</li>' +
+      '<li>مش محتاج تلغيها: هترجع لوحدها الاتنين 1 بالليل.</li></ol>' +
+      '<div class="dacts">' + (pend ? b('▶️ فعّل دلوقتي', 'woActivate()', '') : '') + b('⬆️ ارفع الملف', "$('woFile').click()", pend ? 'soft' : '') +
+      b('🚫 مفيش عروض الأسبوع ده', 'woNone()', 'red') + b('⏰ فكرني بعد 10 دقايق', "dutySnz('" + x.key + "',10)", 'ghost') + more + '</div>';
+  }
+  const L = x.list, v = L[0], one = L.length === 1;
+  return '<h2>' + (v.rec ? '🔁' : '📋') + ' جه ميعاد: ' + esc(v.title) + '</h2>' +
+    '<div class="dmeta">' + (one ? sdot(v.store) + esc(v.store) : L.length + ' محل') + ' • الميعاد ' + esc(dt(v.due)) + (v.prio && v.prio !== 'n' ? ' • ' + TP_LBL[v.prio] : '') + '</div>' +
+    '<h4>📝 التعليمات</h4><div class="dins">' + esc(v.ins) + '</div>' +
+    (v.details ? '<div class="dmeta" style="margin-top:8px"><b>التفاصيل:</b> ' + esc(v.details) + '</div>' : '') +
+    (one ? '' : '<div class="dst">' + L.map(t => '<div class="dstr"><span>' + sdot(t.store) + esc(t.store) + '</span>' + b('✓ اتعملت', "dutyDone('" + esc(t.id) + "',this)", '') + '</div>').join('') + '</div>') +
+    '<div class="dacts">' + (one ? b('✓ اتعملت', "dutyDone('" + esc(v.id) + "',this)", '') : '') +
+    b('📋 افتح التاسك', "dutyOpen('" + esc(v.id) + "','" + x.key + "')", 'soft') + b('⏰ فكرني بعد 10 دقايق', "dutySnz('" + x.key + "',10)", 'ghost') + more + '</div>';
+}
+async function dutyDone(id, btn) { if (btn) btn.disabled = true; try { await taskDone(id); } finally { dutyHtmlLast = ''; dutyCheck(); } }
+function dutyOpen(id, key) { dutySnooze[key] = now() + 10 * 60000; try { localStorage.setItem('mdq-duty-snz', JSON.stringify(dutySnooze)); } catch (e) {} dutyCheck(); openTask('task', id); }
+setInterval(() => { try { dutyCheck(); } catch (e) {} }, 20000);
+
 function woReport() {
   const rows = (wo && wo.rows) || [];
   const order = r => WO_OK.indexOf(r.st) === -1 ? 0 : 1;
