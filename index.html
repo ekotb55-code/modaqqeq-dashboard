@@ -271,6 +271,10 @@
   .bcard.wocard.on { border-inline-start-color: #2BB45A; }
   .bcard.wocard .bacts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
   .bcard.wocard .bacts .btn { padding: 5px 10px; font-size: 12.5px; }
+  .cnt { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px; border-radius: 999px; font-weight: 800; font-size: 13.5px; white-space: nowrap;
+    background: #EEF1F6; color: #2D3B4E; border: 1.5px solid #D5DCE6; vertical-align: middle; }
+  .cnt.new { background: #E6F0FD; color: #0E4F99; border-color: #A9C8F2; }
+  .cnt.back { background: #FFF1E0; color: #9A4A00; border-color: #F5C58A; }
   .worem { font-size: 12.5px; color: #8A5300; margin-top: 4px; }
   .worem a { color: #1460A8; font-weight: 700; text-decoration: none; margin-inline-start: 4px; }
   /* 🔔 البوكس الكبير للشغل الدوري */
@@ -1120,6 +1124,12 @@ const SR_PCT = 25; // سعر الشراء زاد 25% أو أكتر عن آخر �
 function srOpen(v) { return !!(v && v.status === ST_REJ && v.shopRev && v.shopRev.open); }
 // الفرع رد (عدّلها وبعتها تاني، أو قال دخّلها زي ما هي): يبقى مسموح تدخّلها
 function srAnswered(v) { return !!(v && v.shopRev && !v.shopRev.open && v.shopRev.reply); }
+// عدد الأصناف في كارت الفاتورة: شارة واضحة (أزرق = جديدة • برتقاني = راجعة / اتبعتت تاني • رمادي = الباقي)
+function cntTxt(n) { n = Number(n) || 0; return n === 1 ? 'صنف واحد' : n === 2 ? 'صنفين' : n >= 3 && n <= 10 ? n + ' أصناف' : n + ' صنف'; }
+function cntBadge(v) {
+  const c = v.rejectCount || v.status === ST_REJ || (v.status === ST_WORK && v.qaRejects) ? ' back' : v.status === 'جديدة' ? ' new' : '';
+  return '<span class="cnt' + c + '">📦 ' + cntTxt(v.count) + '</span>';
+}
 function vbadge(v) { return srOpen(v) ? '<span class="badge b-sr">👀 مستنية الفرع يراجع الأسعار</span>' : badge(v.status); }
 // الأصناف اللي أسعارها مش منطقية: {n: [{s: مختصر للجدول, l: بالتفصيل}]}
 function srFlags(L) {
@@ -1672,7 +1682,7 @@ function renderList() {
     '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + cmTag('inv', v.id) + '</span>' + timerHtml(v) + '</div>' +
     '<div class="sub"><span class="lbl">مورد:</span> ' + esc(v.supplier || 'غير محدد') + '</div>' +
     '<div class="meta">' + esc(v.user) + ' • ' + dt(v.createdAt) + '</div>' +
-    '<div class="meta">' + vbadge(v) + ' ' + v.count + ' صنف • <span class="money">' + money(v.total) + ' ج.م</span>' +
+    '<div class="meta">' + vbadge(v) + ' ' + cntBadge(v) + ' <span class="money">' + money(v.total) + ' ج.م</span>' +
     (v.receivedBy ? ' • 👤 ' + esc(v.receivedBy) : '') + (v.systemNo ? ' • #' + esc(v.systemNo) : '') +
     (v.rejectCount && v.status !== ST_REJ ? (v.shopRev && v.shopRev.reply === 'asis' ? ' • ✅ الفرع أكّد الأسعار' : ' • ↩️ اتبعتت تاني') : '') +
     (v.status === ST_QA ? ' • 🔍 دخّلها ' + esc(v.doneBy) + ' من ' + durTxt(mins(v.doneAt, now())) + (qaLate(v) ? ' ⚠️' : '') : '') +
@@ -4197,7 +4207,7 @@ function invBoardCard(v) {
   return '<div class="bcard ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : '') + (isLate ? ' late' : '') +
     (v.status === ST_QA ? ' st-qa' : '') + '" onclick="bTap(this,event,()=>{page(\'inv\');tab=\'الكل\';openInv(\'' + v.id + '\')})">' +
     '<div class="bt"><b><span class="kind">🧾</span>' + esc(v.supplier) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥' + (v.urgeCount > 1 ? '×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + '</b>' + vbadge(v) + '</div>' +
-    '<div class="bm">' + v.count + ' صنف • <b>' + money(v.total) + ' ج.م</b>' + (pending(v) ? ' • ' + timerHtml(v) : ' • ' + tm(v.doneAt || v.createdAt)) + '</div>' +
+    '<div class="bm">' + cntBadge(v) + ' <b>' + money(v.total) + ' ج.م</b>' + (pending(v) ? ' • ' + timerHtml(v) : ' • ' + tm(v.doneAt || v.createdAt)) + '</div>' +
     '<div class="bx">' + (v.priceUps || v.priceDowns ? '<div class="bm">' + (v.priceUps ? '📈 ' + v.priceUps + ' زيادة سعر ' : '') + (v.priceDowns ? '📉 ' + v.priceDowns + ' نقص سعر' : '') + '</div>' : '') +
     '<ul class="tl">' + invEvents(v).map(e => '<li class="' + (e.cls || '') + '"><span>' + e.i + '</span><span>' + esc(e.x) + '</span><span class="tm">' + tm(e.t) + '</span></li>').join('') + '</ul></div></div>';
 }
