@@ -4984,6 +4984,7 @@ function bsHtml(s) {
     (s.stopped && !s.running ? '<p style="color:var(--muted)">⏹ آخر تحديث اتوقف' + (s.stoppedBy ? ' (وقّفه ' + esc(s.stoppedBy) + ')' : '') + '</p>' : '') +
     '<label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" ' + (s.autoOn ? 'checked' : '') + ' onchange="bsAutoSet(this.checked)"> التحديث التلقائي شغال (9:30 • 1:30 • 5:30 • 9:30)</label>' +
     '<div class="acts">' + (s.running ? '<button class="btn" style="background:#C62828" onclick="bsStop()">⏹ وقّف التحديث</button>' : '<button class="btn" id="bsGo" onclick="bsGo()">حدّث كل الفروع دلوقتي</button>') +
+    '<button class="btn soft" onclick="baDlg()">🗄️ مطابقة الأصناف بالمخزن</button>' +
     '<button class="btn soft" onclick="closeDlg()">قفل</button></div>';
 }
 async function bsDlg() {
@@ -5005,6 +5006,87 @@ async function bsAutoSet(on) {
 async function bsGo() {
   if (!confirm('هيتعمل "تحديث الكل" في الـ 3 صفحات لكل الفروع المربوطة، فرع ورا فرع. نبدأ؟')) return;
   try { const s = await bsCall('bsAll', { token }); $('bsBox').innerHTML = bsHtml(s); toast('التحديث بدأ ✅'); } catch (e) { toast(msg(e)); }
+}
+
+// ---------- مطابقة أصناف الفرع بالمخزن (BranchArchive.gs) ----------
+// أي صنف في الفرع باركوده الأساسي مش في «نسخة المخزن» ← تصنيفه «أرشيف أصناف قديمة» (الكميات والأسعار ما بتتلمسش)
+let baBusy = false;
+async function baDlg() {
+  clearInterval(bsTimer);
+  let r; try { r = await api('dBaBranches', { token }, true); } catch (e) { return toast(msg(e)); }
+  const last = r.last || {};
+  dlg('<h3>🗄️ مطابقة أصناف الفرع بالمخزن</h3>' +
+    '<p style="color:var(--muted);font-size:13px">أي صنف في الفرع باركوده الأساسي مش موجود في «نسخة المخزن» تصنيفه بيتغيّر لـ «أرشيف أصناف قديمة». الكميات والأسعار ما بتتلمسش، والتصنيف القديم بيتحفظ في تاب «أرشفة أصناف الفروع».</p>' +
+    '<label>الفرع</label><select id="baBr" onchange="baShow()"><option value="">— اختار الفرع —</option>' +
+    (r.branches || []).map(b => '<option>' + esc(b) + '</option>').join('') + '</select>' +
+    '<div id="baBox" style="margin-top:10px">' + baLastHtml(last) + '</div>' +
+    '<div class="acts"><button class="btn soft" onclick="bsDlg()">↩️ رجوع</button><button class="btn soft" onclick="closeDlg()">قفل</button></div>');
+}
+function baLastHtml(last) {
+  const k = Object.keys(last);
+  if (!k.length) return '';
+  return '<p style="color:var(--muted);font-size:12px">' + k.map(b => esc(b) + ': ' + (last[b].run ? 'اتنفذ ' + new Date(last[b].run.at).toLocaleDateString('ar-EG') + ' (✓ ' + last[b].run.ok + (last[b].run.fail ? ' • فشل ' + last[b].run.fail : '') + ')' : 'اتفحص بس')).join(' • ') + '</p>';
+}
+async function baShow() {
+  const b = $('baBr').value, box = $('baBox');
+  if (!b) { box.innerHTML = ''; return; }
+  box.innerHTML = '⏳ ...';
+  try { box.innerHTML = baHtml(await api('dBaStatus', { token, branch: b }, true)); } catch (e) { box.innerHTML = '⚠️ ' + esc(msg(e)); }
+}
+function baHtml(r, running) {
+  const S = r.scan, C = r.counts || {};
+  const wait = C['مستني'] || 0, ok = C['اتأرشف ✓'] || 0, fail = C['فشل'] || 0;
+  let h = '';
+  if (!S) h += '<p>الفرع ده لسه ما اتفحصش.</p>';
+  else {
+    h += '<div style="background:var(--soft,#F4F6FA);padding:10px;border-radius:10px;font-size:13px;line-height:1.9">' +
+      '🕒 آخر فحص: ' + esc(new Date(S.at).toLocaleString('ar-EG')) + (S.by ? ' (' + esc(S.by) + ')' : '') + '<br>' +
+      '📦 أصناف الفرع: <b>' + S.items + '</b> • المخزن: <b>' + S.whItems + '</b><br>' +
+      '✅ هتفضل زي ما هي (باركودها في المخزن): <b>' + S.keep + '</b>' + (S.srv ? ' • خدمة: ' + S.srv : '') + '<br>' +
+      '🗄️ هتتأرشف: <b style="color:#C62828">' + S.todo + '</b> (بالاسم ' + S.byName + ' • بالباركود ' + S.byBc + (S.manual ? ' • يدوي ' + S.manual : '') + ')<br>' +
+      '📊 منهم ليهم كمية: <b>' + S.withQty + '</b>' +
+      (S.hasCat ? '' : '<br>⚠️ تصنيف «' + esc(r.cat) + '» مش موجود في سيستم الفرع - اعمله بإيدك من صفحة التصنيفات قبل التنفيذ') +
+      '</div>';
+    if (S.cats && S.cats.length) h += '<details style="margin-top:6px"><summary>التصنيفات القديمة للأصناف اللي هتتأرشف</summary><div style="font-size:12px">' +
+      S.cats.map(c => esc(c[0]) + ': ' + c[1]).join(' • ') + '</div></details>';
+    h += '<p style="font-size:13px">الحالة: مستني <b>' + wait + '</b> • اتأرشف <b style="color:#2E7D32">' + ok + '</b>' + (fail ? ' • فشل <b style="color:#C62828">' + fail + '</b>' : '') + '</p>';
+    if (S.run) h += '<p style="font-size:12px;color:var(--muted)">آخر تنفيذ: ' + esc(new Date(S.run.at).toLocaleString('ar-EG')) + ' (' + esc(S.run.by || '') + ') • اتأكد ✓ ' + S.run.ok + (S.run.fail ? ' • فشل ' + S.run.fail : '') + '</p>';
+    const L = r.sample || [];
+    if (L.length) h += '<details style="margin-top:6px"' + (fail ? ' open' : '') + '><summary>' + (fail ? 'الأصناف اللي فشلت / لسه مستنية' : 'عيّنة من الأصناف اللي هتتأرشف') + ' (' + L.length + (L.length >= 300 ? '+' : '') + ')</summary>' +
+      '<div style="max-height:260px;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><tr><th>الصنف</th><th>الباركود</th><th>التصنيف</th><th>الكمية</th><th>الحالة</th></tr>' +
+      L.map(x => '<tr style="border-top:1px solid #eee"><td>' + esc(x.name) + '</td><td>' + esc(x.bc) + '</td><td>' + esc(x.old) + '</td><td>' + esc(x.qty) + '</td><td>' + esc(x.st) + (x.note ? '<br><span style="color:var(--muted)">' + esc(x.note) + '</span>' : '') + '</td></tr>').join('') +
+      '</table></div></details>';
+  }
+  if (running) h += '<p style="background:#FFF4D6;padding:10px;border-radius:10px">⏳ ' + esc(running) + '</p>';
+  else h += '<div class="acts" style="justify-content:flex-start">' +
+    '<button class="btn soft" onclick="baScan()">🔍 ' + (S ? 'افحص تاني' : 'افحص') + '</button>' +
+    (S && (wait || fail) ? '<button class="btn" style="background:#C62828" onclick="baRun()">🗄️ نفّذ الأرشفة (' + wait + ')</button>' : '') + '</div>';
+  return h;
+}
+async function baScan() {
+  const b = $('baBr').value; if (!b || baBusy) return;
+  baBusy = true; $('baBox').innerHTML = '<p style="background:#FFF4D6;padding:10px;border-radius:10px">⏳ بفحص أصناف ' + esc(b) + ' والمخزن... (دقيقة تقريباً)</p>';
+  try { $('baBox').innerHTML = baHtml(await api('dBaScan', { token, branch: b }, true)); toast('الفحص خلص ✅ - ما اتغيرش حاجة في السيستم'); }
+  catch (e) { toast(msg(e)); baShow(); }
+  baBusy = false;
+}
+async function baRun() {
+  const b = $('baBr').value; if (!b || baBusy) return;
+  if (!confirm('هيتغيّر تصنيف الأصناف اللي مش في المخزن في سيستم ' + b + ' لـ «أرشيف أصناف قديمة».\nالكميات والأسعار مش هتتلمس، والتصنيف القديم محفوظ في الشيت.\nنبدأ؟')) return;
+  baBusy = true;
+  let r, round = 0;
+  try {
+    do {
+      round++;
+      if (r) $('baBox').innerHTML = baHtml(r, 'شغال... الدفعة ' + round + ' - سيب الشاشة مفتوحة');
+      else $('baBox').innerHTML = '<p style="background:#FFF4D6;padding:10px;border-radius:10px">⏳ شغال... الدفعة 1 - سيب الشاشة مفتوحة (ممكن ياخد كذا دقيقة)</p>';
+      r = await api('dBaRun', { token, branch: b }, true);
+    } while (r.more && $('baBox'));
+    if ($('baBox')) $('baBox').innerHTML = baHtml(r);
+    const run = r.scan && r.scan.run;
+    toast(run ? 'الأرشفة خلصت ✅ اتأكد ' + run.ok + (run.fail ? ' • فشل ' + run.fail : '') : 'خلصت');
+  } catch (e) { toast(msg(e)); if ($('baBox')) baShow(); }
+  baBusy = false;
 }
 
 // ---------- تحديث شيت أصناف المخزن (من سيستم المخزن 4 مرات في اليوم) ----------
