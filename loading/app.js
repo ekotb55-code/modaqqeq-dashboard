@@ -105,8 +105,8 @@ function drawOverlays(){
 }
 function loginView(){
   return `<div class="phone"><div class="login"><img class="logoimg big" src="../icon-192.png" alt="مدقق"><h1>أهلاً بيك</h1><p class="muted" style="margin:0">ادخل باسمك والرقم السري</p>
-  <label class="fld"><span>الاسم</span><input id="lname" autocomplete="username" value="${esc(LASTNAME)}"></label>
-  <label class="fld"><span>الرقم السري</span><input id="pin" type="password" inputmode="numeric" autocomplete="current-password"></label>
+  <label class="fld"><span>الاسم</span><input id="lname" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(LASTNAME)}"></label>
+  <label class="fld"><span>الرقم السري</span><input id="pin" type="password" inputmode="numeric" autocomplete="one-time-code"></label>
   <button class="btn primary wide" data-act="login">دخول</button></div></div>`;
 }
 
