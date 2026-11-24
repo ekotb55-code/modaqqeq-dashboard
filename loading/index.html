@@ -350,6 +350,25 @@ span.tab{cursor:default}
 .filters button[data-act="refresh"]{margin-inline-start:auto;color:var(--blue)}
 img{max-width:100%}
 [hidden]{display:none!important}
+/* خانة الكمية المباشرة + أصناف المحل */
+.irow{cursor:default}
+.irow .nm small{display:block;font-size:.72rem;color:var(--muted);font-weight:500}
+.qin{width:84px;flex:none;min-height:44px;text-align:center;font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums;border-radius:12px;padding:6px 8px;border:2px solid var(--line);background:var(--surface)}
+.irow.in .qin{border-color:var(--lime);background:color-mix(in srgb,var(--lime) 22%,var(--surface))}
+.mode-extra .irow.in .qin{border-color:var(--orange);background:color-mix(in srgb,var(--orange) 18%,var(--surface))}
+.pcsb{border:0;background:var(--sunk);color:var(--ink);border-radius:999px;padding:6px 10px;font-size:.78rem;font-weight:700;cursor:pointer;flex:none}
+.siopen .tchip.si{background:var(--dark);color:#fff}
+.sicat{position:sticky;top:0;background:var(--sunk);color:var(--muted);font-size:.78rem;font-weight:800;padding:6px 16px;z-index:1}
+.sirow{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer;opacity:.55}
+.sirow.on{opacity:1}
+.sirow .nm{flex:1;min-width:0;font-weight:600}
+.sirow .nm small{display:block;font-size:.72rem;color:var(--muted);font-weight:500}
+.sw{appearance:none;-webkit-appearance:none;width:48px;height:28px;border-radius:999px;background:var(--line);position:relative;flex:none;cursor:pointer;transition:background .15s;border:0;min-height:0;padding:0}
+.sw::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:inset-inline-start .15s}
+.sw:checked{background:var(--lime)}
+.sw:checked::after{inset-inline-start:23px}
+.chip.on{background:var(--dark);color:#fff}
+
 .logoimg{width:44px;height:44px;border-radius:12px;background:#fff;flex:none;box-shadow:var(--shadow)}
 .logoimg.big{width:96px;height:96px;border-radius:24px;margin-inline:auto;display:block}
 </style>
@@ -373,7 +392,7 @@ img{max-width:100%}
 <div id="skinbox" dir="rtl" hidden></div>
 <div id="toast" dir="rtl" role="status" hidden></div>
 <input type="file" id="scanfile" accept="image/*" capture="environment" hidden>
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});</script>
 </body>
 </html>
