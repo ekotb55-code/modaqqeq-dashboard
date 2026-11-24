@@ -4714,7 +4714,7 @@ function pushRender(r, store, cmp) {
   const el = $('pushBox'); if (!el) return;
   if (!r.linked) { el.innerHTML = 'الفرع ده مش مربوط ببرنامج البيع - ارفع الكميات بالإيد واكتب الإجمالي تحت.'; return; }
   const p = r.push || {}, sh = r.sheet || {}, st = p.state || '';
-  const busy = ['queued', 'running', 'verify'].indexOf(st) !== -1;
+  const busy = ['queued', 'running', 'bybc', 'verify'].indexOf(st) !== -1;
   let h = '<b>⚙️ الرفع الأوتوماتيك</b><br>';
   h += sh.error ? '<span style="color:#C62828">' + esc(sh.error) + '</span><br>'
     : '📋 الشيت: <b>' + num(sh.counted) + '</b> صنف اتجرد • هيترفع <b>' + num(sh.items) + '</b> صنف ليهم كمية • إجمالي الجرد <b>' + money(sh.value) + '</b> ج.م<br>';
@@ -4725,13 +4725,14 @@ function pushRender(r, store, cmp) {
   });
   if (st === 'queued') h += '<b style="color:#1565C0">🕐 اتأكد - هيبدأ خلال دقيقة</b>';
   if (st === 'running') h += '<b style="color:#1565C0">⚙️ بيرفع: دفعة ' + (p.chunk || 0) + ' من ' + (p.chunks || 0) + ' • ' + num(p.ok || 0) + ' من ' + num(p.total || 0) + ' صنف</b>';
+  if (st === 'bybc') h += '<b style="color:#1565C0">🔢 الأسامي المتكررة بتترفع بالباركود: ' + num(p.bcDone || 0) + ' من ' + num(p.bcN || 0) + ' صنف</b>';
   if (st === 'verify') h += '<b style="color:#1565C0">🔎 خلص الرفع - بيراجع الكميات على البرنامج ويقرا الموقف المالى...</b>';
   if (st === 'error') h += '<span style="color:#C62828">❌ الرفع فشل: ' + esc(p.error || '') + '</span><br>' +
     (p.total ? '<div class="bacts" style="margin-top:6px"><button class="btn soft" id="puRe">🔎 راجع اللي على البرنامج (من غير رفع)</button></div>' : '');
   if (st === 'done') {
     const prog = p.fin !== null && p.fin !== undefined ? p.fin : p.posValue, ok = Math.abs(p.diff || 0) <= 1;
     h += '<div style="background:#fff;border-radius:10px;padding:8px 10px;margin-top:4px">' +
-      '✅ اترفع ' + num(p.ok || 0) + ' صنف • ' + dt(p.done) + (p.by ? ' • أكّده ' + esc(p.by) : '') + '<br>' +
+      '✅ اترفع ' + num(p.ok || 0) + ' صنف' + (p.bcN ? ' + ' + num(p.bcOk || 0) + ' من ' + num(p.bcN) + ' بالباركود (أسامي متكررة)' : '') + ' • ' + dt(p.done) + (p.by ? ' • أكّده ' + esc(p.by) : '') + '<br>' +
       'الموقف المالى (المخزون بسعر الشراء): ' + (p.finBefore !== null && p.finBefore !== undefined ? money(p.finBefore) + ' ← ' : '') + '<b>' + money(prog) + '</b>' +
       (p.fin === null || p.fin === undefined ? ' <small>(محسوب من ملف الأصناف - مقدرناش نقرا الموقف المالى)</small>' : '') + '<br>' +
       'إجمالي الجرد في الشيت: <b>' + money(p.sheetValue) + '</b><br>' +
@@ -5155,7 +5156,8 @@ function baHtml(r, running) {
   if (running) h += '<p style="background:#FFF4D6;padding:10px;border-radius:10px">⏳ ' + esc(running) + '</p>';
   else h += '<div class="acts" style="justify-content:flex-start">' +
     '<button class="btn soft" onclick="baScan()">🔍 ' + (S ? 'افحص تاني' : 'افحص') + '</button>' +
-    (S && (wait || fail) ? '<button class="btn" style="background:#C62828" onclick="baRun()">🗄️ نفّذ الأرشفة (' + wait + ')</button>' : '') + '</div>';
+    (S && (wait || fail) ? '<button class="btn" style="background:#C62828" onclick="baRun()">🗄️ نفّذ الأرشفة (' + wait + ')</button>' : '') +
+    (fail && !wait ? '<button class="btn soft" onclick="baRetry()">🔁 جرّب الفاشل تاني (' + fail + ')</button>' : '') + '</div>';
   return h;
 }
 async function baScan() {
@@ -5164,6 +5166,10 @@ async function baScan() {
   try { $('baBox').innerHTML = baHtml(await api('dBaScan', { token, branch: b }, true)); toast('الفحص خلص ✅ - ما اتغيرش حاجة في السيستم'); }
   catch (e) { toast(msg(e)); baShow(); }
   baBusy = false;
+}
+async function baRetry() {
+  const b = $('baBr').value; if (!b || baBusy) return;
+  try { $('baBox').innerHTML = baHtml(await api('dBaRetry', { token, branch: b }, true)); toast('الأصناف اللي فشلت رجعت مستنية - دوس «نفّذ»'); } catch (e) { toast(msg(e)); }
 }
 async function baRun() {
   const b = $('baBr').value; if (!b || baBusy) return;
