@@ -10,6 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="التحميل والتفريغ">
 <meta name="theme-color" content="#1766E3">
+<meta name="color-scheme" content="light only">
 <title>مدقق • التحميل والتفريغ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,19 +34,8 @@
   --f-head:"IBM Plex Sans Arabic",Tahoma,sans-serif;
   --f-body:"IBM Plex Sans Arabic",Tahoma,"Segoe UI",sans-serif;
   --r:24px;
+  color-scheme:light;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --paper:#0B0F1C; --surface:#161E33; --sunk:#1E2842; --ink:#EEF2FB; --muted:#9DA8C4; --line:#29334E;
-  --top:color-mix(in srgb,var(--yellow) 10%,var(--paper));
-  --unload:#FF9A4D; --unload-soft:#3A2410;
-  --ok:#45CF92; --ok-soft:#153526; --warn:#F2C450; --warn-soft:#3A2F10; --bad:#FF7A86; --bad-soft:#3F1A22;
-  --scrim:rgba(0,0,0,.65); --shadow:0 2px 4px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.3); color-scheme:dark }}
-:root[data-theme="dark"]{
-  --paper:#0B0F1C; --surface:#161E33; --sunk:#1E2842; --ink:#EEF2FB; --muted:#9DA8C4; --line:#29334E;
-  --top:color-mix(in srgb,var(--yellow) 10%,var(--paper));
-  --unload:#FF9A4D; --unload-soft:#3A2410;
-  --ok:#45CF92; --ok-soft:#153526; --warn:#F2C450; --warn-soft:#3A2F10; --bad:#FF7A86; --bad-soft:#3F1A22;
-  --scrim:rgba(0,0,0,.65); --shadow:0 2px 4px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.3); color-scheme:dark }
 /* 10 skins */
 :root[data-skin="melon"]{--blue:#D7263D;--lime:#7BD95A;--orange:#FF8A5B;--purple:#FFB3C1;--yellow:#FFD23F;--pink:#1B998B}
 :root[data-skin="sea"]{--blue:#0B4F6C;--lime:#3DDCC5;--orange:#FFB547;--purple:#8FD3FF;--yellow:#F2D57E;--pink:#FF6B6B}
