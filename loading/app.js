@@ -52,7 +52,7 @@ function saveLocal(){try{localStorage.setItem(lkey('cart'),JSON.stringify(CART))
 function loadLocal(){try{CART=JSON.parse(localStorage.getItem(lkey('cart'))||'{}')||{};UW=JSON.parse(localStorage.getItem(lkey('uw'))||'null')}catch(e){CART={};UW=null}}
 
 /* ===== السيرفر ===== */
-const API='https://script.google.com/macros/s/AKfycbxos7wLBj0tdaRbh46AsRkp0JQoRHHTJemiT6yPVyJ3FgFxMRHLspjq_Oi6gIzo5wo/exec';
+const API='https://script.google.com/macros/s/AKfycbzAiM8070GNCmLGOMYDeCHdf-cCMMFFJ3GIjpzznb5znOyWwAHlYZF1eRpqpju9-RoY/exec';
 async function post(action,data){
   let r;
   try{r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({auth:CRED,action,data:data||{}})})}
