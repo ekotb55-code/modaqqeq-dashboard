@@ -1,0 +1,19 @@
+{
+  "name": "مدقق • التحميل والتفريغ",
+  "short_name": "التحميل والتفريغ",
+  "description": "تطبيق مناديب التوزيع: التحميل والتفريغ والمصروفات والتسليم",
+  "lang": "ar",
+  "dir": "rtl",
+  "id": "./?app=loading",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EDF1FA",
+  "theme_color": "#1766E3",
+  "icons": [
+    { "src": "../icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "../icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "../icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -946,6 +946,36 @@
   .jinote { font-size: 12.5px; color: var(--muted); margin-top: 6px; line-height: 1.7; }
   .jilogin { max-width: 380px; margin: 40px auto; } .jilogin input { width: 100%; margin-bottom: 8px; }
   .jiusers { max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; padding: 6px; margin-top: 6px; } .jiusers label { display: block; padding: 3px 0; }
+  /* 🚚 التحميل والتفريغ */
+  .lustats { display: flex; gap: 8px; flex-wrap: wrap; }
+  .lust { border-radius: 14px; padding: 6px 14px; min-width: 92px; color: #fff; }
+  .lust b { font-size: 24px; display: block; line-height: 1.1; } .lust small { font-weight: 700; font-size: 12px; }
+  .lust.n { background: var(--blue); } .lust.w { background: var(--yellow); color: #3a2a00; } .lust.o { background: var(--orange); }
+  .lugrid { display: grid; grid-template-columns: 330px 1fr; gap: 14px; align-items: start; }
+  .lulist { padding: 0; overflow: hidden; min-height: 0; }
+  .lufil { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .lufil button { background: none; padding: 5px 12px; font-size: 13px; color: var(--muted); border-radius: 20px; }
+  .lufil button.on { background: var(--navy); color: #fff; }
+  .lurow { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; width: 100%; background: none; border-bottom: 1px solid var(--line); border-radius: 0; padding: 10px 12px; text-align: start; font-weight: 400; }
+  .lurow.on { background: var(--sky); } .lurow small { display: block; color: var(--muted); font-size: 12px; }
+  .luwho { min-width: 0; }
+  .lut { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 800; color: #17212E; }
+  .lut.load { background: #C8F26A; } .lut.unload { background: #FFB27A; }
+  .lutrack { display: flex; gap: 6px; margin: 8px 0; }
+  .lutrack span { flex: 1; text-align: center; font-size: 12px; padding: 6px 4px; border-radius: 12px; background: var(--bg); color: var(--muted); font-weight: 700; }
+  .lutrack span.on { background: #DDF5E5; color: var(--green); } .lutrack small { display: block; font-weight: 400; }
+  .luact { background: #F1ECFF; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+  .luact.done { flex-direction: row; flex-wrap: wrap; align-items: center; background: #EEF8F1; }
+  .lushot { max-width: 180px; max-height: 140px; border-radius: 10px; cursor: zoom-in; border: 1px solid var(--line); background: #fff; }
+  .lutbl { overflow-x: auto; margin-top: 8px; border: 1px solid var(--line); border-radius: 14px; }
+  .lutbl table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .lutbl th, .lutbl td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: start; }
+  .lutbl th { background: var(--bg); color: var(--muted); font-size: 12px; } .lutbl tr:last-child td { border-bottom: 0; }
+  .luextra td:first-child { border-inline-start: 4px solid var(--orange); } .lunrow td { background: var(--bg); }
+  .lunb { background: var(--bg); color: var(--muted); font-size: 12px; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+  .lunb.has { background: #FFE9A8; color: #6b4a00; }
+  .lunote { border-inline-start: 5px solid var(--yellow); background: var(--bg); border-radius: 12px; padding: 8px 12px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
+  @media (max-width: 860px) { .lugrid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -976,6 +1006,7 @@
         <button id="navRep" onclick="page('rep')"><i>📊</i><span>تقارير الفروع</span></button>
         <button id="navOrd" onclick="page('ord')"><i>🔁</i><span>الطلبات الدورية</span></button>
         <button id="navJinv" onclick="page('jinv')"><i>📣</i><span>طلبات الجرد</span><span class="nbadge hidden" id="jinvBadge"></span></button>
+        <button id="navLu" onclick="page('lu')"><i>🚚</i><span>التحميل والتفريغ</span><span class="nbadge hidden" id="luBadge"></span></button>
       </div>
       <span class="sp"></span>
       <span class="net good" id="netPill" onclick="netInfo()" title="سرعة النت"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><span id="netTxt">النت...</span></span>
@@ -1037,6 +1068,7 @@
   <div class="main hidden" id="pageRep"></div>
   <div class="main hidden" id="pageOrd"></div>
   <div class="main hidden" id="pageJinv"></div>
+  <div class="main hidden" id="pageLu"></div>
   <div class="team-page hidden" id="pageTeam">
     <div class="tside" id="tSide"><div class="empty"><span class="spin"></span></div></div>
     <div class="tmain" id="tMain"><div class="empty">👈 اختار محادثة</div></div>
@@ -1047,6 +1079,7 @@
 <div id="viewerFull" class="hidden" onclick="this.classList.add('hidden')"><img id="viewerFullImg"></div>
 <div id="toast" class="hidden"></div>
 <input type="file" id="photoFile" accept="image/*" class="hidden" onchange="photoPicked(this)">
+<input type="file" id="luShotFile" accept="image/*" class="hidden" onchange="luShotPicked(this)">
 <input type="file" id="chatFile" accept="image/*" class="hidden" onchange="chatFilePicked(this)">
 <div id="chatModal" class="hidden" onclick="if(event.target===this)closeChatModal()"><div class="chatwrap" id="chatModalBox"></div></div>
 
@@ -1343,6 +1376,7 @@ function showApp() {
   woStart();
   umStart();
   jinvBg();
+  luBg();
   if ('Notification' in window && Notification.permission === 'granted') setupPush();
 }
 function page(p) {
@@ -1361,6 +1395,9 @@ function page(p) {
   $('pageJinv').classList.toggle('hidden', p !== 'jinv');
   $('navJinv').classList.toggle('on', p === 'jinv');
   if (p === 'jinv') jinvLoad(); else jinvStop();
+  $('pageLu').classList.toggle('hidden', p !== 'lu');
+  $('navLu').classList.toggle('on', p === 'lu');
+  if (p === 'lu') luLoad(); else luStop();
   $('pageInv').classList.toggle('hidden', p !== 'inv');
   $('pagePerf').classList.toggle('hidden', p !== 'perf');
   $('pageStores').classList.toggle('hidden', p !== 'stores');
@@ -5454,6 +5491,138 @@ async function tsuSw(key, off) {
     toast(off ? 'اتوقفت: ' + name : 'اشتغلت: ' + name);
   } catch (e) { toast(msg(e)); }
   tsuBusy = false;
+}
+
+// ---------- 🚚 التحميل والتفريغ (مناديب التوزيع - سكريبت لوحده على ekotb55) ----------
+// المندوب بيبعت التحميل والتفريغ من تطبيقه (loading/) وبيوصلوا هنا للدعم: استلام ← صورة السيستم ← تم
+// بيشتغل بدخول الداش بورد نفسه - السيرفر بيتأكد من الجلسة من «دليل الموظفين» (مرة كل 6 ساعات)
+const LU_API = 'https://script.google.com/macros/s/AKfycbxos7wLBj0tdaRbh46AsRkp0JQoRHHTJemiT6yPVyJ3FgFxMRHLspjq_Oi6gIzo5wo/exec';
+const LU_ST = { load: { sent: 'قيد التحميل', received: 'الدعم استلم', done: 'تم رفع الكمية' }, unload: { sent: 'طلب تفريغ', received: 'الدعم استلم', done: 'تم التفريغ' } };
+let lu = null, luTimer = null, luBgT = null, luBusy = false, luSel = null, luFilter = 'all', luNoteFor = null, luKnownNew = null;
+const luImg = {};
+async function luApi(action, data) {
+  let res, j = null;
+  try { res = await fetch(LU_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ auth: { kind: 'dash', token, name: me }, action, data: data || {} }) }); }
+  catch (e) { throw new Error('سيرفر التحميل والتفريغ ما ردّش - حاول تاني كمان شوية'); }
+  try { j = await res.json(); } catch (e) { throw new Error('سيرفر التحميل والتفريغ ما ردّش صح - حاول تاني كمان شوية'); }
+  if (!j.ok) {
+    if ((j.err || '').indexOf('انتهت الجلسة') !== -1) { toast(j.err); setTimeout(logout, 1500); }
+    throw new Error(j.err || 'حصلت مشكلة في سيرفر التحميل والتفريغ');
+  }
+  if (j.state) lu = j.state;
+  return j;
+}
+function luStop() { clearInterval(luTimer); luTimer = null; }
+function luNew() { return (lu && lu.sreqs || []).filter(r => r.status === 'sent').length; }
+function luBadge() {
+  const n = luNew(), b = $('luBadge'); if (!b) return;
+  b.textContent = n; b.classList.toggle('hidden', !n);
+  if (luKnownNew !== null && n > luKnownNew) { toast('🚚 وصل طلب تحميل/تفريغ جديد'); try { ding(); } catch (e) {} }
+  luKnownNew = n;
+}
+function luBg() {
+  if (luBgT) return;
+  const go = async () => { if (!token || !$('pageLu').classList.contains('hidden')) return; try { await luApi('state'); luBadge(); } catch (e) {} };
+  setTimeout(go, 4000); luBgT = setInterval(go, 120000);
+}
+async function luLoad(quiet) {
+  if (!quiet && !lu) $('pageLu').innerHTML = '<div class="pane"><div class="empty"><span class="spin"></span></div></div>';
+  try { await luApi('state'); luBadge(); luRender(); }
+  catch (e) { if (!quiet) $('pageLu').innerHTML = '<div class="pane"><div class="empty">' + esc(msg(e)) + ' <button class="btn soft" onclick="luLoad()">حاول تاني</button></div></div>'; }
+  if (!luTimer) luTimer = setInterval(() => { if ($('pageLu').classList.contains('hidden')) luStop(); else if (!luBusy && !$('dlg') && !(document.activeElement && document.activeElement.id === 'luNote')) luLoad(true); }, 20000);
+}
+function luT(t) { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); if (!m) return esc(t || ''); const h = +m[1]; return (h % 12 || 12) + ':' + m[2] + (h < 12 ? ' ص' : ' م'); }
+function luD(d) { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? (+m[3]) + '/' + (+m[2]) : esc(d || ''); }
+function luUnit(n) { const it = (lu && lu.items || []).find(x => x.n === n); return it && it.w ? 'كجم' : 'كرتونة'; }
+function luReq(id) { return (lu && lu.sreqs || []).find(r => r.id === id); }
+function luBadgeHtml(r) { const c = r.status === 'done' ? 'b-done' : r.status === 'received' ? 'b-work' : 'b-new'; return '<span class="badge ' + c + '">' + esc(LU_ST[r.type][r.status]) + '</span>'; }
+function luTrack(r) {
+  const L = r.type === 'load' ? ['اتبعت للدعم', 'الدعم استلم', 'تم رفع الكمية'] : ['طلب تفريغ', 'الدعم استلم', 'تم التفريغ'];
+  const i = { sent: 0, received: 1, done: 2 }[r.status], tm = [r.t, r.recvT, r.doneT];
+  return '<div class="lutrack">' + L.map((s, k) => '<span class="' + (k <= i ? 'on' : '') + '">' + s + (k <= i && tm[k] ? '<small>' + luT(tm[k]) + (k === 1 && r.recvBy ? ' • ' + esc(r.recvBy) : '') + '</small>' : '') + '</span>').join('') + '</div>';
+}
+function luRender() {
+  if (!lu) return;
+  const all = (lu.sreqs || []).slice().reverse(), list = all.filter(r => luFilter === 'all' || r.status === luFilter);
+  if (!luSel || !all.find(r => r.id === luSel)) luSel = (all.find(r => r.status !== 'done') || all[0] || {}).id;
+  const cN = all.filter(r => r.status === 'sent').length, cR = all.filter(r => r.status === 'received').length, cNo = all.reduce((a, r) => a + r.notes.filter(n => !n.reply).length, 0);
+  const keep = $('luNote') ? $('luNote').value : '';
+  $('pageLu').innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px"><div><h2 style="margin:0;color:var(--navy)">🚚 التحميل والتفريغ</h2>' +
+    '<div style="color:var(--muted);font-size:13px">طلبات مناديب التوزيع • تطبيق المندوب: <a href="loading/" target="_blank" style="color:var(--blue)">loading/</a></div></div>' +
+    '<div class="lustats"><div class="lust n"><b>' + cN + '</b><small>جديد</small></div><div class="lust w"><b>' + cR + '</b><small>قيد الشغل</small></div><div class="lust o"><b>' + cNo + '</b><small>ملاحظات مستنية رد</small></div></div></div>' +
+    '<div class="lugrid"><div class="pane lulist"><div class="lufil">' + [['all', 'الكل'], ['sent', 'جديد'], ['received', 'قيد الشغل'], ['done', 'خلص']].map(f => '<button class="' + (luFilter === f[0] ? 'on' : '') + '" onclick="luFilter=\'' + f[0] + '\';luRender()">' + f[1] + '</button>').join('') + '</div>' +
+    (list.map(r => '<button class="lurow' + (r.id === luSel ? ' on' : '') + '" onclick="luSel=\'' + r.id + '\';luNoteFor=null;luRender()"><span class="lut ' + r.type + '">' + (r.type === 'load' ? 'تحميل' : 'تفريغ') + '</span><span class="luwho"><b>' + esc(r.driver) + '</b><small>' + esc(r.truck) + ' • ' + luD(r.date) + ' ' + luT(r.t) + ' • ' + r.lines.length + ' صنف</small></span>' + luBadgeHtml(r) + '</button>').join('') || '<div class="empty" style="min-height:120px">مفيش طلبات هنا</div>') +
+    '</div><div class="ludet">' + (luSel ? luDetail(luReq(luSel)) : '<div class="pane"><div class="empty">لسه مفيش طلبات من المناديب</div></div>') + '</div></div>';
+  if (keep && $('luNote')) $('luNote').value = keep;
+  luHydrate();
+}
+function luDetail(r) {
+  const isL = r.type === 'load';
+  let act = '';
+  if (r.status === 'sent') act = '<div class="luact"><div>طلب جديد من <b>' + esc(r.driver) + '</b> - استلمه علشان المندوب يعرف إنك شغال عليه.</div><button class="btn" onclick="luDo(\'s_recv\',{id:\'' + r.id + '\'},\'استلمت الطلب والمندوب اتبلّغ\')">📥 استلام الطلب</button></div>';
+  else if (r.status === 'received') act = '<div class="luact"><b>ارفع صورة من السيستم بنفس ترتيب الجدول</b>' +
+    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn soft" onclick="$(\'luShotFile\').click()">🖼️ ' + (r.shot ? 'غيّر الصورة' : 'ارفع صورة السيستم') + '</button>' + (r.shot ? '<img class="lushot" data-luimg="' + r.shot + '" onclick="luZoom(this)">' : '') + '</div>' +
+    '<button class="btn green" onclick="luDo(\'s_done\',{id:\'' + r.id + '\'},\'اتقفل الطلب والصورة راحت للمندوب\')">✅ ' + (isL ? 'تم رفع الكمية' : 'تم التفريغ') + '</button></div>';
+  else act = '<div class="luact done">' + luBadgeHtml(r) + ' <span style="color:var(--muted)">المندوب شايف الصورة جنب اللي كتبه</span>' + (r.shot ? '<img class="lushot" data-luimg="' + r.shot + '" onclick="luZoom(this)">' : '') + '</div>';
+  const cols = isL ? 4 : 6;
+  const nb = l => { const has = r.notes.some(n => n.item === l.n); return '<button class="lunb' + (has ? ' has' : '') + '" onclick="luNoteFor=' + esc(JSON.stringify(l.n)).replace(/'/g, '&#39;') + ';luRender();setTimeout(()=>$(\'luNote\')&&$(\'luNote\').focus(),30)">' + (has ? '📝 فيه ملاحظة' : 'ملاحظة') + '</button>'; };
+  const nrow = l => luNoteFor === l.n ? '<tr class="lunrow"><td colspan="' + cols + '"><div style="display:flex;gap:6px"><input id="luNote" placeholder="اكتب الملاحظة للمندوب على ' + esc(l.n) + '" onkeydown="if(event.key===\'Enter\')luSendNote()"><button class="btn" onclick="luSendNote()">ابعت</button><button class="btn soft" onclick="luNoteFor=null;luRender()">إلغاء</button></div></td></tr>' : '';
+  const pcs = l => l.pieces && l.pieces.length > 1 ? '<small style="display:block;color:var(--muted)">' + l.pieces.join(' + ') + '</small>' : '';
+  const body = r.lines.map((l, i) => isL
+    ? '<tr><td>' + (i + 1) + '</td><td>' + esc(l.n) + pcs(l) + '</td><td><b>' + num(l.qty) + '</b> <small>' + luUnit(l.n) + '</small></td><td>' + nb(l) + '</td></tr>' + nrow(l)
+    : '<tr' + (l.extra ? ' class="luextra"' : '') + '><td>' + (i + 1) + '</td><td>' + esc(l.n) + (l.extra ? '<small style="display:block;color:var(--orange)">رجع زيادة</small>' : '') + '</td><td>' + (l.extra ? '—' : num(l.loaded)) + '</td><td><b>' + num(l.ret) + '</b></td><td style="color:var(--green);font-weight:700">' + (l.extra ? '—' : num(Math.round((l.loaded - l.ret) * 1000) / 1000)) + '</td><td>' + nb(l) + '</td></tr>' + nrow(l)).join('');
+  const notes = r.notes.length ? '<h3 style="margin:14px 0 6px">📝 سجل الملاحظات</h3>' + r.notes.map(n => '<div class="lunote"><div><b>' + esc(n.item) + '</b> <small style="color:var(--muted)">' + esc(n.by) + ' • ' + luT(n.t) + '</small></div><div>' + esc(n.text) + '</div><div>' + (n.reply ? '<span class="badge ' + (n.reply === 'عجز' ? 'b-rej' : n.reply === 'غلط وهراجع' ? 'b-work' : 'b-done') + '">رد المندوب: ' + esc(n.reply) + '</span> ' + esc(n.rtext) : '<span class="badge b-work">مستني رد المندوب</span>') + '</div></div>').join('') : '';
+  return '<div class="pane"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="lut ' + r.type + '">' + (isL ? 'تحميل' : 'تفريغ') + '</span>' + luBadgeHtml(r) + '</div>' +
+    '<h2 style="margin:6px 0;color:var(--navy)">' + esc(r.driver) + ' • ' + esc(r.truck) + ' <small style="color:var(--muted);font-size:14px">طلب ' + r.no + ' • ' + luD(r.date) + '</small></h2>' + luTrack(r) + act +
+    '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px"><h3 style="margin:0">' + (isL ? 'شيت التحميل' : 'شيت التفريغ') + '</h3><div style="display:flex;gap:6px"><button class="btn soft" onclick="luCopy()">📋 نسخ للإكسل</button><button class="btn soft" onclick="luCsv()">⬇️ Excel</button></div></div>' +
+    '<div class="lutbl"><table><thead><tr><th>م</th><th>الصنف</th>' + (isL ? '<th>الكمية</th>' : '<th>حمّل</th><th>رجع</th><th>اتباع</th>') + '<th></th></tr></thead><tbody>' + body + '</tbody></table></div>' + notes + '</div>';
+}
+function luHydrate() {
+  document.querySelectorAll('img[data-luimg]').forEach(im => {
+    const id = im.dataset.luimg;
+    if (luImg[id] && luImg[id] !== '…') { im.src = luImg[id]; return; }
+    if (luImg[id]) return;
+    luImg[id] = '…';
+    luApi('img', { id }).then(j => { luImg[id] = j.img; document.querySelectorAll('img[data-luimg="' + id + '"]').forEach(x => x.src = j.img); }).catch(() => { delete luImg[id]; });
+  });
+}
+function luZoom(im) { if (!im.src) return; $('viewerFullImg').src = im.src; $('viewerFull').classList.remove('hidden'); }
+async function luDo(action, data, ok) {
+  if (luBusy) return; luBusy = true;
+  try { await luApi(action, data); if (ok) toast(ok); luBadge(); luRender(); } catch (e) { toast(msg(e)); }
+  luBusy = false;
+}
+function luSendNote() {
+  const t = ($('luNote').value || '').trim();
+  if (!t) return toast('اكتب الملاحظة');
+  const item = luNoteFor; luNoteFor = null;
+  luDo('s_note', { id: luSel, item, text: t }, 'الملاحظة اتبعتت للمندوب');
+}
+function luShotPicked(inp) {
+  const f = inp.files && inp.files[0]; inp.value = '';
+  if (!f || !luSel) return;
+  const fr = new FileReader();
+  fr.onload = () => { const im = new Image(); im.onload = () => {
+    const k = Math.min(1, 1200 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+    c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    luDo('s_shot', { id: luSel, img: c.toDataURL('image/jpeg', .82) }, 'الصورة اترفعت');
+  }; im.onerror = () => toast('الصورة دي مش بتفتح، جرّب صورة تانية'); im.src = fr.result; };
+  fr.readAsDataURL(f);
+}
+function luTable(r) {
+  const isL = r.type === 'load';
+  return [isL ? ['الصنف', 'الكمية'] : ['الصنف', 'حمل', 'رجع', 'اتباع']].concat(r.lines.map(l => isL ? [l.n, l.qty] : [l.n, l.extra ? '' : l.loaded, l.ret, l.extra ? '' : Math.round((l.loaded - l.ret) * 1000) / 1000]));
+}
+async function luCopy() {
+  const t = luTable(luReq(luSel)).map(x => x.join('\t')).join('\n');
+  try { await navigator.clipboard.writeText(t); toast('📋 اتنسخ - الصقه في إكسل'); } catch (e) { toast('ما قدرتش أنسخ، استخدم زرار Excel'); }
+}
+function luCsv() {
+  const r = luReq(luSel);
+  const csv = '﻿' + luTable(r).map(x => x.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = (r.type === 'load' ? 'تحميل ' : 'تفريغ ') + r.driver + ' طلب ' + r.no + '.csv'; a.click();
 }
 
 // ---------- 📣 طلبات الجرد (فريق «مدقق تيم» - سكريبت لوحده) ----------
