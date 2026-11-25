@@ -6242,7 +6242,7 @@ function drawShifts_() {
     '<button class="btn soft" onclick="sh.week=dayAdd_(sh.week,-7);sh.day=null;renderShifts()">→ الأسبوع اللي فات</button>' +
     '<button class="btn soft" onclick="sh.week=null;sh.day=null;renderShifts()">النهارده</button>' +
     '<button class="btn soft" onclick="sh.week=dayAdd_(sh.week,7);sh.day=null;renderShifts()">الأسبوع الجاي ←</button>' +
-    (boss ? '<button class="btn" onclick="shiftCopy_()">📋 انسخ الأسبوع اللي فات</button><button class="btn soft" onclick="shiftDefsDlg_()">⚙️ الورديات ومواعيدها</button>' : '') +
+    (boss ? '<button class="btn" onclick="shiftCopy_()">📋 انسخ الأسبوع اللي فات</button><button class="btn" onclick="shiftRepeatDlg_()">🔁 كرر الأسبوع ده</button><button class="btn soft" onclick="shiftDefsDlg_()">⚙️ الورديات ومواعيدها</button>' : '') +
     '</div></div>';
   // شغالين دلوقتي
   const curDef = d.defs.find(df => { const sp = shiftSpan_(today, df); return now() >= sp[0] && now() < sp[1]; });
@@ -6403,6 +6403,28 @@ function shiftSync_() { const el = $('shSync'); if (el) el.textContent = sh.pend
 async function shiftCopy_() {
   if (!confirm('هتنسخ جدول الأسبوع اللي فات على الأسبوع ده (هيمسح الموجود فيه). موافق؟')) return;
   try { await api('dShiftCopy', { token, fromDay: dayAdd_(sh.week, -7), toDay: sh.week }, true); toast('اتنسخ ✅'); renderShifts(true); } catch (e) { toast(msg(e)); }
+}
+// تكرار الأسبوع المعروض على الأسابيع اللي بعده (الافتراضي: لحد آخر الشهر)
+function shiftRepeatDlg_() {
+  const end = sh.week.slice(0, 8) + '01', last = dayAdd_(dayAdd_(end, 32).slice(0, 8) + '01', -1);
+  const wkEnd = dayAdd_(sh.week, 6);
+  let def = 1; while (def < 8 && dayAdd_(wkEnd, 7 * def) < last) def++;
+  const opts = [1, 2, 3, 4, 5, 6, 7, 8].map(n => '<option value="' + n + '"' + (n === def ? ' selected' : '') + '>' + n + (n === 1 ? ' أسبوع' : ' أسابيع') + ' (لحد ' + dayAdd_(wkEnd, 7 * n) + ')</option>').join('');
+  dlg('<h3>🔁 كرر الأسبوع ده</h3><p style="margin-top:0">هينسخ توزيع الأسبوع اللي قدامك (' + sh.week + ' → ' + wkEnd + ') على الأسابيع اللي بعده. وبعدها تقدر تعدّل أي يوم براحتك.</p>' +
+    '<select id="rpN" style="width:100%">' + opts + '</select>' +
+    '<label style="display:flex;gap:6px;align-items:center;margin-top:10px"><input type="checkbox" id="rpOver"> امسح الأيام اللي متظبطة بالفعل واكتب عليها</label>' +
+    '<p style="font-size:13px;opacity:.75">من غير العلامة دي: أي يوم فيه توزيع قبل كده بيفضل زي ما هو.</p>' +
+    '<div class="acts"><button class="btn" id="dlgOk">كرر</button><button class="btn soft" onclick="closeDlg()">إلغاء</button></div>');
+  $('dlgOk').onclick = async () => {
+    const weeks = Number($('rpN').value), overwrite = $('rpOver').checked;
+    if (overwrite && !confirm('متأكد؟ هيمسح التوزيع الموجود في الأيام دي ويكتب عليه.')) return;
+    try {
+      const r = await api('dShiftRepeat', { token, fromWeek: sh.week, weeks, overwrite }, true);
+      closeDlg(); sh.cache = {};
+      toast('اتكرر ✅ ' + r.copied + ' يوم' + (r.skipped ? ' — وسبت ' + r.skipped + ' يوم كان متظبط' : ''));
+      renderShifts(true);
+    } catch (e) { toast(msg(e)); }
+  };
 }
 function shiftDefsDlg_() {
   const row = x => '<div class="sdef" style="display:flex;gap:6px;margin:6px 0"><input type="hidden" value="' + esc(x.id || '') + '"><input placeholder="اسم الوردية" value="' + esc(x.name || '') + '" style="flex:1">' +
