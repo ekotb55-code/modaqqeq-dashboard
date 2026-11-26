@@ -288,6 +288,17 @@
   #dutyBox .dmeta { color: var(--muted); font-size: 13.5px; line-height: 1.7; }
   #dutyBox ol.dsteps { margin: 10px 0 0; padding-inline-start: 24px; font-size: 15.5px; line-height: 1.95; }
   #dutyBox ol.dsteps li { margin-bottom: 4px; }
+  .tmgrid { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+  .tmgrid .tmi { position: relative; width: 96px; height: 96px; border-radius: 10px; overflow: hidden; background: #EEF2F7; border: 1.5px solid var(--line); cursor: zoom-in; display: flex; align-items: center; justify-content: center; }
+  .tmgrid .tmi img { width: 100%; height: 100%; object-fit: cover; }
+  .tmgrid .tmx { position: absolute; top: 3px; left: 3px; background: rgba(0,0,0,.6); color: #fff; border: 0; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 13px; line-height: 22px; padding: 0; }
+  .tmaud { display: flex; align-items: center; gap: 8px; margin: 6px 0; } .tmaud audio { height: 36px; max-width: 100%; }
+  #tmView { position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 80; display: flex; align-items: center; justify-content: center; }
+  #tmView img { max-width: 96vw; max-height: 90vh; object-fit: contain; border-radius: 6px; }
+  #tmView button { position: absolute; background: rgba(255,255,255,.18); color: #fff; border: 0; border-radius: 50%; width: 46px; height: 46px; font-size: 22px; cursor: pointer; }
+  #tmView .tvc { top: 14px; left: 14px; } #tmView .tvp { right: 14px; top: 50%; } #tmView .tvn { left: 14px; top: 50%; }
+  #tmView .tvi { position: absolute; bottom: 14px; color: #fff; font-size: 13px; opacity: .8; }
+  .tmrec { color: #C62828; font-weight: 700; }
   #dutyBox .dins { white-space: pre-wrap; background: #F5F1FF; border: 1.5px solid #D8CCFA; border-radius: 12px; padding: 12px 14px; font-size: 15.5px; line-height: 1.85; }
   #dutyBox .dacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
   #dutyBox .dacts .btn { padding: 10px 16px; font-size: 15px; }
@@ -3394,6 +3405,7 @@ function tourSteps() {
     { el: '#navRep', t: 'تقارير الفروع 📊', b: 'تقرير PDF لأي فرع في أي فترة.' },
     { el: '#navOrd', t: 'الطلبات الدورية 🔁', b: 'طلبات الموزع الرئيسي اللي بتتعمل لوحدها للفروع في مواعيدها، وتتابع منها اتعملت ولا لأ.\nأول ما تفتحها هتلاقي ليها جولة شرح لوحدها.' },
     { el: '#navTeam', t: 'دردشة الفريق 💬', b: 'زي واتساب بين فريق الدعم والجودة: جروب للفريق كله ورسايل خاصة.\nاكتب @ وبعدها اسم زميلك علشان تعمل له منشن (هيوصله تنبيه)، وتقدر تبعت صور وفيديو وملفات ورسالة صوتية 🎤، وترد على أي رسالة ↩️.' },
+    { el: '#taskNewBtn', t: 'التاسكات 📋', b: 'من «＋ تاسك» تبعت شغل لمحل أو لكذا محل، مرة واحدة أو متكررة.\nتقدر تحط صور 📷 (أو تلزق صورة) وتسجيل صوتي 🎙️ يشرح المطلوب - بيظهروا في التاسك، والصورة تتفتح كبيرة بدوسة.\nولتاسك موجودة: افتحها ودوس «📎 صور وتسجيل».' },
     { el: '#bellBtn', t: 'الإشعارات والصوت 🔔', b: 'فعّلها مرة واحدة: هيرن مع كل فاتورة جديدة أو استعجال، وكل 5 دقايق طول ما فيه فواتير مستنية.' },
     { el: '#who', t: 'صورتك 🙂', b: 'دوس على اسمك علشان تحط صورتك - بتظهر جنب رسايلك في الشات.' },
     { el: '#helpBtn', t: 'خلصنا ✅', b: 'تقدر تعيد الجولة دي في أي وقت من زرار ؟' }
@@ -3439,6 +3451,7 @@ const TOUR_SAY = {
   'تقارير الفروع 📊': 'تَقارير الفُروع. تَقْرير بي دي إِف لِأَيّ فَرْع، في أَيّ فَتْرَة.',
   'الطلبات الدورية 🔁': 'الطَّلَبات الدَّوْرِيَّة. طَلَبات المُوَزِّع الرَّئيسي اللي بِتِتْعِمِل لِوَحْدَها لِلفُروع في مَواعيدْها، وتِتابِع مِنْها اتْعَمَلِت وَلّا لَأ. وأَوِّل ما تِفْتَحْها، هَتْلاقي لِيها جُولِة شَرْح لِوَحْدَها.',
   'دردشة الفريق 💬': 'دَرْدَشِة الفَريق. زَيّ واتْساب بين فَريق الدَّعْم والجُودَة: جْروب لِلفَريق كُلُّه، ورَسايِل خاصَّة. اكْتِب عَلامِة آت، وبَعْدَها اسْم زَميلَك، عَلَشان تِعْمِلُّه مِنْشِن. وتِقْدَر تِبْعَت صُوَر، وفيديو، ومِلَفّات، ورِسالَة صُوتِيَّة.',
+  'التاسكات 📋': 'التّاسْكات. مِن زُرار تاسْك، تِبْعَت شُغْل لِمَحَلّ أَوْ لِكَذا مَحَلّ، مَرَّة واحْدَة أَوْ مِتْكَرَّرَة. وتِقْدَر تْحُطّ صُوَر، أَوْ تِلْزَق صورَة، وتَسْجيل صُوتي يِشْرَح المَطْلوب. بِيِظْهَروا في التّاسْك، والصّورَة بِتِتْفِتِح كِبيرَة بِدوسَة. ولِتاسْك مَوْجودَة، افْتَحْها ودُوس صُوَر وتَسْجيل.',
   'الإشعارات والصوت 🔔': 'الإِشْعارات والصُّوت. فَعَّلْها مَرَّة واحْدَة: هَيْرِنّ مَعَ كُلّ فاتورَة جِديدَة أَوْ اسْتِعْجال، وكُلّ خَمَس دَقايِق، طول ما فِيه فَواتير مِسْتَنِّيَة.',
   'صورتك 🙂': 'صورْتَك. دُوس عَلى اسْمَك، عَلَشان تْحُطّ صورْتَك. بِتِظْهَر جَنْب رَسايْلَك في الشّات.',
   'خلصنا ✅': 'خَلَّصْنا. تِقْدَر تْعيد الجُولَة دي في أَيّ وَقْت، مِن زُرار عَلامِة الاسْتِفْهام.',
@@ -4670,12 +4683,15 @@ function renderTaskPane() {
       (done && v.data && v.data.progTotal !== undefined ? i('البرنامج', money(v.data.progTotal)) + i('الجرد', money(v.data.appTotal)) : '') + '</div>';
     h += v.details ? '<div class="pane tpbox"><b>التفاصيل:</b><br>' + esc(v.details) + '</div>' : '<div class="tpnone">التاسك دي من غير تفاصيل.</div>';
     if (v.ins) h += '<div class="pane tpbox" style="background:#F5F1FF;border-color:#D8CCFA;white-space:pre-wrap"><b>📝 التعليمات:</b><br>' + esc(v.ins) + '</div>';
+    if ((v.media || []).length) h += '<div class="pane tpbox"><b>📎 المرفقات:</b>' + tmShow(v.media) + '</div>';
     if (!done) h += '<div class="tpacts"><button class="btn" onclick="taskDone(\'' + id + '\')">' + (v.step === 'upload' ? '📤 ارفع على البرنامج وطابق' : '✓ اتعملت') + '</button>' +
       '<button class="btn soft" onclick="tpEdit(\'' + id + '\')">⚡ الأهمية والنغمة</button>' +
       '<button class="btn soft" onclick="tiEdit(\'' + id + '\',\'\')">📝 التعليمات</button>' +
+      '<button class="btn soft" onclick="tmEditDlg(\'' + id + '\')">📎 صور وتسجيل</button>' +
       (boss ? '<button class="btn soft" onclick="taskCancel(\'' + id + '\')">إلغاء</button>' : '') + '</div>';
   }
   $('detailPane').innerHTML = h;
+  tmHydrate($('detailPane'));
 }
 async function taskDone(id) {
   const v = tasks.find(x => x.id === id); if (!v) return;
@@ -4824,14 +4840,158 @@ function taskApply(r) {
   try { dutyCheck(); } catch (e) {}
 }
 // تاسك جديدة: لمحل أو لكذا محل، مرة واحدة أو مكررة
+
+// ---------- 📎 مرفقات التاسك: صور + تسجيل صوتي (TaskIns.gs: dTaskUp / dTaskFile / dTaskMedia) ----------
+let tmItems = [], tmBusy = 0, tmRecObj = null;
+const tmCache = {};
+function tmEditor() {
+  return '<label class="fl" style="margin-top:8px">📎 صور وتسجيل صوتي (اختياري)</label>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+    '<button type="button" class="btn soft" onclick="$(\'tmFile\').click()">📷 صورة</button>' +
+    '<button type="button" class="btn soft" id="tmRecBtn" onclick="tmRec()">🎙️ سجّل</button>' +
+    '<span id="tmSt" style="color:var(--muted);font-size:12.5px"></span>' +
+    '<input type="file" id="tmFile" accept="image/*" multiple style="display:none" onchange="tmPick(this.files);this.value=\'\'"></div>' +
+    '<div id="tmBox"></div><small style="color:var(--muted)">لحد ' + 5 + ' صور وتسجيل واحد (دقيقتين). تقدر كمان تلصق صورة (Ctrl+V).</small>';
+}
+function tmRender() {
+  const b = $('tmBox'); if (!b) return;
+  const im = tmItems.filter(x => x.t === 'img'), au = tmItems.find(x => x.t === 'aud');
+  b.innerHTML = (im.length ? '<div class="tmgrid">' + im.map(x => '<div class="tmi"><img src="' + (x.url || '') + '" data-tm="' + esc(x.id) + '" onclick="tmView(\'' + esc(x.id) + '\',' + JSON.stringify(im.map(y => y.id)).replace(/"/g, '&quot;') + ')"><button type="button" class="tmx" onclick="event.stopPropagation();tmDel(\'' + esc(x.id) + '\')">✕</button></div>').join('') + '</div>' : '') +
+    (au ? '<div class="tmaud">🎙️ <audio controls src="' + (au.url || '') + '" data-tma="' + esc(au.id) + '"></audio><button type="button" class="btn soft" style="padding:4px 10px" onclick="tmDel(\'' + esc(au.id) + '\')">✕ امسح</button></div>' : '');
+  tmHydrate(b);
+  const rb = $('tmRecBtn'); if (rb) rb.disabled = !!au && !tmRecObj;
+}
+function tmDel(id) { tmItems = tmItems.filter(x => x.id !== id); tmRender(); }
+function tmSt(t) { const e = $('tmSt'); if (e) e.textContent = t || ''; }
+// الصورة بتتصغّر في المتصفح (أطول ضلع 1600) قبل الرفع
+function tmShrink(file) {
+  return new Promise((ok, bad) => {
+    const img = new Image(), u = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
+      ok(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(u); bad(new Error('الصورة دي مش بتفتح')); };
+    img.src = u;
+  });
+}
+async function tmUpload(mime, dataUrl, name) {
+  const r = await api('dTaskUp', { token, mime: mime, data: dataUrl.split(',')[1], name: name || '' }, true);
+  return r.item;
+}
+async function tmPick(files) {
+  files = [...(files || [])].filter(f => /^image\//.test(f.type));
+  for (const f of files) {
+    if (tmItems.filter(x => x.t === 'img').length >= 5) { toast('أقصى حاجة 5 صور'); break; }
+    tmBusy++; tmSt('⏳ بترفع الصورة...');
+    try { const d = await tmShrink(f); const it = await tmUpload('image/jpeg', d, f.name); it.url = d; tmCache[it.id] = d; tmItems.push(it); tmRender(); }
+    catch (e) { toast(/غير معروف/.test(msg(e)) ? 'السكريبت لسه ما اتحدّثش - كلّم المدير' : msg(e)); }
+    finally { tmBusy--; tmSt(tmBusy ? '⏳ بترفع...' : ''); }
+  }
+}
+document.addEventListener('paste', e => {
+  if (!$('tmBox')) return;
+  const fs = [...((e.clipboardData && e.clipboardData.files) || [])].filter(f => /^image\//.test(f.type));
+  if (fs.length) { e.preventDefault(); tmPick(fs); }
+});
+// 🎙️ التسجيل: دوسة تبدأ ودوسة توقف (أقصى حاجة دقيقتين)
+async function tmRec() {
+  const rb = $('tmRecBtn');
+  if (tmRecObj) { tmRecObj.stop(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) return toast('المتصفح ده مش بيدعم التسجيل');
+  let st;
+  try { st = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { return toast('لازم تسمح للمتصفح يستخدم المايك'); }
+  const mime = ['audio/webm', 'audio/mp4', 'audio/ogg'].find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
+  const rec = new MediaRecorder(st, mime ? { mimeType: mime } : undefined), parts = [];
+  const t0 = Date.now();
+  let tick = setInterval(() => { const s = Math.floor((Date.now() - t0) / 1000); tmSt('🔴 بيسجّل ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ' - دوس «وقّف» لما تخلص'); if (s >= 120) rec.stop(); }, 500);
+  rec.ondataavailable = e => { if (e.data && e.data.size) parts.push(e.data); };
+  rec.onstop = async () => {
+    clearInterval(tick); st.getTracks().forEach(x => x.stop()); tmRecObj = null;
+    if (rb) { rb.textContent = '🎙️ سجّل'; rb.classList.remove('tmrec'); }
+    const type = (rec.mimeType || mime || 'audio/webm').split(';')[0];
+    const blob = new Blob(parts, { type: type });
+    if (!blob.size) { tmSt(''); return toast('التسجيل طلع فاضي'); }
+    tmBusy++; tmSt('⏳ بيترفع التسجيل...');
+    try {
+      const d = await new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.readAsDataURL(blob); });
+      const it = await tmUpload(type, d); it.url = URL.createObjectURL(blob); tmCache[it.id] = it.url;
+      tmItems = tmItems.filter(x => x.t !== 'aud'); tmItems.push(it); tmRender();
+    } catch (e) { toast(/غير معروف/.test(msg(e)) ? 'السكريبت لسه ما اتحدّثش - كلّم المدير' : msg(e)); }
+    finally { tmBusy--; tmSt(''); }
+  };
+  rec.start(1000); tmRecObj = rec;
+  if (rb) { rb.textContent = '⏹ وقّف'; rb.classList.add('tmrec'); rb.disabled = false; }
+}
+// العرض: صور صغيرة (دوسة = كبيرة) + مشغل الصوت - الملفات بتتجاب من السكريبت وتتحفظ في الذاكرة
+function tmShow(L) {
+  const im = (L || []).filter(x => x.t === 'img'), au = (L || []).find(x => x.t === 'aud');
+  const ids = JSON.stringify(im.map(y => y.id)).replace(/"/g, '&quot;');
+  return (im.length ? '<div class="tmgrid">' + im.map(x => '<div class="tmi" onclick="tmView(\'' + esc(x.id) + '\',' + ids + ')"><img data-tm="' + esc(x.id) + '" alt=""><span class="spin" style="position:absolute"></span></div>').join('') + '</div>' : '') +
+    (au ? '<div class="tmaud">🎙️ <audio controls data-tma="' + esc(au.id) + '"></audio></div>' : '');
+}
+async function tmLoad(id) {
+  if (tmCache[id]) return tmCache[id];
+  const r = await api('dTaskFile', { token, id: id });
+  const bin = atob(r.data), u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return (tmCache[id] = URL.createObjectURL(new Blob([u8], { type: r.mime })));
+}
+function tmHydrate(root) {
+  if (!root) return;
+  root.querySelectorAll('img[data-tm]:not([src])').forEach(el => tmLoad(el.dataset.tm).then(u => { el.src = u; const sp = el.parentNode.querySelector('.spin'); if (sp) sp.remove(); }).catch(() => { const sp = el.parentNode.querySelector('.spin'); if (sp) sp.outerHTML = '⚠️'; }));
+  root.querySelectorAll('audio[data-tma]:not([src])').forEach(el => tmLoad(el.dataset.tma).then(u => { el.src = u; }).catch(() => {}));
+}
+function tmView(id, ids) {
+  ids = ids && ids.length ? ids : [id];
+  let i = Math.max(0, ids.indexOf(id));
+  const show = () => {
+    let v = $('tmView');
+    if (!v) { document.body.insertAdjacentHTML('beforeend', '<div id="tmView" onclick="if(event.target===this)this.remove()"><img><button class="tvc" onclick="$(\'tmView\').remove()">✕</button>' +
+      (ids.length > 1 ? '<button class="tvp">›</button><button class="tvn">‹</button>' : '') + '<span class="tvi"></span></div>'); v = $('tmView');
+      if (ids.length > 1) { v.querySelector('.tvp').onclick = () => { i = (i - 1 + ids.length) % ids.length; show(); }; v.querySelector('.tvn').onclick = () => { i = (i + 1) % ids.length; show(); }; } }
+    const img = v.querySelector('img'); img.removeAttribute('src');
+    v.querySelector('.tvi').textContent = ids.length > 1 ? (i + 1) + ' من ' + ids.length : '';
+    tmLoad(ids[i]).then(u => { img.src = u; }).catch(e => toast(msg(e)));
+  };
+  show();
+}
+document.addEventListener('keydown', e => {
+  const v = $('tmView'); if (!v) return;
+  if (e.key === 'Escape') v.remove();
+  else if (e.key === 'ArrowLeft' && v.querySelector('.tvn')) v.querySelector('.tvn').click();
+  else if (e.key === 'ArrowRight' && v.querySelector('.tvp')) v.querySelector('.tvp').click();
+});
+// إضافة / تعديل مرفقات تاسك موجودة (ومجموعتها المفتوحة + المتكررة اللي جاية منها)
+function tmEditDlg(id) {
+  const v = (tasks || []).find(x => x.id === id); if (!v) return;
+  tmItems = (v.media || []).map(x => Object.assign({}, x, { url: tmCache[x.id] || '' }));
+  dlg('<h3>📎 صور وتسجيل - ' + esc(v.title) + '</h3>' + tmEditor() +
+    (/^R\d+-/.test(v.group || '') ? '<p style="color:var(--muted);font-size:12.5px">هتتعدّل للتاسك المتكررة كلها والمفتوح منها</p>' : '') +
+    '<div class="acts"><button class="btn" id="dlgOk">حفظ</button><button class="btn soft" onclick="closeDlg()">رجوع</button></div>');
+  tmRender();
+  $('dlgOk').onclick = async () => {
+    if (tmBusy) return toast('استنى لما الصورة / التسجيل يترفع');
+    if (tmRecObj) return toast('وقّف التسجيل الأول');
+    $('dlgOk').disabled = true;
+    try {
+      const res = await api('dTaskMedia', { token, id: id, rep: '', media: tmItems.map(x => ({ t: x.t, id: x.id, n: x.n })) }, true);
+      closeDlg(); if (res.repeats) ordReps = res.repeats; taskApply(res); toast('✅ المرفقات اتحفظت');
+    } catch (e) { $('dlgOk').disabled = false; toast(/غير معروف/.test(msg(e)) ? 'السكريبت لسه ما اتحدّثش - كلّم المدير' : msg(e)); }
+  };
+}
 function taskNewDlg() {
   const two = n => String(n).padStart(2, '0'), d = new Date(now() + 10 * 60000);
   const local = d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()) + 'T' + two(d.getHours()) + ':' + two(d.getMinutes());
   const days = ['الحد', 'الاتنين', 'التلات', 'الأربع', 'الخميس', 'الجمعة', 'السبت'];
+  tmItems = [];
   dlg('<h3>＋ تاسك جديدة</h3><input id="kT" placeholder="عنوان التاسك (مثلاً: تحديث أسعار الزيت)">' +
     '<label class="fl" style="margin-top:8px">التفاصيل</label><textarea id="kD" rows="3" style="width:100%;font:inherit;padding:8px;border-radius:10px;border:1.5px solid var(--line)"></textarea>' +
     '<label class="fl" style="margin-top:8px">📝 التعليمات (اختياري)</label><textarea id="kIns" rows="4" placeholder="الشغل ده بيتعمل إزاي خطوة بخطوة - مثلاً: ده بقى يتعمل من الداش بورد: افتح... ودوس..." style="width:100%;font:inherit;padding:8px;border-radius:10px;border:1.5px solid var(--line)"></textarea>' +
     '<small style="color:var(--muted)">لو كتبت تعليمات: لما ييجي ميعاد التاسك هيطلع للدعم بوكس كبير في نص الشاشة بالتعليمات دي ومش هيختفي غير لما تتعمل</small>' +
+    tmEditor() +
     '<label class="fl" style="margin-top:8px">المحلات</label><div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><label class="chk"><input type="checkbox" id="kAll" onchange="document.querySelectorAll(\'.stpick input\').forEach(x=>x.checked=this.checked)"> كل المحلات</label>' +
     '<input id="kQ" placeholder="🔍 دوّر على محل" style="flex:1" oninput="document.querySelectorAll(\'.stpick label\').forEach(l=>l.style.display=l.textContent.indexOf(this.value)!==-1?\'\':\'none\')"></div>' +
     '<div class="stpick">' + stores.map(s => '<label><input type="checkbox" value="' + esc(s) + '">' + sdot(s) + esc(s) + '</label>').join('') + '</div>' +
@@ -4851,8 +5011,10 @@ function taskNewDlg() {
   $('dlgOk').onclick = async () => {
     const sel = [...document.querySelectorAll('.stpick input:checked')].map(x => x.value);
     const t = { title: $('kT').value, details: $('kD').value, stores: sel, all: $('kAll').checked, repeat: $('kR').value, to: $('kTo').value,
-      due: $('kDue').value ? new Date($('kDue').value).toISOString() : '', time: $('kTime').value, weekday: Number($('kWday').value), est: Math.round(Number($('kEst').value)), prio: $('kPr').value, tone: Number($('kTn').value), ins: $('kIns').value };
+      due: $('kDue').value ? new Date($('kDue').value).toISOString() : '', time: $('kTime').value, weekday: Number($('kWday').value), est: Math.round(Number($('kEst').value)), prio: $('kPr').value, tone: Number($('kTn').value), ins: $('kIns').value,
+      media: tmItems.map(x => ({ t: x.t, id: x.id, n: x.n })) };
     if (!t.title.trim()) return toast('اكتب عنوان التاسك');
+    if (tmBusy) return toast('استنى لما الصورة / التسجيل يترفع');
     if (!(t.est >= 1 && t.est <= 480)) return toast('اكتب الوقت المتوقع للتاسك بالدقايق (من 1 لـ 480)');
     if (!t.all && !sel.length) return toast('اختار محل واحد على الأقل');
     $('dlgOk').disabled = true;
@@ -6091,7 +6253,7 @@ function dutyCheck() {
   const x = L[0], html = dutyHtml(x, L.length);
   if (!$('dutyBox')) document.body.insertAdjacentHTML('beforeend', '<div id="dutyBox"><div class="dbox"></div></div>');
   const box = $('dutyBox').querySelector('.dbox');
-  if (html !== dutyHtmlLast) { box.className = 'dbox ' + (x.kind === 'wo' ? 'wo' : x.kind === 'wores' ? (dutyResBad() ? 'warn' : 'ok') : ''); box.innerHTML = html; dutyHtmlLast = html; }
+  if (html !== dutyHtmlLast) { box.className = 'dbox ' + (x.kind === 'wo' ? 'wo' : x.kind === 'wores' ? (dutyResBad() ? 'warn' : 'ok') : ''); box.innerHTML = html; dutyHtmlLast = html; tmHydrate(box); }
   if (x.key !== dutyKey) {
     dutyKey = x.key;
     if (x.kind === 'wo') alarm(4);
@@ -6138,6 +6300,7 @@ function dutyHtml(x, n) {
   return '<h2>' + (v.rec ? '🔁' : '📋') + ' جه ميعاد: ' + esc(v.title) + '</h2>' +
     '<div class="dmeta">' + (one ? sdot(v.store) + esc(v.store) : L.length + ' محل') + ' • الميعاد ' + esc(dt(v.due)) + (v.prio && v.prio !== 'n' ? ' • ' + TP_LBL[v.prio] : '') + '</div>' +
     '<h4>📝 التعليمات</h4><div class="dins">' + esc(v.ins) + '</div>' +
+    ((v.media || []).length ? tmShow(v.media) : '') +
     (v.details ? '<div class="dmeta" style="margin-top:8px"><b>التفاصيل:</b> ' + esc(v.details) + '</div>' : '') +
     (one ? '' : '<div class="dst">' + L.map(t => '<div class="dstr"><span>' + sdot(t.store) + esc(t.store) + '</span>' + b('✓ اتعملت', "dutyDone('" + esc(t.id) + "',this)", '') + '</div>').join('') + '</div>') +
     '<div class="dacts">' + (one ? b('✓ اتعملت', "dutyDone('" + esc(v.id) + "',this)", '') : '') +
