@@ -5236,13 +5236,24 @@ async function bsCall(action, data) {
   return j;
 }
 function bsHtml(s) {
-  const B = s.branches || {};
-  // كل الفروع المربوطة (حتى اللي ما دخلتش آخر تحديث) + زرار «حدّث» لكل فرع لوحده
-  const names = Object.keys(B).concat((s.all || []).filter(n => !B[n]));
-  const rows = names.map(n => '<tr style="border-top:1px solid #eee"><td style="padding:6px 4px"><b>' + esc(n) + '</b></td><td style="padding:6px 4px">' +
-    (!B[n] ? '<span style="color:var(--muted)">ما اتحدّثش في آخر تحديث</span>' : B[n].error ? '⚠️ ' + esc(B[n].error) :
-    Object.keys(B[n].pages || {}).map(p => esc(p) + ': ' + esc(B[n].pages[p])).join('<br>')) + '</td>' +
-    '<td style="padding:6px 4px;white-space:nowrap">' + (s.running ? '' : '<button class="btn soft" style="padding:4px 10px;font-size:12px" data-br="' + esc(n) + '" onclick="bsOne(this.dataset.br)">🔄 حدّث</button>') + '</td></tr>').join('');
+  const B = s.branches || {}, LAST = s.last || {}, Q = s.queue || [];
+  // كل الفروع المربوطة - اللي شغال دلوقتي أول واحد ومتلوّن، وكل فرع بآخر نتيجة ليه (حتى لو من تحديث قبل كده)
+  let names = (s.all || []).slice();
+  Object.keys(B).concat(Object.keys(LAST)).forEach(n => { if (names.indexOf(n) === -1) names.push(n); });
+  if (s.running && s.current) names = [s.current].concat(names.filter(n => n !== s.current));
+  const pagesTxt = x => Object.keys(x.pages || {}).map(p => esc(p) + ': ' + esc(x.pages[p])).join('<br>');
+  const rows = names.map(n => {
+    const cur = s.running && n === s.current, wait = s.running && !cur && Q.indexOf(n) > Q.indexOf(s.current) && !B[n];
+    const mine = B[n] && (B[n].done || B[n].error || cur) ? B[n] : null, last = LAST[n];
+    let body;
+    if (cur) body = '<b style="color:#B26A00">⏳ شغال دلوقتي: ' + esc(s.step || '') + (s.waiting ? ' (بيبدأ بعد ' + s.waiting + ' ثانية)' : '') + '</b>' + (mine && Object.keys(mine.pages || {}).length ? '<br>' + pagesTxt(mine) : '');
+    else if (wait) body = '<span style="color:var(--muted)">⏳ مستني دوره</span>';
+    else if (mine) body = (mine.error ? '⚠️ ' + esc(mine.error) : pagesTxt(mine));
+    else if (last) body = '<span style="color:var(--muted);font-size:12px">آخر تحديث: ' + esc(new Date(last.at).toLocaleString('ar-EG')) + (last.by ? ' (' + esc(last.by) + ')' : '') + '</span><br>' + (last.error ? '⚠️ ' + esc(last.error) : pagesTxt(last));
+    else body = '<span style="color:var(--muted)">لسه ما اتحدّثش</span>';
+    return '<tr style="border-top:1px solid #eee' + (cur ? ';background:#FFF4D6' : '') + '"><td style="padding:6px 4px"><b>' + (cur ? '🔄 ' : '') + esc(n) + '</b></td><td style="padding:6px 4px">' + body + '</td>' +
+      '<td style="padding:6px 4px;white-space:nowrap">' + (s.running ? '' : '<button class="btn soft" style="padding:4px 10px;font-size:12px" data-br="' + esc(n) + '" onclick="bsOne(this.dataset.br)">🔄 حدّث</button>') + '</td></tr>';
+  }).join('');
   const t = s.finished || s.started;
   return '<h3>🔄 تحديث الفروع من الرئيسي</h3>' +
     (s.running ? '<p style="background:#FFF4D6;padding:10px;border-radius:10px">⏳ شغال دلوقتي: <b>' + esc(s.current || '') + '</b> • ' + esc(s.step || '') +
