@@ -292,6 +292,10 @@
   .tmgrid .tmi { position: relative; width: 96px; height: 96px; border-radius: 10px; overflow: hidden; background: #EEF2F7; border: 1.5px solid var(--line); cursor: zoom-in; display: flex; align-items: center; justify-content: center; }
   .tmgrid .tmi img { width: 100%; height: 100%; object-fit: cover; }
   .tmgrid .tmx { position: absolute; top: 3px; left: 3px; background: rgba(0,0,0,.6); color: #fff; border: 0; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 13px; line-height: 22px; padding: 0; }
+  .tmbig { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 10px 0; }
+  .tmbig .tmb { position: relative; width: 100%; display: flex; justify-content: center; min-height: 120px; align-items: center; }
+  .tmbig img { max-width: 100%; max-height: 75vh; border-radius: 12px; border: 1px solid var(--line); background: #fff; cursor: zoom-in; box-shadow: 0 4px 18px rgba(0,0,0,.08); }
+  .tmbig .tmaud { justify-content: center; }
   .tmaud { display: flex; align-items: center; gap: 8px; margin: 6px 0; } .tmaud audio { height: 36px; max-width: 100%; }
   #tmView { position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 80; display: flex; align-items: center; justify-content: center; }
   #tmView img { max-width: 96vw; max-height: 90vh; object-fit: contain; border-radius: 6px; }
@@ -4683,7 +4687,7 @@ function renderTaskPane() {
       (done && v.data && v.data.progTotal !== undefined ? i('البرنامج', money(v.data.progTotal)) + i('الجرد', money(v.data.appTotal)) : '') + '</div>';
     h += v.details ? '<div class="pane tpbox"><b>التفاصيل:</b><br>' + esc(v.details) + '</div>' : '<div class="tpnone">التاسك دي من غير تفاصيل.</div>';
     if (v.ins) h += '<div class="pane tpbox" style="background:#F5F1FF;border-color:#D8CCFA;white-space:pre-wrap"><b>📝 التعليمات:</b><br>' + esc(v.ins) + '</div>';
-    if ((v.media || []).length) h += '<div class="pane tpbox"><b>📎 المرفقات:</b>' + tmShow(v.media) + '</div>';
+    if ((v.media || []).length) h += '<div class="pane tpbox"><b>📎 المرفقات:</b>' + tmShow(v.media, true) + '</div>';
     if (!done) h += '<div class="tpacts"><button class="btn" onclick="taskDone(\'' + id + '\')">' + (v.step === 'upload' ? '📤 ارفع على البرنامج وطابق' : '✓ اتعملت') + '</button>' +
       '<button class="btn soft" onclick="tpEdit(\'' + id + '\')">⚡ الأهمية والنغمة</button>' +
       '<button class="btn soft" onclick="tiEdit(\'' + id + '\',\'\')">📝 التعليمات</button>' +
@@ -4926,9 +4930,12 @@ async function tmRec() {
   if (rb) { rb.textContent = '⏹ وقّف'; rb.classList.add('tmrec'); rb.disabled = false; }
 }
 // العرض: صور صغيرة (دوسة = كبيرة) + مشغل الصوت - الملفات بتتجاب من السكريبت وتتحفظ في الذاكرة
-function tmShow(L) {
+function tmShow(L, big) {
   const im = (L || []).filter(x => x.t === 'img'), au = (L || []).find(x => x.t === 'aud');
   const ids = JSON.stringify(im.map(y => y.id)).replace(/"/g, '&quot;');
+  // كبيرة وفي النص (تفاصيل التاسك وبوكس التعليمات) - دوسة = الشاشة كلها
+  if (big) return '<div class="tmbig">' + im.map(x => '<div class="tmb"><img data-tm="' + esc(x.id) + '" alt="" onclick="tmView(\'' + esc(x.id) + '\',' + ids + ')"><span class="spin" style="position:absolute"></span></div>').join('') +
+    (au ? '<div class="tmaud">🎙️ <audio controls data-tma="' + esc(au.id) + '"></audio></div>' : '') + '</div>';
   return (im.length ? '<div class="tmgrid">' + im.map(x => '<div class="tmi" onclick="tmView(\'' + esc(x.id) + '\',' + ids + ')"><img data-tm="' + esc(x.id) + '" alt=""><span class="spin" style="position:absolute"></span></div>').join('') + '</div>' : '') +
     (au ? '<div class="tmaud">🎙️ <audio controls data-tma="' + esc(au.id) + '"></audio></div>' : '');
 }
@@ -6300,7 +6307,7 @@ function dutyHtml(x, n) {
   return '<h2>' + (v.rec ? '🔁' : '📋') + ' جه ميعاد: ' + esc(v.title) + '</h2>' +
     '<div class="dmeta">' + (one ? sdot(v.store) + esc(v.store) : L.length + ' محل') + ' • الميعاد ' + esc(dt(v.due)) + (v.prio && v.prio !== 'n' ? ' • ' + TP_LBL[v.prio] : '') + '</div>' +
     '<h4>📝 التعليمات</h4><div class="dins">' + esc(v.ins) + '</div>' +
-    ((v.media || []).length ? tmShow(v.media) : '') +
+    ((v.media || []).length ? tmShow(v.media, true) : '') +
     (v.details ? '<div class="dmeta" style="margin-top:8px"><b>التفاصيل:</b> ' + esc(v.details) + '</div>' : '') +
     (one ? '' : '<div class="dst">' + L.map(t => '<div class="dstr"><span>' + sdot(t.store) + esc(t.store) + '</span>' + b('✓ اتعملت', "dutyDone('" + esc(t.id) + "',this)", '') + '</div>').join('') + '</div>') +
     '<div class="dacts">' + (one ? b('✓ اتعملت', "dutyDone('" + esc(v.id) + "',this)", '') : '') +
