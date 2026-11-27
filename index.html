@@ -1021,7 +1021,6 @@
         <button id="navRep" onclick="page('rep')"><i>📊</i><span>تقارير الفروع</span></button>
         <button id="navOrd" onclick="page('ord')"><i>🔁</i><span>الطلبات الدورية</span></button>
         <button id="navJinv" onclick="page('jinv')"><i>📣</i><span>طلبات الجرد</span><span class="nbadge hidden" id="jinvBadge"></span></button>
-        <button id="navLu" onclick="page('lu')"><i>🚚</i><span>التحميل والتفريغ</span><span class="nbadge hidden" id="luBadge"></span></button>
       </div>
       <span class="sp"></span>
       <span class="net good" id="netPill" onclick="netInfo()" title="سرعة النت"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><span id="netTxt">النت...</span></span>
@@ -1083,7 +1082,6 @@
   <div class="main hidden" id="pageRep"></div>
   <div class="main hidden" id="pageOrd"></div>
   <div class="main hidden" id="pageJinv"></div>
-  <div class="main hidden" id="pageLu"></div>
   <div class="team-page hidden" id="pageTeam">
     <div class="tside" id="tSide"><div class="empty"><span class="spin"></span></div></div>
     <div class="tmain" id="tMain"><div class="empty">👈 اختار محادثة</div></div>
@@ -1410,9 +1408,6 @@ function page(p) {
   $('pageJinv').classList.toggle('hidden', p !== 'jinv');
   $('navJinv').classList.toggle('on', p === 'jinv');
   if (p === 'jinv') jinvLoad(); else jinvStop();
-  $('pageLu').classList.toggle('hidden', p !== 'lu');
-  $('navLu').classList.toggle('on', p === 'lu');
-  if (p === 'lu') luLoad(); else luStop();
   $('pageInv').classList.toggle('hidden', p !== 'inv');
   $('pagePerf').classList.toggle('hidden', p !== 'perf');
   $('pageStores').classList.toggle('hidden', p !== 'stores');
@@ -1679,12 +1674,13 @@ const CARD_TABS = [
   { k: 'الكل', c: 's9', t: '📋 الكل', f: () => true }
 ];
 // التذاكر بتتفلتر بقواعدها هي (tkInTab)
-CARD_TABS.forEach(x => { const f = x.f; x.f = v => v.kind === 'task' || v.kind === 'jr' ? taskInTab(x.k, v) : v.kind === 'tk' ? tkInTab(x.k, v) : f(v); });
+CARD_TABS.forEach(x => { const f = x.f; x.f = v => v.kind === 'lu' ? luInTab(x.k, v) : v.kind === 'task' || v.kind === 'jr' ? taskInTab(x.k, v) : v.kind === 'tk' ? tkInTab(x.k, v) : f(v); });
 // اسم المحل من غير همزات وتاء مربوطة (علشان "أبو" = "ابو")
 function stNorm(x) { return String(x || '').trim().replace(/\s+/g, ' ').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').toLowerCase(); }
 function baseList() {
   const st = stNorm($('fStore').value), q = $('fText').value.trim();
-  return all.concat(tks, tasks, jrs).filter(v => (!st || stNorm(v.store).indexOf(st) !== -1) && (!q || (v.kind === 'task' || v.kind === 'jr' ? (v.title || 'طلب جرد') + ' ' + v.store + ' ' + (v.details || v.notes || '')
+  return all.concat(tks, tasks, jrs, luItems()).filter(v => (!st || stNorm(v.store).indexOf(st) !== -1) && (!q || (v.kind === 'lu' ? 'تحميل تفريغ ' + v.driver + ' ' + v.truck + ' ' + v.store
+    : v.kind === 'task' || v.kind === 'jr' ? (v.title || 'طلب جرد') + ' ' + v.store + ' ' + (v.details || v.notes || '')
     : v.kind === 'tk' ? v.title + ' ' + v.desc + ' ' + v.user + ' ' + v.store + ' ' + v.assigneeName
     : v.supplier + ' ' + v.number + ' ' + v.systemNo + ' ' + v.user + ' ' + v.store).indexOf(q) !== -1));
 }
@@ -1729,7 +1725,7 @@ function renderList() {
   if (tab === 'الكل' || tab === 'chat' || tab === TAB_NOTES) list = list.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   if (tab === 'tasks') list = list.slice().sort((a, b) => taskRank(a) - taskRank(b) || String(a.due || a.at).localeCompare(String(b.due || b.at)));
   list = list.map((v, k) => [v, k]).sort((a, b) => kRank(a[0]) - kRank(b[0]) || a[1] - b[1]).map(x => x[0]);
-  $('list').innerHTML = list.length ? list.map(v => v.kind === 'task' ? taskCard(v, false) : v.kind === 'jr' ? jrCard(v, false) : v.kind === 'tk' ? tkCard(v) :
+  $('list').innerHTML = list.length ? list.map(v => v.kind === 'lu' ? luCard(v, false) : v.kind === 'task' ? taskCard(v, false) : v.kind === 'jr' ? jrCard(v, false) : v.kind === 'tk' ? tkCard(v) :
     '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : v.status === ST_QA ? 'st-qa' : '') + (v.urgeCount && pending(v) ? ' urged' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
     '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + cmTag('inv', v.id) + '</span>' + timerHtml(v) + '</div>' +
     '<div class="sub"><span class="lbl">مورد:</span> ' + esc(v.supplier || 'غير محدد') + '</div>' +
@@ -4262,14 +4258,15 @@ function renderBoard() {
   const tkL = tks.filter(v => txt(v) && (tkOpen(v) || v.status === TK_SOLVED || new Date(v.updatedAt || v.createdAt).getTime() >= since.getTime()) && (!onlyOpen || tkOpen(v) || v.status === TK_SOLVED));
   const taskL = tasks.filter(v => txt(v) && (v.status === 'مفتوحة' || (!onlyOpen && new Date(v.doneAt).getTime() >= since.getTime())));
   const jrL = jrs.filter(v => txt(v) && (!onlyOpen || ['خلص', 'اتلغى'].indexOf(v.status) === -1));
+  const luL = luItems().filter(v => (!q || storeHit(v.store) || hit('تحميل تفريغ ' + v.driver + ' ' + v.truck)) && (v.status !== 'done' || (!onlyOpen && new Date(v.createdAt).getTime() >= since.getTime())));
   // المحلات اللي فيها شغل مستني الأول
-  const by = {}; names0.forEach(n => by[n] = { inv: [], tk: [], task: [], jr: [] });
-  const put = (k, v) => { (by[v.store] = by[v.store] || { inv: [], tk: [], task: [], jr: [] })[k].push(v); };
-  list.forEach(v => put('inv', v)); tkL.forEach(v => put('tk', v)); taskL.forEach(v => put('task', v)); jrL.forEach(v => put('jr', v));
-  const busy = n => marks.filter(m => m.store === n && m.state === 'requested').length + by[n].inv.filter(pending).length + by[n].tk.filter(tkOpen).length + by[n].task.filter(x => x.status === 'مفتوحة').length + by[n].jr.filter(x => jrOpenSup(x)).length;
+  const by = {}; names0.forEach(n => by[n] = { inv: [], tk: [], task: [], jr: [], lu: [] });
+  const put = (k, v) => { (by[v.store] = by[v.store] || { inv: [], tk: [], task: [], jr: [], lu: [] })[k].push(v); };
+  list.forEach(v => put('inv', v)); tkL.forEach(v => put('tk', v)); taskL.forEach(v => put('task', v)); jrL.forEach(v => put('jr', v)); luL.forEach(v => put('lu', v));
+  const busy = n => marks.filter(m => m.store === n && m.state === 'requested').length + by[n].inv.filter(pending).length + by[n].tk.filter(tkOpen).length + by[n].task.filter(x => x.status === 'مفتوحة').length + by[n].jr.filter(x => jrOpenSup(x)).length + by[n].lu.filter(x => x.status !== 'done').length;
   const score = n => busy(n) * 1000 + by[n].inv.length + by[n].tk.length + by[n].task.length;
   // وانت بتدوّر: المحلات اللي فيها نتيجة بس (أو اسمها نفسه مطابق)
-  const order = Object.keys(by).filter(n => !q || storeHit(n) || by[n].inv.length + by[n].tk.length + by[n].task.length + by[n].jr.length)
+  const order = Object.keys(by).filter(n => !q || storeHit(n) || by[n].inv.length + by[n].tk.length + by[n].task.length + by[n].jr.length + by[n].lu.length)
     .sort((a, b) => (q ? (storeHit(b) ? 1 : 0) - (storeHit(a) ? 1 : 0) : 0) || score(b) - score(a) || a.localeCompare(b));
   const nTk = tkL.length, nTask = taskL.filter(x => x.status === 'مفتوحة').length;
   $('bInfo').textContent = list.length + ' فاتورة' + (nTk ? ' • ' + nTk + ' تذكرة' : '') + (nTask ? ' • ' + nTask + ' تاسك مفتوحة' : '') + ' في ' + order.filter(n => busy(n) || by[n].inv.length).length + ' محل';
@@ -4281,24 +4278,27 @@ function renderBoard() {
     const doneToday = all.filter(v => v.store === n && v.status === ST_DONE && new Date(v.doneAt) >= today).length;
     const rej = vs.filter(v => v.status === ST_REJ).length, rev = vs.filter(v => v.status === ST_DONE && !v.reviewedBy).length;
     const urge = pend.filter(v => v.urgeCount).length;
+    const openLu = B.lu.filter(x => x.status !== 'done');
     const openTk = B.tk.filter(tkOpen), openTask = B.task.filter(x => x.status === 'مفتوحة'), lateTask = openTask.filter(taskLate).length;
     // الترتيب جوه العمود: طلب الجرد ← التاسكات المفتوحة ← التذاكر المفتوحة ← الفواتير المستنية ← الباقي
     const cards = [].concat(
       n === WO_STORE ? [woBoardCard()].filter(Boolean) : [],
       marks.filter(m => m.store === n).map(markCard),
       B.jr.map(v => jrCard(v, true)),
+      openLu.map(v => luCard(v, true)),
       openTask.sort((a, b) => String(a.due).localeCompare(String(b.due))).map(v => taskCard(v, true)),
       openTk.sort(qSort).map(v => tkBoardCard(v)),
       vs.filter(pending).map(invBoardCard),
       B.tk.filter(v => !tkOpen(v)).map(v => tkBoardCard(v)),
       vs.filter(v => !pending(v)).map(invBoardCard),
-      B.task.filter(x => x.status !== 'مفتوحة').map(v => taskCard(v, true)));
-    const tot = B.inv.length + B.tk.length + B.task.length + B.jr.length;
-    const totT = 'التعاملات في الفترة: ' + B.inv.length + ' فاتورة • ' + B.tk.length + ' تذكرة • ' + B.task.length + ' تاسك' + (B.jr.length ? ' • ' + B.jr.length + ' طلب جرد' : '');
+      B.task.filter(x => x.status !== 'مفتوحة').map(v => taskCard(v, true)),
+      B.lu.filter(x => x.status === 'done').map(v => luCard(v, true)));
+    const tot = B.inv.length + B.tk.length + B.task.length + B.jr.length + B.lu.length;
+    const totT = 'التعاملات في الفترة: ' + B.inv.length + ' فاتورة • ' + B.tk.length + ' تذكرة • ' + B.task.length + ' تاسك' + (B.jr.length ? ' • ' + B.jr.length + ' طلب جرد' : '') + (B.lu.length ? ' • ' + B.lu.length + ' تحميل/تفريغ' : '');
     return '<div class="bcol" style="--sc:' + stColor(n) + '"><div class="bhead"><h3><span class="dot' + (late || urge || lateTask ? ' bad' : busy(n) ? ' warn' : '') + '"></span><span class="bname" title="' + esc(n) + '">' + esc(n) + '</span>' +
       '<span class="bcount" title="' + esc(totT) + '">' + tot + '</span></h3>' +
       '<div class="bstats">' + (pend.length ? '<span class="o">⏳ ' + pend.length + ' مستنية</span>' : '') + (late ? '<span class="r">⚠️ ' + late + ' متأخرة</span>' : '') +
-      (urge ? '<span class="r">🔥 ' + urge + ' مستعجلة</span>' : '') + (openTk.length ? '<span>🛠️ ' + openTk.length + ' تذكرة</span>' : '') +
+      (urge ? '<span class="r">🔥 ' + urge + ' مستعجلة</span>' : '') + (openTk.length ? '<span>🛠️ ' + openTk.length + ' تذكرة</span>' : '') + (openLu.length ? '<span style="color:#2E7D32">🚚 ' + openLu.length + ' تحميل/تفريغ</span>' : '') +
       (openTask.length ? '<span style="color:#6C4BD8">📋 ' + openTask.length + ' تاسك' + (lateTask ? ' (' + lateTask + ' متأخرة)' : '') + '</span>' : '') +
       '<span class="g">✅ ' + doneToday + ' النهارده</span>' +
       (rej ? '<span>↩️ ' + rej + ' مرفوضة</span>' : '') + (rev ? '<span>👀 ' + rev + ' مستنية مراجعة</span>' : '') + '</div>' +
@@ -4649,7 +4649,7 @@ function tpEdit(id) {
   };
 }
 // ---------- التاسك وطلب الجرد في مربع التفاصيل (بدل ما يتفتحوا في الكارت) ----------
-let curTask = null; // {kind: 'task' | 'jr', id}
+let curTask = null; // {kind: 'task' | 'jr' | 'lu', id}
 function taskSel(kind, id) { return !!curTask && curTask.kind === kind && curTask.id === id; }
 function openTask(kind, id) {
   page('inv');
@@ -4659,6 +4659,7 @@ function openTask(kind, id) {
 }
 function renderTaskPane() {
   if (!curTask) return;
+  if (curTask.kind === 'lu') return luPane();
   const jr = curTask.kind === 'jr', v = (jr ? jrs : tasks).find(x => x.id === curTask.id);
   if (!v) { curTask = null; $('detailPane').innerHTML = '<div class="empty">👈 اختار فاتورة من القايمة</div>'; closeInv(); return; }
   const boss = myRole === 'مدير', id = esc(v.id);
@@ -5746,11 +5747,11 @@ async function tsuSw(key, off) {
 }
 
 // ---------- 🚚 التحميل والتفريغ (مناديب التوزيع - سكريبت لوحده على ekotb55) ----------
-// المندوب بيبعت التحميل والتفريغ من تطبيقه (loading/) وبيوصلوا هنا للدعم: استلام ← صورة السيستم ← تم
+// المندوب بيبعت التحميل والتفريغ من تطبيقه (loading/) وبيوصلوا للدعم في طابور الفواتير كتاسك 🚚 وفي كارت المحل: استلام ← صورة السيستم ← تم
 // بيشتغل بدخول الداش بورد نفسه - السيرفر بيتأكد من الجلسة من «دليل الموظفين» (مرة كل 6 ساعات)
 const LU_API = 'https://script.google.com/macros/s/AKfycbzAiM8070GNCmLGOMYDeCHdf-cCMMFFJ3GIjpzznb5znOyWwAHlYZF1eRpqpju9-RoY/exec';
 const LU_ST = { load: { sent: 'قيد التحميل', received: 'الدعم استلم', done: 'تم رفع الكمية' }, unload: { sent: 'طلب تفريغ', received: 'الدعم استلم', done: 'تم التفريغ' } };
-let lu = null, luTimer = null, luBgT = null, luBusy = false, luSel = null, luFilter = 'all', luNoteFor = null, luKnownNew = null;
+let lu = null, luBgT = null, luBusy = false, luSel = null, luNoteFor = null, luKnownNew = null;
 const luImg = {};
 async function luApi(action, data) {
   let res, j = null;
@@ -5764,24 +5765,72 @@ async function luApi(action, data) {
   if (j.state) lu = j.state;
   return j;
 }
-function luStop() { clearInterval(luTimer); luTimer = null; }
-function luNew() { return (lu && lu.sreqs || []).filter(r => r.status === 'sent').length; }
+// الطلبات بتظهر في طابور الفواتير كتاسك (🚚) وفي كارت المحل في «المحلات» - المحل = المحل اللي متسجل قدام المندوب
+function luKey(x) { return stNorm(x).replace(/\s/g, ''); }
+function luStoreName(shop) { const k = luKey(shop); if (!k) return 'من غير محل'; return (stores || []).find(n => luKey(n) === k) || String(shop).trim(); }
+function luIso(d, t) {
+  const m = String(t || '').match(/^(\d{1,2}):(\d{2})/), dm = String(d || '').match(/^\d{4}-\d{2}-\d{2}$/);
+  if (!dm) return '';
+  const x = new Date(d + 'T' + (m ? String(m[1]).padStart(2, '0') + ':' + m[2] : '00:00') + ':00');
+  return isNaN(x) ? '' : x.toISOString();
+}
+function luItems() {
+  return (lu && lu.sreqs || []).map(r => ({ kind: 'lu', id: r.id, r, store: luStoreName(r.shop), status: r.status, driver: r.driver || '', truck: r.truck || '',
+    createdAt: luIso(r.date, r.t), doneAt: r.status === 'done' ? luIso(r.date, r.doneT || r.t) : '' }));
+}
+// الطلب في أنهي كارت من الكروت اللي فوق
+function luInTab(k, v) {
+  if (k === 'الكل') return true;
+  if (k === ST_NEW) return v.status === 'sent';
+  if (k === ST_WORK) return v.status === 'received';
+  if (k === ST_DONE) return v.status === 'done';
+  if (k === 'tasks') return v.status !== 'done' || v.r.notes.some(n => !n.reply);
+  return false;
+}
+function luCard(v, board) {
+  const r = v.r, isL = r.type === 'load', nNo = r.notes.filter(n => !n.reply).length, id = esc(v.id);
+  const what = (isL ? 'تحميل' : 'تفريغ') + ' • ' + esc(r.driver);
+  if (!board) {
+    return '<div class="card' + (taskSel('lu', v.id) ? ' sel' : '') + '" style="border-inline-start:5px solid ' + (isL ? '#2E7D32' : '#E65100') + '" onclick="openTask(\'lu\',\'' + id + '\')">' +
+      '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + '</span>' + luBadgeHtml(r) + '</div>' +
+      '<div class="sub"><span class="lbl">تاسك:</span> 🚚 ' + what + '</div>' +
+      '<div class="meta">' + esc(r.truck) + ' • ' + luD(r.date) + ' ' + luT(r.t) + ' • ' + r.lines.length + ' صنف' + (nNo ? ' • <b style="color:#8A5300">📝 ' + nNo + ' ملاحظة مستنية رد المندوب</b>' : '') + '</div></div>';
+  }
+  return '<div class="bcard' + (r.status === 'sent' ? ' late' : '') + '" onclick="bTap(this,event,()=>openTask(\'lu\',\'' + id + '\'))">' +
+    '<div class="bt"><b><span class="kind">🚚</span>' + what + '</b>' + luBadgeHtml(r) + '</div>' +
+    '<div class="bm">' + esc(r.truck) + ' • ' + luD(r.date) + ' ' + luT(r.t) + ' • ' + r.lines.length + ' صنف' + (nNo ? ' • 📝 ' + nNo : '') + '</div></div>';
+}
+// تفاصيل الطلب في مربع التفاصيل (زي التاسك وطلب الجرد)
+function luPane() {
+  const v = luItems().find(x => x.id === curTask.id);
+  if (!v) { $('detailPane').innerHTML = '<button class="btn ghost back" onclick="closeInv()">→ رجوع للقايمة</button><div class="empty">' + (lu ? 'الطلب ده مش موجود دلوقتي' : '<span class="spin"></span>') + '</div>'; return; }
+  luSel = v.id;
+  const keep = $('luNote') ? $('luNote').value : '', foc = !!document.activeElement && document.activeElement.id === 'luNote';
+  $('detailPane').innerHTML = '<button class="btn ghost back" onclick="closeInv()">→ رجوع للقايمة</button>' +
+    '<div class="info">' + i('المحل', v.store) + i('المندوب', v.driver) + i('العربية', v.truck) + '</div>' + luDetail(v.r);
+  if ($('luNote')) { if (keep) $('luNote').value = keep; if (foc) $('luNote').focus(); }
+  luHydrate();
+}
 function luBadge() {
-  const n = luNew(), b = $('luBadge'); if (!b) return;
-  b.textContent = n; b.classList.toggle('hidden', !n);
+  const n = (lu && lu.sreqs || []).filter(r => r.status === 'sent').length;
   if (luKnownNew !== null && n > luKnownNew) { toast('🚚 وصل طلب تحميل/تفريغ جديد'); try { ding(); } catch (e) {} }
   luKnownNew = n;
 }
+function luRender() {
+  if (!lu) return;
+  luBadge();
+  if (!$('pageInv').classList.contains('hidden')) renderList();
+  if (curTask && curTask.kind === 'lu') renderTaskPane();
+  if (!$('pageStores').classList.contains('hidden')) renderBoard();
+}
+// بيتجاب كل 30 ثانية في الخلفية (وانت بتكتب ملاحظة مش بيرسم علشان الكتابة ما تتمسحش)
 function luBg() {
   if (luBgT) return;
-  const go = async () => { if (!token || !$('pageLu').classList.contains('hidden')) return; try { await luApi('state'); luBadge(); } catch (e) {} };
-  setTimeout(go, 4000); luBgT = setInterval(go, 120000);
-}
-async function luLoad(quiet) {
-  if (!quiet && !lu) $('pageLu').innerHTML = '<div class="pane"><div class="empty"><span class="spin"></span></div></div>';
-  try { await luApi('state'); luBadge(); luRender(); }
-  catch (e) { if (!quiet) $('pageLu').innerHTML = '<div class="pane"><div class="empty">' + esc(msg(e)) + ' <button class="btn soft" onclick="luLoad()">حاول تاني</button></div></div>'; }
-  if (!luTimer) luTimer = setInterval(() => { if ($('pageLu').classList.contains('hidden')) luStop(); else if (!luBusy && !$('dlg') && !(document.activeElement && document.activeElement.id === 'luNote')) luLoad(true); }, 20000);
+  const go = async () => {
+    if (!token || luBusy || document.hidden) return;
+    try { await luApi('state'); if (document.activeElement && document.activeElement.id === 'luNote') luBadge(); else luRender(); } catch (e) {}
+  };
+  setTimeout(go, 3000); luBgT = setInterval(go, 30000);
 }
 function luT(t) { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); if (!m) return esc(t || ''); const h = +m[1]; return (h % 12 || 12) + ':' + m[2] + (h < 12 ? ' ص' : ' م'); }
 function luD(d) { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? (+m[3]) + '/' + (+m[2]) : esc(d || ''); }
@@ -5792,22 +5841,6 @@ function luTrack(r) {
   const L = r.type === 'load' ? ['اتبعت للدعم', 'الدعم استلم', 'تم رفع الكمية'] : ['طلب تفريغ', 'الدعم استلم', 'تم التفريغ'];
   const i = { sent: 0, received: 1, done: 2 }[r.status], tm = [r.t, r.recvT, r.doneT];
   return '<div class="lutrack">' + L.map((s, k) => '<span class="' + (k <= i ? 'on' : '') + '">' + s + (k <= i && tm[k] ? '<small>' + luT(tm[k]) + (k === 1 && r.recvBy ? ' • ' + esc(r.recvBy) : '') + '</small>' : '') + '</span>').join('') + '</div>';
-}
-function luRender() {
-  if (!lu) return;
-  const all = (lu.sreqs || []).slice().reverse(), list = all.filter(r => luFilter === 'all' || r.status === luFilter);
-  if (!luSel || !all.find(r => r.id === luSel)) luSel = (all.find(r => r.status !== 'done') || all[0] || {}).id;
-  const cN = all.filter(r => r.status === 'sent').length, cR = all.filter(r => r.status === 'received').length, cNo = all.reduce((a, r) => a + r.notes.filter(n => !n.reply).length, 0);
-  const keep = $('luNote') ? $('luNote').value : '';
-  $('pageLu').innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px"><div><h2 style="margin:0;color:var(--navy)">🚚 التحميل والتفريغ</h2>' +
-    '<div style="color:var(--muted);font-size:13px">طلبات مناديب التوزيع • تطبيق المندوب: <a href="loading/" target="_blank" style="color:var(--blue)">loading/</a></div></div>' +
-    '<div class="lustats"><div class="lust n"><b>' + cN + '</b><small>جديد</small></div><div class="lust w"><b>' + cR + '</b><small>قيد الشغل</small></div><div class="lust o"><b>' + cNo + '</b><small>ملاحظات مستنية رد</small></div></div></div>' +
-    '<div class="lugrid"><div class="pane lulist"><div class="lufil">' + [['all', 'الكل'], ['sent', 'جديد'], ['received', 'قيد الشغل'], ['done', 'خلص']].map(f => '<button class="' + (luFilter === f[0] ? 'on' : '') + '" onclick="luFilter=\'' + f[0] + '\';luRender()">' + f[1] + '</button>').join('') + '</div>' +
-    (list.map(r => '<button class="lurow' + (r.id === luSel ? ' on' : '') + '" onclick="luSel=\'' + r.id + '\';luNoteFor=null;luRender()"><span class="lut ' + r.type + '">' + (r.type === 'load' ? 'تحميل' : 'تفريغ') + '</span><span class="luwho"><b>' + esc(r.driver) + '</b><small>' + esc(r.truck) + ' • ' + luD(r.date) + ' ' + luT(r.t) + ' • ' + r.lines.length + ' صنف</small></span>' + luBadgeHtml(r) + '</button>').join('') || '<div class="empty" style="min-height:120px">مفيش طلبات هنا</div>') +
-    '</div><div class="ludet">' + (luSel ? luDetail(luReq(luSel)) : '<div class="pane"><div class="empty">لسه مفيش طلبات من المناديب</div></div>') + '</div></div>';
-  if (keep && $('luNote')) $('luNote').value = keep;
-  luHydrate();
 }
 function luDetail(r) {
   const isL = r.type === 'load';
