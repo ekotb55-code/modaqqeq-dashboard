@@ -2108,6 +2108,8 @@ function renderDetail() {
       '<button class="btn red" id="rejBtn" style="width:100%;padding:12px;font-size:16px" onclick="reject()">↩️ رجّع الفاتورة للفرع</button></details>';
   } else if (v.status === ST_REJ) {
     // مرفوضة: مفيش حاجة تتعمل لحد ما الفرع يبعتها تاني
+  } else if (v.status === ST_QA) {
+    h += '<div class="box" id="merged"><h3>🖼 الصورة المدمجة - للمراجعة</h3><div class="empty"><span class="spin"></span> بيجهز الصورة المدمجة...</div></div>';
   } else {
     h += '<div class="box" id="merged"><h3>📤 للمشاركة مع الفرع</h3><div class="empty"><span class="spin"></span> بيجهز الصورة المدمجة...</div></div>';
   }
@@ -2116,7 +2118,7 @@ function renderDetail() {
   renderLines();
   openChat(v.store, v.id, 'chatBox', 'فاتورة ' + v.supplier);
   initViewer();
-  if (canWork) { renderShots(); bindDrop(); posLoad(v.id); } else if (v.status === ST_DONE) buildMerged();
+  if (canWork) { renderShots(); bindDrop(); posLoad(v.id); } else if (v.status === ST_DONE || v.status === ST_QA) buildMerged();
 }
 
 // ---------- ترتيب أصناف الفاتورة (سحب أو أسهم) - بيتحفظ على السيرفر علشان الجودة تشوفه ----------
@@ -2551,7 +2553,7 @@ async function done() {
   try {
     cur = await api('dDone', { token, id: cur.invoice.id, systemNo: sys, balance: bal, screens: shots.map(s => s.split(',')[1]), pricesDone }, true);
     shots = []; pIdx = 0;
-    toast(cur.invoice.status === ST_QA ? 'اتبعتت لقسم الجودة 🔍 - هتبقى "تم الإدخال" بعد ما يعتمدوها' : 'تم الإدخال ✅');
+    toast(cur.invoice.status === ST_QA ? 'اتبعتت لقسم الجودة 🔍 - والفرع وصله إشعار إنها دخلت ومستنية الجودة' : 'تم الإدخال ✅');
     renderDetail(); loadList(true);
   } catch (e) { err.textContent = msg(e); b.disabled = false; b.textContent = 'تم الإدخال ✓'; }
 }
@@ -2574,6 +2576,12 @@ async function buildMerged() {
       url = draw(pairs, v, await loadImage('logo_wide.png'));
       const saved = await api('dMerged', { token, id: v.id, image: url.split(',')[1] }, true);
       v.merged = saved.merged; imgCache[saved.merged] = Promise.resolve(url);
+    }
+    // مستنية الجودة: الصورة للمراجعة بس (الفرع بيستلمها بعد الاعتماد)
+    if (v.status === ST_QA) {
+      box.innerHTML = '<h3>🖼 الصورة المدمجة - للمراجعة</h3><small style="color:var(--muted)">صورة الفرع جنب صورة السيستم - راجع منها. الفرع هيستلمها بعد اعتماد الجودة.</small>' +
+        '<img id="mergedImg" src="' + url + '" style="width:100%;display:block;margin-top:8px;border-radius:10px">';
+      return;
     }
     box.innerHTML = '<h3>📤 للمشاركة مع الفرع</h3><div class="caption" id="cap">' + esc(captionText(v)) + '</div>' +
       '<div class="actions">' +
@@ -3170,7 +3178,8 @@ function qaPanel(v) {
         '<div class="qaitems">' + items.map(k => '<div class="qait"><span>' + esc(k) + '</span><span class="tg">' +
           '<button class="ok' + (qaChecks[k] === true ? ' on' : '') + '" onclick="qaSet(this,\'' + k + '\',true)">✓</button>' +
           '<button class="bad' + (qaChecks[k] === false ? ' on' : '') + '" onclick="qaSet(this,\'' + k + '\',false)">✗</button></span></div>').join('') + '</div>' +
-        '<button class="btn soft" onclick="qaAllOk()">✓ كله مظبوط</button>' +
+        '<button class="btn soft" onclick="qaAllOk()">✓ كله مظبوط</button> ' +
+        '<button class="btn soft" onclick="const m=$(\'merged\'); if (m) m.scrollIntoView({ behavior: \'smooth\', block: \'start\' })">🖼 الصورة المدمجة</button>' +
         '<textarea id="qaNotes" placeholder="ملاحظة للدعم (لازم لو فيه ✗) - داخلية والفرع مش هيشوفها" style="margin-top:8px;display:block;width:100%;min-height:64px"></textarea>' +
         '<div class="err" id="qaErr"></div>' +
         '<div style="display:flex;gap:8px;margin-top:6px"><button class="btn green" id="qaOk" style="flex:2;padding:12px;font-size:16px" onclick="qaApprove()">✅ اعتمد الفاتورة (تبقى تم الإدخال)</button>' +
@@ -3395,7 +3404,7 @@ function tourSteps() {
     { el: '#stats .extras', t: 'فلاتر إضافية', b: 'المستعجلة 🔥، المتأخرة، ملاحظات الفروع، والرسايل الجديدة - كلها بدوسة.' },
     { el: '#listPane', t: 'قايمة الفواتير 🧾', b: 'الأقدم فوق. العداد بيبقى أصفر بعد ' + WARN_MIN + ' دقيقة وأحمر بعد ' + SLA_MIN + ' دقيقة (برة مواعيد الشغل بيقف).\nابحث بالمورد أو الرقم أو اختار محل.' },
     { el: '#detailPane', k: q ? 'تفاصيل الفاتورة 📄|qa' : '', t: 'تفاصيل الفاتورة 📄', b: q
-        ? 'هنا بتشوف صور الفاتورة وصورة السيستم وبيانات الدعم.\nراجع بنود الجودة ✓/✗ وبعدين "اعتماد" أو "ترجيع للدعم" مع ملاحظة (الملاحظة داخلية - الفرع ما يشوفهاش).\nقدامك ' + QA_SLA_MIN + ' دقيقة لكل فاتورة.'
+        ? 'هنا بتشوف صور الفاتورة وصورة السيستم وبيانات الدعم، والصورة المدمجة 🖼 (صورة الفرع جنب السيستم) تحت.\nراجع بنود الجودة ✓/✗ وبعدين "اعتماد" أو "ترجيع للدعم" مع ملاحظة (الملاحظة داخلية - الفرع ما يشوفهاش).\nقدامك ' + QA_SLA_MIN + ' دقيقة لكل فاتورة.'
         : 'دوس على فاتورة: هتشوف صورها وأصنافها.\n① "استلام" ← ② دخّلها السيستم ← ③ اكتب رقم السيستم والرصيد في إطار "بيانات السيستم" وارفع صورة الإثبات ← ④ "تم الإدخال".\nلو فيها مشكلة: "رفض" واكتب السبب.' },
     { el: '#detailPane', k: q ? 'الشات مع الفرع 💬|qa' : '', t: 'الشات مع الفرع 💬', b: q
         ? 'رسايلك هنا داخلية دايمًا للدعم بس 🔒.'
@@ -3443,7 +3452,7 @@ const TOUR_SAY = {
   'فلاتر إضافية': 'فَلاتِر إِضافِيَّة. المِسْتَعْجِلَة، والمِتْأَخَّرَة، ومُلاحْظات الفُروع، والرَّسايِل الجِديدَة. كُلُّها بِدوسَة.',
   'قايمة الفواتير 🧾': 'قايْمِة الفَواتير. الأَقْدَم فُوق. العَدّاد بِيِبْقى أَصْفَر لَوْ الفاتورَة اتْأَخَّرِت، وأَحْمَر لَوْ اتْأَخَّرِت أَكْتَر، وبَرَّه مَواعيد الشُّغْل بِيُقَف. ابْحَث بِالمُوَرِّد، أَوْ الرَّقَم، أَوْ اخْتار مَحَلّ.',
   'تفاصيل الفاتورة 📄': 'تَفاصيل الفاتورَة. دُوس عَلى فاتورَة، هَتْشوف صُوَرْها وأَصْنافْها. دُوس اسْتِلام، وبَعْدين دَخَّلْها السِّيسْتِم، واكْتِب رَقَم السِّيسْتِم والرَّصيد، وارْفَع صورِة الإِثْبات، وبَعْدين دُوس تَمّ الإِدْخال. ولَوْ فيها مُشْكِلَة، ارْفُضْها مَعَ السَّبَب.',
-  'تفاصيل الفاتورة 📄|qa': 'تَفاصيل الفاتورَة. هِنا بِتْشوف صُوَر الفاتورَة، وصورِة السِّيسْتِم، وبَيانات الدَّعْم. راجِع بُنود الجُودَة، وبَعْدين اعْتِماد، أَوْ تَرْجيع لِلدَّعْم مَعَ مُلاحْظَة. المُلاحْظَة داخِلِيَّة، والفَرْع ما يْشوفْهاش.',
+  'تفاصيل الفاتورة 📄|qa': 'تَفاصيل الفاتورَة. هِنا بِتْشوف صُوَر الفاتورَة، وصورِة السِّيسْتِم، وبَيانات الدَّعْم، والصّورَة المَدْموجَة تَحْت. راجِع بُنود الجُودَة، وبَعْدين اعْتِماد، أَوْ تَرْجيع لِلدَّعْم مَعَ مُلاحْظَة. المُلاحْظَة داخِلِيَّة، والفَرْع ما يْشوفْهاش.',
   'الشات مع الفرع 💬': 'الشّات مَعَ الفَرْع. تَحْت كُلّ فاتورَة فِيه شات مَعَ الفَرْع: رُدود سَريعَة جاهْزَة، وتِقْدَر تِبْعَت صورَة، وهَتِعْرَف لَمّا الفَرْع يْشوف. والمُلاحْظَة الدّاخِلِيَّة، لِلدَّعْم بَسّ.',
   'الشات مع الفرع 💬|qa': 'الشّات. رَسايْلَك هِنا داخِلِيَّة دايْمًا، لِلدَّعْم بَسّ.',
   'المحلات 🏪': 'المَحَلّات. لُوحَة فيها عَمود لِكُلّ مَحَلّ، وكُلّ فاتورَة كارْت بِالأَحْداث بِتاعِتْها بِالتَّرْتيب. ومِنْها تِفْتَح شات الفَرْع.',
