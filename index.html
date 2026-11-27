@@ -982,6 +982,11 @@
   .luact { background: #F1ECFF; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
   .luact.done { flex-direction: row; flex-wrap: wrap; align-items: center; background: #EEF8F1; }
   .lushot { max-width: 180px; max-height: 140px; border-radius: 10px; cursor: zoom-in; border: 1px solid var(--line); background: #fff; }
+  .ludrop { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; width: 100%; box-sizing: border-box; }
+  .luside { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+  .luside .lusys { position: sticky; top: 8px; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 8px; }
+  .luside .lusys img { width: 100%; display: block; margin-top: 6px; border-radius: 10px; cursor: zoom-in; }
+  @media (max-width: 900px) { .luside { grid-template-columns: 1fr; } }
   .lutbl { overflow-x: auto; margin-top: 8px; border: 1px solid var(--line); border-radius: 14px; }
   .lutbl table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .lutbl th, .lutbl td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: start; }
@@ -3415,6 +3420,7 @@ function tourSteps() {
     { el: '#navOrd', t: 'الطلبات الدورية 🔁', b: 'طلبات الموزع الرئيسي اللي بتتعمل لوحدها للفروع في مواعيدها، وتتابع منها اتعملت ولا لأ.\nأول ما تفتحها هتلاقي ليها جولة شرح لوحدها.' },
     { el: '#navTeam', t: 'دردشة الفريق 💬', b: 'زي واتساب بين فريق الدعم والجودة: جروب للفريق كله ورسايل خاصة.\nاكتب @ وبعدها اسم زميلك علشان تعمل له منشن (هيوصله تنبيه)، وتقدر تبعت صور وفيديو وملفات ورسالة صوتية 🎤، وترد على أي رسالة ↩️.' },
     { el: '#taskNewBtn', t: 'التاسكات 📋', b: 'من «＋ تاسك» تبعت شغل لمحل أو لكذا محل، مرة واحدة أو متكررة.\nتقدر تحط صور 📷 (أو تلزق صورة) وتسجيل صوتي 🎙️ يشرح المطلوب - بيظهروا في التاسك، والصورة تتفتح كبيرة بدوسة.\nولتاسك موجودة: افتحها ودوس «📎 صور وتسجيل».' },
+    { el: '#listPane', k: 'lu_qa', t: 'التحميل والتفريغ 🚚', b: 'صورة السيستم: دوس، أو اسحب الصورة، أو الصق Ctrl+V بعد سكرين شوت.\n"تم رفع الكمية" بيبعت الطلب للجودة 🔍: زميلك يقارن شيت المندوب بصورة السيستم جنب بعض ويعتمد ✅ أو يرجّع ↩️.\nالمندوب بيستلم الصورة بعد الاعتماد بس.' },
     { el: '#bellBtn', t: 'الإشعارات والصوت 🔔', b: 'فعّلها مرة واحدة: هيرن مع كل فاتورة جديدة أو استعجال، وكل 5 دقايق طول ما فيه فواتير مستنية.' },
     { el: '#who', t: 'صورتك 🙂', b: 'دوس على اسمك علشان تحط صورتك - بتظهر جنب رسايلك في الشات.' },
     { el: '#helpBtn', t: 'خلصنا ✅', b: 'تقدر تعيد الجولة دي في أي وقت من زرار ؟' }
@@ -3455,6 +3461,7 @@ const TOUR_SAY = {
   'تفاصيل الفاتورة 📄|qa': 'تَفاصيل الفاتورَة. هِنا بِتْشوف صُوَر الفاتورَة، وصورِة السِّيسْتِم، وبَيانات الدَّعْم، والصّورَة المَدْموجَة تَحْت. راجِع بُنود الجُودَة، وبَعْدين اعْتِماد، أَوْ تَرْجيع لِلدَّعْم مَعَ مُلاحْظَة. المُلاحْظَة داخِلِيَّة، والفَرْع ما يْشوفْهاش.',
   'الشات مع الفرع 💬': 'الشّات مَعَ الفَرْع. تَحْت كُلّ فاتورَة فِيه شات مَعَ الفَرْع: رُدود سَريعَة جاهْزَة، وتِقْدَر تِبْعَت صورَة، وهَتِعْرَف لَمّا الفَرْع يْشوف. والمُلاحْظَة الدّاخِلِيَّة، لِلدَّعْم بَسّ.',
   'الشات مع الفرع 💬|qa': 'الشّات. رَسايْلَك هِنا داخِلِيَّة دايْمًا، لِلدَّعْم بَسّ.',
+  'lu_qa': 'التَّحْميل والتَّفْريغ. صورِة السِّيسْتِم: دُوس، أَوْ اسْحَب الصّورَة، أَوْ الْزَق بِكُنْتْرول في، بَعْد السِّكْرين شوت. تَمّ رَفْع الكِمِّيَّة، بِيِبْعَت الطَّلَب لِلجُودَة. زَميلَك يِقارِن شيت المَنْدوب بِصورِة السِّيسْتِم جَنْب بَعْض، ويِعْتِمِد أَوْ يْرَجَّع. والمَنْدوب بِيِسْتِلِم الصّورَة بَعْد الاعْتِماد بَسّ.',
   'المحلات 🏪': 'المَحَلّات. لُوحَة فيها عَمود لِكُلّ مَحَلّ، وكُلّ فاتورَة كارْت بِالأَحْداث بِتاعِتْها بِالتَّرْتيب. ومِنْها تِفْتَح شات الفَرْع.',
   'الأداء 🏆': 'الأَداء. سُرْعِة الاسْتِلام والإِدْخال لِكُلّ مُوَظَّف، وتَقْييم الجُودَة، ونِسْبِة الفَواتير اللي عَدِّت مِن أَوِّل مَرَّة.',
   'تقارير الفروع 📊': 'تَقارير الفُروع. تَقْرير بي دي إِف لِأَيّ فَرْع، في أَيّ فَتْرَة.',
@@ -5759,7 +5766,7 @@ async function tsuSw(key, off) {
 // المندوب بيبعت التحميل والتفريغ من تطبيقه (loading/) وبيوصلوا للدعم في طابور الفواتير كتاسك 🚚 وفي كارت المحل: استلام ← صورة السيستم ← تم
 // بيشتغل بدخول الداش بورد نفسه - السيرفر بيتأكد من الجلسة من «دليل الموظفين» (مرة كل 6 ساعات)
 const LU_API = 'https://script.google.com/macros/s/AKfycbzAiM8070GNCmLGOMYDeCHdf-cCMMFFJ3GIjpzznb5znOyWwAHlYZF1eRpqpju9-RoY/exec';
-const LU_ST = { load: { sent: 'قيد التحميل', received: 'الدعم استلم', done: 'تم رفع الكمية' }, unload: { sent: 'طلب تفريغ', received: 'الدعم استلم', done: 'تم التفريغ' } };
+const LU_ST = { load: { sent: 'قيد التحميل', received: 'الدعم استلم', qa: 'مستني الجودة', done: 'تم رفع الكمية' }, unload: { sent: 'طلب تفريغ', received: 'الدعم استلم', qa: 'مستني الجودة', done: 'تم التفريغ' } };
 let lu = null, luBgT = null, luBusy = false, luSel = null, luNoteFor = null, luKnownNew = null;
 const luImg = {};
 async function luApi(action, data) {
@@ -5792,6 +5799,7 @@ function luInTab(k, v) {
   if (k === 'الكل') return true;
   if (k === ST_NEW) return v.status === 'sent';
   if (k === ST_WORK) return v.status === 'received';
+  if (k === ST_QA) return v.status === 'qa';
   if (k === ST_DONE) return v.status === 'done';
   if (k === 'tasks') return v.status !== 'done' || v.r.notes.some(n => !n.reply);
   return false;
@@ -5815,15 +5823,22 @@ function luPane() {
   if (!v) { $('detailPane').innerHTML = '<button class="btn ghost back" onclick="closeInv()">→ رجوع للقايمة</button><div class="empty">' + (lu ? 'الطلب ده مش موجود دلوقتي' : '<span class="spin"></span>') + '</div>'; return; }
   luSel = v.id;
   const keep = $('luNote') ? $('luNote').value : '', foc = !!document.activeElement && document.activeElement.id === 'luNote';
+  const qaKeep = $('luQaNote') ? $('luQaNote').value : '';
   $('detailPane').innerHTML = '<button class="btn ghost back" onclick="closeInv()">→ رجوع للقايمة</button>' +
     '<div class="info">' + i('المحل', v.store) + i('المندوب', v.driver) + i('العربية', v.truck) + '</div>' + luDetail(v.r);
   if ($('luNote')) { if (keep) $('luNote').value = keep; if (foc) $('luNote').focus(); }
+  if ($('luQaNote') && qaKeep) $('luQaNote').value = qaKeep;
+  luBindDrop();
   luHydrate();
 }
+let luKnownQa = null;
 function luBadge() {
   const n = (lu && lu.sreqs || []).filter(r => r.status === 'sent').length;
   if (luKnownNew !== null && n > luKnownNew) { toast('🚚 وصل طلب تحميل/تفريغ جديد'); try { ding(); } catch (e) {} }
   luKnownNew = n;
+  const q = canQA() ? (lu && lu.sreqs || []).filter(r => r.status === 'qa' && r.upBy !== me).length : 0;
+  if (luKnownQa !== null && q > luKnownQa) { toast('🔍 طلب تحميل/تفريغ مستني مراجعة الجودة'); try { ding(); } catch (e) {} }
+  luKnownQa = q;
 }
 function luRender() {
   if (!lu) return;
@@ -5837,7 +5852,7 @@ function luBg() {
   if (luBgT) return;
   const go = async () => {
     if (!token || luBusy || document.hidden) return;
-    try { await luApi('state'); if (document.activeElement && document.activeElement.id === 'luNote') luBadge(); else luRender(); } catch (e) {}
+    try { await luApi('state'); if (document.activeElement && (document.activeElement.id === 'luNote' || document.activeElement.id === 'luQaNote')) luBadge(); else luRender(); } catch (e) {}
   };
   setTimeout(go, 3000); luBgT = setInterval(go, 30000);
 }
@@ -5845,20 +5860,31 @@ function luT(t) { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); if (!m)
 function luD(d) { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? (+m[3]) + '/' + (+m[2]) : esc(d || ''); }
 function luUnit(n) { const it = (lu && lu.items || []).find(x => x.n === n); return it && it.w ? 'كجم' : 'كرتونة'; }
 function luReq(id) { return (lu && lu.sreqs || []).find(r => r.id === id); }
-function luBadgeHtml(r) { const c = r.status === 'done' ? 'b-done' : r.status === 'received' ? 'b-work' : 'b-new'; return '<span class="badge ' + c + '">' + esc(LU_ST[r.type][r.status]) + '</span>'; }
+function luBadgeHtml(r) { const c = r.status === 'done' ? 'b-done' : r.status === 'qa' ? 'b-qa' : r.status === 'received' ? 'b-work' : 'b-new'; return '<span class="badge ' + c + '">' + esc(LU_ST[r.type][r.status]) + '</span>'; }
 function luTrack(r) {
-  const L = r.type === 'load' ? ['اتبعت للدعم', 'الدعم استلم', 'تم رفع الكمية'] : ['طلب تفريغ', 'الدعم استلم', 'تم التفريغ'];
-  const i = { sent: 0, received: 1, done: 2 }[r.status], tm = [r.t, r.recvT, r.doneT];
-  return '<div class="lutrack">' + L.map((s, k) => '<span class="' + (k <= i ? 'on' : '') + '">' + s + (k <= i && tm[k] ? '<small>' + luT(tm[k]) + (k === 1 && r.recvBy ? ' • ' + esc(r.recvBy) : '') + '</small>' : '') + '</span>').join('') + '</div>';
+  const L = r.type === 'load' ? ['اتبعت للدعم', 'الدعم استلم', 'اترفعت للجودة', 'اتعتمد ✅'] : ['طلب تفريغ', 'الدعم استلم', 'اترفع للجودة', 'اتعتمد ✅'];
+  const i = { sent: 0, received: 1, qa: 2, done: 3 }[r.status], tm = [r.t, r.recvT, r.upT, r.doneT], by = ['', r.recvBy, r.upBy, r.qaBy];
+  return '<div class="lutrack">' + L.map((s, k) => '<span class="' + (k <= i ? 'on' : '') + '">' + s + (k <= i && tm[k] ? '<small>' + luT(tm[k]) + (by[k] ? ' • ' + esc(by[k]) : '') + '</small>' : '') + '</span>').join('') + '</div>';
 }
 function luDetail(r) {
   const isL = r.type === 'load';
   let act = '';
   if (r.status === 'sent') act = '<div class="luact"><div>طلب جديد من <b>' + esc(r.driver) + '</b> - استلمه علشان المندوب يعرف إنك شغال عليه.</div><button class="btn" onclick="luDo(\'s_recv\',{id:\'' + r.id + '\'},\'استلمت الطلب والمندوب اتبلّغ\')">📥 استلام الطلب</button></div>';
-  else if (r.status === 'received') act = '<div class="luact"><b>ارفع صورة من السيستم بنفس ترتيب الجدول</b>' +
-    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn soft" onclick="$(\'luShotFile\').click()">🖼️ ' + (r.shot ? 'غيّر الصورة' : 'ارفع صورة السيستم') + '</button>' + (r.shot ? '<img class="lushot" data-luimg="' + r.shot + '" onclick="luZoom(this)">' : '') + '</div>' +
-    '<button class="btn green" onclick="luDo(\'s_done\',{id:\'' + r.id + '\'},\'اتقفل الطلب والصورة راحت للمندوب\')">✅ ' + (isL ? 'تم رفع الكمية' : 'تم التفريغ') + '</button></div>';
-  else act = '<div class="luact done">' + luBadgeHtml(r) + ' <span style="color:var(--muted)">المندوب شايف الصورة جنب اللي كتبه</span>' + (r.shot ? '<img class="lushot" data-luimg="' + r.shot + '" onclick="luZoom(this)">' : '') + '</div>';
+  else if (r.status === 'received') act = (r.qaBack && r.qaNote ? '<div class="qaret"><b>↩️ الجودة رجّعت الطلب ده' + (r.qaBack > 1 ? ' (' + r.qaBack + ' مرات)' : '') + '</b><br>' +
+      (r.qaBy ? 'رجّعه <b>' + esc(r.qaBy) + '</b>' + (r.qaT ? ' - ' + luT(r.qaT) : '') + '<br>' : '') + 'الملاحظة: <b>' + esc(r.qaNote) + '</b><br><small>صلّح الغلط على السيستم وارفع صورة جديدة ودوس "' + (isL ? 'تم رفع الكمية' : 'تم التفريغ') + '" تاني</small></div>' : '') +
+    '<div class="luact"><b>ارفع صورة من السيستم بنفس ترتيب الجدول</b>' +
+    '<div class="drop ludrop" id="luDrop" onclick="$(\'luShotFile\').click()">' + (r.shot ? '<img class="lushot" data-luimg="' + r.shot + '" onclick="event.stopPropagation();luZoom(this)">' : '') +
+    '<div>📸 ' + (r.shot ? 'غيّر الصورة' : 'ارفع صورة السيستم') + '<br><small>دوس هنا، أو اسحب الصورة، أو الصق (Ctrl+V) - مثلاً بعد سكرين شوت Win+Shift+S</small></div></div>' +
+    '<button class="btn green" onclick="luDo(\'s_done\',{id:\'' + r.id + '\'},\'اتبعت للجودة 🔍 - المندوب هيستلم الصورة بعد الاعتماد\')">✅ ' + (isL ? 'تم رفع الكمية' : 'تم التفريغ') + '</button></div>';
+  else if (r.status === 'qa') act = r.upBy === me || !canQA()
+    ? '<div class="qabox"><h3>🔍 مستني مراجعة زميل</h3>' + (r.upBy === me ? 'إنت اللي رفعت الكمية' : 'رفعها ' + esc(r.upBy)) + (r.upT ? ' الساعة ' + luT(r.upT) : '') +
+      ' - زميلك في الدعم أو الجودة هو اللي يراجع الشيت على صورة السيستم قبل ما الطلب يتقفل والصورة توصل للمندوب</div>'
+    : '<div class="qabox"><h3>🔍 مراجعة ' + (isL ? 'التحميل' : 'التفريغ') + ' <small style="font-weight:600;color:var(--muted)">(رفعها ' + esc(r.upBy) + ')</small></h3>' +
+      '<small>قارن شيت المندوب بصورة السيستم اللي جنبه صنف صنف: الأسماء والكميات.</small>' +
+      '<textarea id="luQaNote" placeholder="لو فيه غلط اكتبه هنا (لازم في الترجيع) - الدعم هيشوفه والمندوب لأ" style="margin-top:8px;display:block;width:100%;min-height:56px"></textarea>' +
+      '<div style="display:flex;gap:8px;margin-top:6px"><button class="btn green" style="flex:2;padding:12px;font-size:16px" onclick="luQa(true)">✅ اعتمد (الصورة توصل للمندوب)</button>' +
+      '<button class="btn red" style="flex:1;padding:12px" onclick="luQa(false)">↩️ رجّعه للدعم</button></div></div>';
+  else act = '<div class="luact done">' + luBadgeHtml(r) + ' <span style="color:var(--muted)">المندوب شايف الصورة جنب اللي كتبه' + (r.qaBy ? ' • اعتمده ' + esc(r.qaBy) : '') + '</span>' + (r.shot ? '<img class="lushot" data-luimg="' + r.shot + '" onclick="luZoom(this)">' : '') + '</div>';
   const cols = isL ? 4 : 6;
   const nb = l => { const has = r.notes.some(n => n.item === l.n); return '<button class="lunb' + (has ? ' has' : '') + '" onclick="luNoteFor=' + esc(JSON.stringify(l.n)).replace(/'/g, '&#39;') + ';luRender();setTimeout(()=>$(\'luNote\')&&$(\'luNote\').focus(),30)">' + (has ? '📝 فيه ملاحظة' : 'ملاحظة') + '</button>'; };
   const nrow = l => luNoteFor === l.n ? '<tr class="lunrow"><td colspan="' + cols + '"><div style="display:flex;gap:6px"><input id="luNote" placeholder="اكتب الملاحظة للمندوب على ' + esc(l.n) + '" onkeydown="if(event.key===\'Enter\')luSendNote()"><button class="btn" onclick="luSendNote()">ابعت</button><button class="btn soft" onclick="luNoteFor=null;luRender()">إلغاء</button></div></td></tr>' : '';
@@ -5870,7 +5896,9 @@ function luDetail(r) {
   return '<div class="pane"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="lut ' + r.type + '">' + (isL ? 'تحميل' : 'تفريغ') + '</span>' + luBadgeHtml(r) + '</div>' +
     '<h2 style="margin:6px 0;color:var(--navy)">' + esc(r.driver) + ' • ' + esc(r.truck) + ' <small style="color:var(--muted);font-size:14px">طلب ' + r.no + ' • ' + luD(r.date) + '</small></h2>' + luTrack(r) + act +
     '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px"><h3 style="margin:0">' + (isL ? 'شيت التحميل' : 'شيت التفريغ') + '</h3><div style="display:flex;gap:6px"><button class="btn soft" onclick="luCopy()">📋 نسخ للإكسل</button><button class="btn soft" onclick="luCsv()">⬇️ Excel</button></div></div>' +
-    '<div class="lutbl"><table><thead><tr><th>م</th><th>الصنف</th>' + (isL ? '<th>الكمية</th>' : '<th>حمّل</th><th>رجع</th><th>اتباع</th>') + '<th></th></tr></thead><tbody>' + body + '</tbody></table></div>' + notes + '</div>';
+    (r.status === 'qa' && r.shot ? '<div class="luside"><div class="lutbl"><table><thead><tr><th>م</th><th>الصنف</th>' + (isL ? '<th>الكمية</th>' : '<th>حمّل</th><th>رجع</th><th>اتباع</th>') + '<th></th></tr></thead><tbody>' + body + '</tbody></table></div>' +
+      '<div class="lusys"><b>🖥️ فاتورة السيستم</b><img data-luimg="' + r.shot + '" onclick="luZoom(this)"></div></div>'
+    : '<div class="lutbl"><table><thead><tr><th>م</th><th>الصنف</th>' + (isL ? '<th>الكمية</th>' : '<th>حمّل</th><th>رجع</th><th>اتباع</th>') + '<th></th></tr></thead><tbody>' + body + '</tbody></table></div>') + notes + '</div>';
 }
 function luHydrate() {
   document.querySelectorAll('img[data-luimg]').forEach(im => {
@@ -5880,6 +5908,23 @@ function luHydrate() {
     luImg[id] = '…';
     luApi('img', { id }).then(j => { luImg[id] = j.img; document.querySelectorAll('img[data-luimg="' + id + '"]').forEach(x => x.src = j.img); }).catch(() => { delete luImg[id]; });
   });
+}
+document.addEventListener('paste', e => {
+  if (!$('luDrop') || !curTask || curTask.kind !== 'lu') return;
+  const f = [...((e.clipboardData && e.clipboardData.items) || [])].filter(x => x.type.startsWith('image/')).map(x => x.getAsFile())[0];
+  if (f) { e.preventDefault(); luShotUp(f); }
+});
+function luBindDrop() {
+  const d = $('luDrop'); if (!d) return;
+  d.addEventListener('dragover', e => { e.preventDefault(); d.classList.add('over'); });
+  d.addEventListener('dragleave', () => d.classList.remove('over'));
+  d.addEventListener('drop', e => { e.preventDefault(); d.classList.remove('over'); luShotUp(e.dataTransfer.files && e.dataTransfer.files[0]); });
+}
+// الجودة: اعتماد أو رجوع للدعم
+function luQa(ok) {
+  const note = (($('luQaNote') || {}).value || '').trim();
+  if (!ok && !note) { toast('اكتب الغلط علشان الدعم يصلّحه'); if ($('luQaNote')) $('luQaNote').focus(); return; }
+  luDo(ok ? 'q_ok' : 'q_back', { id: luSel, note }, ok ? 'اتعتمد ✅ والصورة راحت للمندوب' : 'رجع للدعم بالملاحظة ↩️');
 }
 function luZoom(im) { if (!im.src) return; $('viewerFullImg').src = im.src; $('viewerFull').classList.remove('hidden'); }
 async function luDo(action, data, ok) {
@@ -5895,12 +5940,17 @@ function luSendNote() {
 }
 function luShotPicked(inp) {
   const f = inp.files && inp.files[0]; inp.value = '';
+  luShotUp(f);
+}
+// صورة السيستم: من الاختيار أو السحب أو اللصق (Ctrl+V)
+function luShotUp(f) {
   if (!f || !luSel) return;
+  if (!/^image\//.test(f.type || '')) return toast('ده مش صورة');
   const fr = new FileReader();
   fr.onload = () => { const im = new Image(); im.onload = () => {
     const k = Math.min(1, 1200 / Math.max(im.width, im.height)), c = document.createElement('canvas');
     c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
-    luDo('s_shot', { id: luSel, img: c.toDataURL('image/jpeg', .82) }, 'الصورة اترفعت');
+    luDo('s_shot', { id: luSel, img: c.toDataURL('image/jpeg', .82) }, $('luDrop') && $('luDrop').querySelector('img') ? 'اتغيرت الصورة ✅' : 'الصورة اترفعت ✅');
   }; im.onerror = () => toast('الصورة دي مش بتفتح، جرّب صورة تانية'); im.src = fr.result; };
   fr.readAsDataURL(f);
 }
