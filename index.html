@@ -278,6 +278,25 @@
   .worem { font-size: 12.5px; color: #8A5300; margin-top: 4px; }
   .worem a { color: #1460A8; font-weight: 700; text-decoration: none; margin-inline-start: 4px; }
   /* 🔔 البوكس الكبير للشغل الدوري */
+  /* «يومك»: الشغل المتوزّع عليك */
+  #wqBar { margin: 0 0 10px; border-radius: 18px; padding: 10px 14px; background: linear-gradient(135deg, #1565D8, #4527A0); color: #fff; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; box-shadow: 0 6px 18px rgba(21,101,216,.25); }
+  #wqBar.late { background: linear-gradient(135deg, #E65100, #C62828); }
+  #wqBar.zero { background: linear-gradient(135deg, #2BB45A, #1A7A36); }
+  #wqBar .wqn { font-size: 15px; } #wqBar .wqn b { font-size: 22px; }
+  #wqBar .wqnext { flex: 1; min-width: 180px; font-size: 13px; opacity: .95; cursor: pointer; }
+  #wqBar .btn { background: rgba(255,255,255,.18); color: #fff; border: 0; padding: 7px 12px; }
+  #wqBar .wqteam { width: 100%; font-size: 12px; opacity: .9; }
+  .wqown { margin-top: 6px; font-size: 12px; color: var(--muted); } .wqown.me { color: #1565D8; font-weight: 800; }
+  .card.wqmine { box-shadow: inset -4px 0 0 #1565D8; }
+  #wqPop { position: fixed; inset: 0; background: rgba(8,25,45,.55); z-index: 53; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  #wqPop .wbox { background: #fff; border-radius: 20px; width: min(520px, 100%); max-height: 88vh; overflow-y: auto; padding: 20px 22px; border-top: 9px solid #1565D8; box-shadow: 0 20px 60px rgba(0,0,0,.35); animation: dpop .25s ease-out; }
+  #wqPop .wbox.ok { border-top-color: #2BB45A; } #wqPop .wbox.late { border-top-color: #E53935; }
+  #wqPop h2 { margin: 0 0 6px; font-size: 21px; color: var(--navy); line-height: 1.5; }
+  #wqPop .wbig { font-size: 40px; font-weight: 900; color: #1565D8; line-height: 1.2; }
+  #wqPop .wnext { background: #F1ECFF; border-radius: 14px; padding: 10px 12px; margin-top: 10px; line-height: 1.7; }
+  #wqPop .wl { margin: 8px 0 0; padding-inline-start: 20px; line-height: 1.8; font-size: 14px; max-height: 220px; overflow-y: auto; }
+  #wqPop table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 8px; } #wqPop th, #wqPop td { padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: center; } #wqPop td:first-child, #wqPop th:first-child { text-align: start; }
+  #wqPop .wacts { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   #dutyBox { position: fixed; inset: 0; background: rgba(8,25,45,.62); z-index: 54; display: flex; align-items: center; justify-content: center; padding: 16px; }
   #dutyBox .dbox { background: #fff; border-radius: 20px; width: min(640px, 100%); max-height: 90vh; overflow-y: auto; padding: 20px 22px; border-top: 9px solid #6C4BD8; box-shadow: 0 20px 60px rgba(0,0,0,.35); animation: dpop .25s ease-out; }
   #dutyBox .dbox.wo { border-top-color: #E53935; } #dutyBox .dbox.ok { border-top-color: #2BB45A; } #dutyBox .dbox.warn { border-top-color: #E0A100; }
@@ -365,6 +384,7 @@
   .bacts .btn { padding: 5px 10px; font-size: 12.5px; }
   .bdesc { font-size: 12.5px; color: #33404D; white-space: pre-wrap; margin-bottom: 4px; }
   .s14 { background: linear-gradient(135deg, #7E57C2, #4527A0); }
+  .s15 { background: linear-gradient(135deg, #1565D8, #0D47A1); }
   .tkgrp { border: 1px solid #E3E9F1; border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; }
   .tkgrp .bar { height: 6px; background: #EEF2F7; border-radius: 4px; overflow: hidden; margin: 5px 0; }
   .tkgrp .bar i { display: block; height: 100%; background: #6C4BD8; }
@@ -1050,6 +1070,7 @@
       <div id="listPane">
         <div id="markBox"></div>
         <div id="devBox"></div>
+        <div id="wqBar" class="hidden"></div>
         <div class="tabs" id="tabs"></div>
         <div class="filters">
           <input id="fStore" type="search" list="fStoreList" placeholder="🏪 كل المحلات" title="اكتب اسم المحل أو جزء منه علشان تصفّي" oninput="renderList()" autocomplete="off"><datalist id="fStoreList"></datalist>
@@ -1596,6 +1617,7 @@ async function loadList(quiet) {
     prevStatus = {}; r.invoices.forEach(v => { prevStatus[v.id] = v.status; });
     all = r.invoices; stores = r.stores;
     tks = (r.tickets || []).map(t => Object.assign(t, { kind: 'tk' })); if (r.storePrio) storePrio = r.storePrio;
+    wqListOk = true;
     tasks = r.tasks || []; jrs = r.jrs || []; marks = r.marks || []; jardDevs = r.jardDevs || []; if (r.storeColor) storeColor = r.storeColor; if (r.members) members = r.members;
     tasksAfterLoad(); marksAfterLoad(); setTimeout(() => { try { tpCheck(); sumAfterLoad(); dutyCheck(); } catch (e) {} }, 50);
     tkAfterLoad(tks);
@@ -1667,6 +1689,7 @@ const CARD_TABS = [
   { k: ST_QA, c: 's11', t: '🔍 قسم الجودة', stage: 3, f: v => v.status === ST_QA },
   { k: ST_DONE, c: 's3', t: '✅ تم الإدخال', stage: 4, f: v => v.status === ST_DONE },
   // فلاتر تانية (كروت صغيرة) - التاسكات أول واحدة علشان تبان على طول
+  { k: 'mine', c: 's15', t: '📌 يومي (الشغل اللي عليّا)', f: v => wqIsMine(v), hideEmpty: true },
   { k: 'tasks', c: 's14', t: '📋 التاسكات وطلبات الجرد', f: v => srOpen(v) },
   { k: 'late', c: 's4', t: '⚠️ متأخرة', f: v => (pending(v) && mins(t0(v), now()) > SLA_MIN) || qaLate(v) },
   { k: 'urge', c: 's7', t: '🔥 الفرع مستعجلها', f: v => pending(v) && v.urgeCount, hideEmpty: true },
@@ -1679,7 +1702,7 @@ const CARD_TABS = [
   { k: 'الكل', c: 's9', t: '📋 الكل', f: () => true }
 ];
 // التذاكر بتتفلتر بقواعدها هي (tkInTab)
-CARD_TABS.forEach(x => { const f = x.f; x.f = v => v.kind === 'lu' ? luInTab(x.k, v) : v.kind === 'task' || v.kind === 'jr' ? taskInTab(x.k, v) : v.kind === 'tk' ? tkInTab(x.k, v) : f(v); });
+CARD_TABS.forEach(x => { const f = x.f; x.f = v => x.k === 'mine' ? wqIsMine(v) : v.kind === 'lu' ? luInTab(x.k, v) : v.kind === 'task' || v.kind === 'jr' ? taskInTab(x.k, v) : v.kind === 'tk' ? tkInTab(x.k, v) : f(v); });
 // اسم المحل من غير همزات وتاء مربوطة (علشان "أبو" = "ابو")
 function stNorm(x) { return String(x || '').trim().replace(/\s+/g, ' ').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').toLowerCase(); }
 function baseList() {
@@ -1726,11 +1749,11 @@ function renderList() {
   // الأحدث الأول في المنتهية، والأقدم الأول في الشغالة، والمستعجلة فوق خالص
   if (tab === ST_DONE || tab === 'review') list = list.slice().sort((a, b) => String(b.doneAt || b.solvedAt).localeCompare(String(a.doneAt || a.solvedAt)));
   if (tab === ST_QA) list = list.slice().sort((a, b) => String(a.doneAt).localeCompare(String(b.doneAt)));
-  if (tab === ST_NEW || tab === ST_WORK || tab === 'late' || tab === 'urge' || tab === 'tk' || tab === 'sched') list = list.slice().sort(qSort);
+  if (tab === ST_NEW || tab === ST_WORK || tab === 'late' || tab === 'urge' || tab === 'tk' || tab === 'sched' || tab === 'mine') list = list.slice().sort(qSort);
   if (tab === 'الكل' || tab === 'chat' || tab === TAB_NOTES) list = list.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   if (tab === 'tasks') list = list.slice().sort((a, b) => taskRank(a) - taskRank(b) || String(a.due || a.at).localeCompare(String(b.due || b.at)));
   list = list.map((v, k) => [v, k]).sort((a, b) => kRank(a[0]) - kRank(b[0]) || a[1] - b[1]).map(x => x[0]);
-  $('list').innerHTML = list.length ? list.map(v => v.kind === 'lu' ? luCard(v, false) : v.kind === 'task' ? taskCard(v, false) : v.kind === 'jr' ? jrCard(v, false) : v.kind === 'tk' ? tkCard(v) :
+  $('list').innerHTML = list.length ? list.map(v => wqTag(v, v.kind === 'lu' ? luCard(v, false) : v.kind === 'task' ? taskCard(v, false) : v.kind === 'jr' ? jrCard(v, false) : v.kind === 'tk' ? tkCard(v) :
     '<div class="card ' + (v.status === ST_DONE ? 'st-done' : v.status === ST_WORK ? 'st-work' : v.status === ST_REJ ? 'st-rej' : v.status === ST_QA ? 'st-qa' : '') + (v.urgeCount && pending(v) ? ' urged' : '') + (cur && cur.invoice.id === v.id ? ' sel' : '') + '" onclick="openInv(\'' + v.id + '\')">' +
     '<div class="top"><span class="sup"><span class="lbl">فرع:</span> ' + sdot(v.store) + esc(v.store) + (v.urgeCount && pending(v) ? ' <span class="urge">🔥 مستعجلة' + (v.urgeCount > 1 ? ' ×' + v.urgeCount : '') + '</span>' : '') + chatTag(v.store, v.id) + cmTag('inv', v.id) + '</span>' + timerHtml(v) + '</div>' +
     '<div class="sub"><span class="lbl">مورد:</span> ' + esc(v.supplier || 'غير محدد') + '</div>' +
@@ -1743,7 +1766,7 @@ function renderList() {
     (srOpen(v) ? '<div class="meta" style="color:#8A5300">⏸ التايمر واقف - الفرع بيراجع أسعار ' + ((v.shopRev.items || []).length || '') + ' صنف</div>'
       : v.status === ST_REJ ? '<div class="meta" style="color:#C62828">❌ ' + esc(v.rejectReason) + '</div>' : '') +
     (v.status === ST_DONE ? '<div class="meta">' + revTag(v) + '</div>' : '') + '</div>'
-  ).join('') : '<div class="empty">مفيش فواتير هنا 🎉</div>';
+  )).join('') : '<div class="empty">' + (tab === 'mine' ? 'مفيش حاجة عليك دلوقتي 🎉' : 'مفيش فواتير هنا 🎉') + '</div>';
 }
 
 function revTag(v) {
@@ -3421,6 +3444,7 @@ function tourSteps() {
     { el: '#navTeam', t: 'دردشة الفريق 💬', b: 'زي واتساب بين فريق الدعم والجودة: جروب للفريق كله ورسايل خاصة.\nاكتب @ وبعدها اسم زميلك علشان تعمل له منشن (هيوصله تنبيه)، وتقدر تبعت صور وفيديو وملفات ورسالة صوتية 🎤، وترد على أي رسالة ↩️.' },
     { el: '#taskNewBtn', t: 'التاسكات 📋', b: 'من «＋ تاسك» تبعت شغل لمحل أو لكذا محل، مرة واحدة أو متكررة.\nتقدر تحط صور 📷 (أو تلزق صورة) وتسجيل صوتي 🎙️ يشرح المطلوب - بيظهروا في التاسك، والصورة تتفتح كبيرة بدوسة.\nولتاسك موجودة: افتحها ودوس «📎 صور وتسجيل».' },
     { el: '#listPane', k: 'lu_qa', t: 'التحميل والتفريغ 🚚', b: 'صورة السيستم: دوس، أو اسحب الصورة، أو الصق Ctrl+V بعد سكرين شوت.\n"تم رفع الكمية" بيبعت الطلب للجودة 🔍: زميلك يقارن شيت المندوب بصورة السيستم جنب بعض ويعتمد ✅ أو يرجّع ↩️.\nالمندوب بيستلم الصورة بعد الاعتماد بس.' },
+    { el: '#wqBar', k: 'wq', t: 'يومك 📌', b: 'كل فاتورة أو تاسك أو طلب بييجي وإنت في ورديتك بيتكتب عليك أوتوماتيك - الجديد بيروح للي معاه أقل.\nهنا العداد: خلصت كام وفاضلك كام، و«الجاية» تفتحها بدوسة. كل 10 دقايق هيفكّرك باللي فاضل.\nلو زميلك دخل، الشغل بيتقسم بينكم نص ونص، ولو خلّصت بدري بتسحب من زمايلك. اللي يفضل عليك في آخر ورديتك بيتحسب عليك، و🏆 فيها ترتيب النهارده.' },
     { el: '#bellBtn', t: 'الإشعارات والصوت 🔔', b: 'فعّلها مرة واحدة: هيرن مع كل فاتورة جديدة أو استعجال، وكل 5 دقايق طول ما فيه فواتير مستنية.' },
     { el: '#who', t: 'صورتك 🙂', b: 'دوس على اسمك علشان تحط صورتك - بتظهر جنب رسايلك في الشات.' },
     { el: '#helpBtn', t: 'خلصنا ✅', b: 'تقدر تعيد الجولة دي في أي وقت من زرار ؟' }
@@ -3461,6 +3485,7 @@ const TOUR_SAY = {
   'تفاصيل الفاتورة 📄|qa': 'تَفاصيل الفاتورَة. هِنا بِتْشوف صُوَر الفاتورَة، وصورِة السِّيسْتِم، وبَيانات الدَّعْم، والصّورَة المَدْموجَة تَحْت. راجِع بُنود الجُودَة، وبَعْدين اعْتِماد، أَوْ تَرْجيع لِلدَّعْم مَعَ مُلاحْظَة. المُلاحْظَة داخِلِيَّة، والفَرْع ما يْشوفْهاش.',
   'الشات مع الفرع 💬': 'الشّات مَعَ الفَرْع. تَحْت كُلّ فاتورَة فِيه شات مَعَ الفَرْع: رُدود سَريعَة جاهْزَة، وتِقْدَر تِبْعَت صورَة، وهَتِعْرَف لَمّا الفَرْع يْشوف. والمُلاحْظَة الدّاخِلِيَّة، لِلدَّعْم بَسّ.',
   'الشات مع الفرع 💬|qa': 'الشّات. رَسايْلَك هِنا داخِلِيَّة دايْمًا، لِلدَّعْم بَسّ.',
+  'wq': 'يُومَك. كُلّ فاتورَة، أَوْ تاسْك، أَوْ طَلَب، بِييجي وإِنْتَ في وَرْدِيتَك، بِيِتْكِتِب عَلِيك أُوتوماتيك، والجِديد بِيْروح لِلّي مَعاه أَقَلّ. هِنا العَدّاد: خَلَّصْت كام، وفاضْلَك كام، والجايَّة تِفْتَحْها بِدوسَة. كُلّ عَشَر دَقايِق هَيْفَكَّرَك بِاللي فاضِل. لَوْ زَميلَك دَخَل، الشُّغْل بِيِتْقِسِم بينْكُم نُصّ ونُصّ، ولَوْ خَلَّصْت بَدْري، بِتِسْحَب مِن زُمايْلَك. واللي يِفْضَل عَلِيك في آخِر وَرْدِيتَك، بِيِتْحِسِب عَلِيك.',
   'lu_qa': 'التَّحْميل والتَّفْريغ. صورِة السِّيسْتِم: دُوس، أَوْ اسْحَب الصّورَة، أَوْ الْزَق بِكُنْتْرول في، بَعْد السِّكْرين شوت. تَمّ رَفْع الكِمِّيَّة، بِيِبْعَت الطَّلَب لِلجُودَة. زَميلَك يِقارِن شيت المَنْدوب بِصورِة السِّيسْتِم جَنْب بَعْض، ويِعْتِمِد أَوْ يْرَجَّع. والمَنْدوب بِيِسْتِلِم الصّورَة بَعْد الاعْتِماد بَسّ.',
   'المحلات 🏪': 'المَحَلّات. لُوحَة فيها عَمود لِكُلّ مَحَلّ، وكُلّ فاتورَة كارْت بِالأَحْداث بِتاعِتْها بِالتَّرْتيب. ومِنْها تِفْتَح شات الفَرْع.',
   'الأداء 🏆': 'الأَداء. سُرْعِة الاسْتِلام والإِدْخال لِكُلّ مُوَظَّف، وتَقْييم الجُودَة، ونِسْبِة الفَواتير اللي عَدِّت مِن أَوِّل مَرَّة.',
@@ -6736,10 +6761,143 @@ let attCache_ = null;
 const ATT_REQ = 480; // 8 ساعات
 
 // نبضة الحضور: كل دقيقة وإنت مسجل دخول (الباكإند بيسجل أول دخول وآخر نشاط والدقايق المتصلة)
-function attBeat_() { if (token) api('dBeat', { token }, true).catch(() => {}); }
+function attBeat_() { if (token) wqSend(); }
 setInterval(attBeat_, 60000);
 setTimeout(attBeat_, 5000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) attBeat_(); });
+
+// ---------- «يومك»: الشغل بيتوزّع أوتوماتيك على الدعم اللي في الوردية ----------
+// النبضة اللي كل دقيقة بتبعت الحاجات المفتوحة، والسيرفر بيكتب كل حاجة على حد (الجديد للي معاه أقل،
+// واللي داخل جديد ياخد النص، واللي خلّص بدري يسحب من زمايله). هنا: العداد، والجاية، والزنّ كل 10 دقايق.
+let wq = null, wqListOk = false, wqNagAt = 0, wqOld = false;
+const WQ_NAG_MIN = 10;
+function wqKey(v) { return (v.kind || 'inv') + ':' + v.id; }
+function wqOpenItem(v) {
+  if (!v.kind) return (v.status === ST_NEW || !v.status || v.status === ST_WORK) && !srOpen(v);
+  if (v.kind === 'task') return v.status === TASK_OPEN && taskDue(v);
+  if (v.kind === 'jr') return jrOpenSup(v);
+  if (v.kind === 'tk') return tkOpen(v) && tkDue(v);
+  if (v.kind === 'lu') return v.status === 'sent' || v.status === 'received';
+  return false;
+}
+function wqBy(v) { return !v.kind ? (v.status === ST_WORK ? v.receivedBy || '' : '') : v.kind === 'tk' ? (v.status === TK_WORK ? v.assigneeName || '' : '') : v.kind === 'lu' ? (v.status === 'received' ? v.r.recvBy || '' : '') : ''; }
+function wqWhat(v) { return !v.kind ? 'فاتورة ' + (v.supplier || '') : v.kind === 'task' ? 'تاسك: ' + (v.title || '') : v.kind === 'jr' ? 'طلب جرد' : v.kind === 'tk' ? 'تذكرة: ' + (v.title || '') : (v.r.type === 'load' ? 'تحميل ' : 'تفريغ ') + (v.driver || ''); }
+function wqAll() { return all.concat(tks, tasks, jrs, luItems()); }
+function wqIsMine(v) { return !!(wq && wq.worker && wq.map[wqKey(v)] && wq.mine.indexOf(wqKey(v)) !== -1); }
+function wqMineList() { return wq && wq.worker ? wqAll().filter(v => wq.mine.indexOf(wqKey(v)) !== -1).sort(qSort) : []; }
+function wqLate(v) { const f = (CARD_TABS.find(x => x.k === 'late') || {}).f; return !!(f && f(v)); }
+function wqCur() { return cur ? 'inv:' + cur.invoice.id : curTk ? 'tk:' + curTk.ticket.id : curTask ? curTask.kind + ':' + curTask.id : ''; }
+function wqSend() {
+  let items = null, kinds = [];
+  if (wqListOk) {
+    kinds = ['inv', 'task', 'jr', 'tk'].concat(lu ? ['lu'] : []);
+    items = wqAll().filter(wqOpenItem).map(v => ({ k: wqKey(v), s: v.store || '', t: wqWhat(v).slice(0, 40), c: v.kind === 'task' ? (v.due || v.createdAt) : v.createdAt || '', by: wqBy(v) }));
+  }
+  if (wqOld) return api('dBeat', { token }, true).catch(() => {});
+  api('dWork', { token, items, kinds, cur: wqCur() }, true).then(wqGot).catch(e => { if (/مفتاح غلط/.test(msg(e))) { wqOld = true; api('dBeat', { token }, true).catch(() => {}); } });
+}
+function wqGot(r) {
+  if (!r) return;
+  const first = !wq, sig = JSON.stringify([r.map, r.mine]), changed = !wq || wq._sig !== sig;
+  wq = r; wq._sig = sig;
+  wqBar();
+  if (changed && !$('pageInv').classList.contains('hidden')) renderList();
+  if (!wq.worker) return;
+  const mine = wqMineList();
+  // أول ما تفتح في اليوم: ده يومك
+  const dk = 'wqHello_' + me + '_' + wq.day;
+  if (first && !ls(dk) && mine.length) { ls(dk, '1'); wqPop('hello'); wqNagAt = Date.now(); return; }
+  const ev = wq.ev || [];
+  const ins = ev.filter(e => e.t === 'in'), outs = ev.filter(e => e.t === 'out'), dones = ev.filter(e => e.t === 'done'), news = ev.filter(e => e.t === 'new');
+  if (ins.length) { wqPop('in', ins); try { ding(); } catch (e) {} wqNagAt = Date.now(); }
+  else if (outs.length) wqPop('out', outs);
+  else if (dones.length) { wqPop('done', dones); wqNagAt = Date.now(); }
+  if (news.length && !ins.length) { toast('📌 جت عليك: ' + news.map(e => e.what).slice(0, 2).join('، ') + (news.length > 2 ? ' و' + (news.length - 2) + ' كمان' : '')); try { ding(); } catch (e) {} }
+  // الزنّ: كل 10 دقايق طول ما عليك حاجات
+  if (mine.length && inWork(now()) && Date.now() - wqNagAt >= WQ_NAG_MIN * 60000 && !$('wqPop')) {
+    wqNagAt = Date.now();
+    wqPop('nag');
+    try { const late = mine.filter(wqLate).length; late ? alarm(2) : ding(); } catch (e) {}
+    if (document.hidden) { const n = mine[0]; notify('📌 فاضلك ' + mine.length + ' في يومك', 'الجاية: ' + wqWhat(n) + ' - ' + (n.store || ''), n.kind ? '' : n.id, 'wq-nag'); }
+  }
+}
+function wqMeRow() { return wq && (wq.team || []).find(x => x.email === wq.me) || { done: 0, open: 0, got: 0 }; }
+function wqNextHtml(n) {
+  if (!n) return '';
+  return '<b>' + esc(wqWhat(n)) + '</b> • فرع ' + esc(n.store || '') + (wqLate(n) ? ' • <b style="color:#C62828">⚠️ متأخرة</b>' : '') +
+    (n.createdAt ? ' • بقالها ' + durTxt(mins(n.createdAt, now())) : '');
+}
+function wqBar() {
+  const b = $('wqBar'); if (!b) return;
+  if (!wq) { b.classList.add('hidden'); return; }
+  const team = (wq.team || []).filter(x => x.online || x.open);
+  const teamTxt = team.length ? '<div class="wqteam">👥 ' + team.map(x => esc(x.name) + ': ' + x.open + ' مفتوح • خلّص ' + x.done + (x.online ? '' : ' (مش فاتح)')).join(' &nbsp;|&nbsp; ') + '</div>' : '';
+  if (!wq.worker) {
+    b.className = ''; b.innerHTML = '<span class="wqn">📊 توزيع الشغل النهارده</span><span class="sp" style="flex:1"></span><button class="btn" onclick="wqPop(\'board\')">🏆 الترتيب</button>' + teamTxt;
+    return;
+  }
+  const mine = wqMineList(), meRow = wqMeRow(), late = mine.filter(wqLate).length, n = mine[0];
+  b.className = late ? 'late' : mine.length ? '' : 'zero';
+  b.innerHTML = '<span class="wqn">📌 يومك: <b>' + (meRow.done + mine.length) + '</b> • خلصت <b>' + meRow.done + '</b> • فاضلك <b>' + mine.length + '</b>' + (late ? ' • ⚠️ ' + late + ' متأخرين' : '') + '</span>' +
+    (n ? '<span class="wqnext" onclick="wqGo()">➡️ الجاية: ' + wqNextHtml(n) + '</span>' : '<span class="wqnext">🎉 مفيش حاجة عليك دلوقتي</span>') +
+    (n ? '<button class="btn" onclick="wqGo()">افتح الجاية</button>' : '') + '<button class="btn" onclick="pickTab(\'mine\')">📌 يومي</button><button class="btn" onclick="wqPop(\'board\')">🏆</button>' + teamTxt;
+}
+function wqTag(v, html) {
+  if (!wq || !wqOpenItem(v)) return html;
+  const who = wq.map[wqKey(v)];
+  if (!who) return html;
+  const mine = wq.worker && wq.mine.indexOf(wqKey(v)) !== -1;
+  const tag = '<div class="wqown' + (mine ? ' me' : '') + '">' + (mine ? '📌 عليك' : '👤 على ' + esc(who)) + '</div>';
+  return html.replace(/<\/div>\s*$/, tag + '</div>').replace(/^<div class="(b?card)/, mine ? '<div class="$1 wqmine' : '<div class="$1');
+}
+function wqGo(k) {
+  wqClose();
+  const n = k || (wqMineList()[0] && wqKey(wqMineList()[0]));
+  if (!n) return;
+  const i = n.indexOf(':'), kind = n.slice(0, i), id = n.slice(i + 1);
+  page('inv');
+  if (kind === 'inv') openInv(id); else if (kind === 'tk') openTk(id); else openTask(kind, id);
+}
+function wqClose() { const p = $('wqPop'); if (p) p.remove(); }
+function wqPop(kind, ev) {
+  wqClose();
+  const mine = wqMineList(), n = mine[0], meRow = wqMeRow(), late = mine.filter(wqLate).length;
+  let h = '', cls = '';
+  const goBtn = n ? '<button class="btn green" style="flex:2;padding:12px;font-size:16px" onclick="wqGo(\'' + wqKey(n) + '\')">➡️ افتح الجاية</button>' : '';
+  const next = n ? '<div class="wnext">➡️ <b>الجاية:</b> ' + wqNextHtml(n) + '</div>' : '';
+  const list = L => '<ol class="wl">' + L.slice(0, 40).map(v => '<li>' + esc(wqWhat(v)) + ' • ' + esc(v.store || '') + (wqLate(v) ? ' ⚠️' : '') + '</li>').join('') + '</ol>';
+  const cnt = (L, f) => { const m = {}; L.forEach(e => { const k = f(e); m[k] = (m[k] || 0) + 1; }); return Object.keys(m).map(k => [k, m[k]]); };
+  if (kind === 'hello') {
+    h = '<h2>☀️ أهلاً ' + esc(me) + ' - ده يومك</h2><div class="wbig">' + mine.length + ' <small style="font-size:17px">حاجة عليك</small></div>' +
+      (late ? '<div style="color:#C62828;font-weight:800">⚠️ منهم ' + late + ' متأخرين - ابدأ بيهم</div>' : '') + list(mine) + next;
+  } else if (kind === 'in') {
+    h = '<h2>📥 جالك شغل من زمايلك</h2>' + cnt(ev, e => e.who + '|' + e.how).map(([k, c]) => {
+      const [who, how] = k.split('|');
+      return '<div>• <b>' + c + '</b> حاجة من <b>' + esc(who) + '</b> - ' + (how === 'سحب' ? 'إنت خلّصت بدري فسحبت من عنده 💪' : how === 'تقسيم' ? 'الشغل اتقسم بينكم' : how === 'ساب' ? 'ورديته خلصت أو مش فاتح' : 'هو استلمها') + '</div>';
+    }).join('') + '<div style="margin-top:8px">دلوقتي عليك <b>' + mine.length + '</b>:</div>' + list(mine) + next;
+  } else if (kind === 'out') {
+    h = '<h2>📤 جزء من شغلك اتنقل</h2>' + cnt(ev, e => e.who + '|' + e.how).map(([k, c]) => {
+      const [who, how] = k.split('|');
+      return '<div>• <b>' + c + '</b> حاجة راحت لـ <b>' + esc(who) + '</b>' + (how === 'ساب' ? ' <b style="color:#C62828">(اتحسبوا عليك إنك سبتهم)</b>' : how === 'أخدها' ? ' (هو استلمها)' : ' (الشغل اتقسم)') + '</div>';
+    }).join('') + '<div style="margin-top:8px">فاضلك <b>' + mine.length + '</b></div>' + next;
+  } else if (kind === 'done') {
+    cls = 'ok';
+    h = '<h2>' + (mine.length ? '✅ برافو - خلصت ' + (ev.length > 1 ? ev.length + ' حاجات' : esc(ev[0].what || 'حاجة')) : '🎉 خلّصت كل اللي عليك!') + '</h2>' +
+      '<div class="wbig">' + mine.length + ' <small style="font-size:17px">فاضلك • خلّصت ' + meRow.done + ' النهارده</small></div>' + next;
+  } else if (kind === 'nag') {
+    cls = late ? 'late' : '';
+    h = '<h2>⏰ فاضلك ' + mine.length + ' في يومك' + (late ? ' - منهم ' + late + ' متأخرين' : '') + '</h2>' +
+      '<div style="color:var(--muted)">الحاجات دي متسجلة عليك، واللي يفضل في آخر ورديتك بيتحسب عليك.</div>' + next;
+  } else if (kind === 'board') {
+    const T = (wq.team || []).map(x => Object.assign({ pts: x.done - x.quit * 2 }, x)).sort((a, b) => b.pts - a.pts || b.done - a.done);
+    h = '<h2>🏆 ترتيب النهارده</h2><div style="color:var(--muted);font-size:13px">النقط = اللي خلّصه − (اللي سابه × 2). اللي بيسحب من زمايله بيبان إنه أسرع.</div>' +
+      '<table><tr><th>الموظف</th><th>اتسلم</th><th>خلّص</th><th>سحب</th><th>ساب</th><th>مفتوح</th><th>نقط</th></tr>' +
+      T.map((x, i) => '<tr><td>' + (['🥇', '🥈', '🥉'][i] || '') + ' ' + esc(x.name) + (x.online ? ' <small style="color:#2BB45A">●</small>' : '') + '</td><td>' + x.got + '</td><td><b>' + x.done + '</b></td><td>' + x.took + '</td><td' + (x.quit ? ' style="color:#C62828;font-weight:800"' : '') + '>' + x.quit + '</td><td>' + x.open + '</td><td><b>' + x.pts + '</b></td></tr>').join('') + '</table>' +
+      (T.length ? '' : '<div class="empty">لسه محدش اشتغل النهارده</div>');
+  }
+  document.body.insertAdjacentHTML('beforeend', '<div id="wqPop" onclick="if(event.target===this)wqClose()"><div class="wbox ' + cls + '">' + h +
+    '<div class="wacts">' + (kind !== 'board' ? goBtn : '') + '<button class="btn ghost" style="flex:1" onclick="wqClose()">' + (kind === 'board' ? 'قفل' : 'تمام') + '</button></div></div></div>');
+}
 
 // يوم الشغل بيبدأ 9 الصبح (اللي قبل 9 بيتحسب على اليوم اللي قبله) - بيطابق الباكإند
 function dayKey9_(t) {
